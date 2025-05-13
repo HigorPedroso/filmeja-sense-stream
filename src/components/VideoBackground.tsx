@@ -38,7 +38,7 @@ const VideoBackground: React.FC<VideoBackgroundProps> = ({
   }, []);
 
   return (
-    <div className="relative w-full h-[80vh] min-h-[500px] overflow-hidden">
+    <div className="relative w-full h-[80vh] min-h-[600px] overflow-hidden">
       {!videoLoaded && (
         <div 
           className="absolute inset-0 bg-cover bg-center bg-no-repeat z-0" 
@@ -57,8 +57,8 @@ const VideoBackground: React.FC<VideoBackgroundProps> = ({
         <source src={videoSrc} type="video/mp4" />
       </video>
       
-      {/* Overlay gradient */}
-      <div className="absolute inset-0 bg-hero-gradient z-10"></div>
+      {/* Gradient overlay for better text readability */}
+      <div className="absolute inset-0 bg-gradient-to-b from-filmeja-dark/70 to-filmeja-dark z-10"></div>
       
       {/* Content */}
       <div className="relative z-20 h-full">

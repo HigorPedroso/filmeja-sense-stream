@@ -1,18 +1,28 @@
 
-import React from 'react';
+import React, { useRef } from 'react';
 import Navbar from '@/components/Navbar';
 import HeroSection from '@/components/HeroSection';
 import ContentCarousel from '@/components/ContentCarousel';
-import FeaturesSection from '@/components/FeaturesSection';
-import PricingSection from '@/components/PricingSection';
 import Footer from '@/components/Footer';
 import { getPopularMovies, getPopularTVShows, getTrending } from '@/lib/tmdb';
+import { Button } from '@/components/ui/button';
+import { ArrowDown, Heart, Search, Settings } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import HowItWorksStep from '@/components/HowItWorksStep';
+import BenefitCard from '@/components/BenefitCard';
+import TestimonialCard from '@/components/TestimonialCard';
 
 const Index = () => {
+  // Get a reference to the how it works section
+  const howItWorksRef = useRef<HTMLDivElement>(null);
+  
   // In a real implementation, these would be fetched from API with React Query
   const trendingContent = getTrending();
-  const popularMovies = getPopularMovies();
-  const popularTVShows = getPopularTVShows();
+
+  // Scroll to the how it works section
+  const scrollToHowItWorks = () => {
+    howItWorksRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   return (
     <div className="min-h-screen bg-filmeja-dark">
@@ -20,20 +30,186 @@ const Index = () => {
       <Navbar transparent />
       
       {/* Hero Section with Video Background */}
-      <HeroSection />
+      <HeroSection>
+        <div className="max-w-3xl animate-fade-in">
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4">
+            Não sabe o que assistir? <span className="text-filmeja-purple">O FilmeJá decide por você.</span>
+          </h1>
+          <p className="text-lg md:text-xl text-gray-200 mb-8">
+            Receba recomendações inteligentes de filmes e séries com base no seu humor ou personalidade.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4">
+            <Link to="/signup">
+              <Button size="lg" className="bg-filmeja-purple hover:bg-filmeja-purple/90 text-white">
+                Testar por R$9,99/mês
+              </Button>
+            </Link>
+            <Button 
+              size="lg" 
+              variant="outline" 
+              className="border-white text-white hover:bg-white/10"
+              onClick={scrollToHowItWorks}
+            >
+              Veja como funciona <ArrowDown className="ml-1" />
+            </Button>
+          </div>
+          <p className="text-sm text-gray-300 mt-4">
+            Apenas R$ 9,99/mês. Cancele quando quiser.
+          </p>
+        </div>
+      </HeroSection>
       
-      {/* Content Sections */}
-      <section className="py-8">
-        <ContentCarousel title="Em alta" items={trendingContent} />
-        <ContentCarousel title="Filmes populares" items={popularMovies} />
-        <ContentCarousel title="Séries populares" items={popularTVShows} />
+      {/* How It Works Section */}
+      <section ref={howItWorksRef} className="py-16 px-4">
+        <div className="container mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-white mb-3">Como funciona?</h2>
+            <p className="text-gray-300 max-w-2xl mx-auto">
+              O FilmeJá usa inteligência artificial para entender seu humor e preferências, 
+              recomendando o filme ou série perfeito para o seu momento.
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <HowItWorksStep 
+              step={1}
+              title="Responda como você está se sentindo"
+              description="Conte-nos seu humor atual, preferências ou responda a perguntas simples sobre sua personalidade."
+              icon={<Heart className="h-6 w-6" />}
+            />
+            <HowItWorksStep 
+              step={2}
+              title="Receba sugestões personalizadas"
+              description="Nossa IA analisa suas respostas e cruza com milhares de opções para encontrar o conteúdo perfeito para você."
+              icon={<Search className="h-6 w-6" />}
+            />
+            <HowItWorksStep 
+              step={3}
+              title="Assista na sua plataforma favorita"
+              description="Descubra exatamente onde o filme ou série está disponível e comece a assistir com apenas um clique."
+              icon={<Settings className="h-6 w-6" />}
+            />
+          </div>
+        </div>
       </section>
       
-      {/* Features Section */}
-      <FeaturesSection />
+      {/* Preview Section */}
+      <section className="py-16 px-4 bg-filmeja-dark/50">
+        <div className="container mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-white mb-3">Prévia do que te espera</h2>
+            <p className="text-gray-300 max-w-2xl mx-auto">
+              Uma interface elegante e intuitiva, inspirada nas melhores plataformas de streaming.
+            </p>
+          </div>
+          
+          {/* Content Preview */}
+          <div className="bg-black/40 backdrop-blur-sm border border-white/10 rounded-lg p-4 md:p-8 max-w-5xl mx-auto">
+            <h3 className="text-xl font-bold text-white mb-4">Suas recomendações personalizadas</h3>
+            <ContentCarousel title="" items={trendingContent} />
+            
+            <div className="mt-10 text-center">
+              <p className="text-gray-300 mb-4">
+                E muito mais conteúdo personalizado, atualizado diariamente.
+              </p>
+              <Link to="/signup">
+                <Button className="bg-filmeja-purple hover:bg-filmeja-purple/90 text-white">
+                  Experimentar agora
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
       
-      {/* Pricing Section */}
-      <PricingSection />
+      {/* Benefits Section */}
+      <section className="py-16 px-4">
+        <div className="container mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-white mb-3">Por que escolher o FilmeJá?</h2>
+            <p className="text-gray-300 max-w-2xl mx-auto">
+              Uma experiência premium para quem valoriza seu tempo de entretenimento
+            </p>
+          </div>
+          
+          <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6">
+            <BenefitCard 
+              title="Recomendações de filmes e séries"
+              description="Não apenas filmes, mas todo tipo de conteúdo disponível nas plataformas de streaming."
+            />
+            <BenefitCard 
+              title="Baseado em humor e preferências"
+              description="Algoritmos inteligentes que entendem como você se sente e o que realmente gostaria de assistir agora."
+            />
+            <BenefitCard 
+              title="Design estilo streaming de verdade"
+              description="Interface premium inspirada nas melhores plataformas do mercado, fácil de usar e visualmente impressionante."
+            />
+            <BenefitCard 
+              title="Dados confiáveis via API da TMDb"
+              description="Informações atualizadas e precisas sobre todos os filmes e séries disponíveis."
+            />
+            <BenefitCard 
+              title="Sem anúncios, com recomendações honestas"
+              description="Sugestões genuínas baseadas apenas na sua personalidade, sem propaganda ou conteúdo patrocinado."
+            />
+            <BenefitCard 
+              title="Sem plano gratuito, apenas qualidade"
+              description="Um serviço exclusivo para quem valoriza qualidade e não quer perder tempo escolhendo o que assistir."
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials Section */}
+      <section className="py-16 px-4 bg-gradient-to-b from-filmeja-dark/50 to-filmeja-dark">
+        <div className="container mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-white mb-3">O que nossos usuários dizem</h2>
+            <p className="text-gray-300 max-w-2xl mx-auto">
+              Pessoas como você que não perdem mais tempo escolhendo o que assistir
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+            <TestimonialCard 
+              name="Carlos Silva"
+              quote="Economizo pelo menos 30 minutos toda vez que vou assistir algo. As recomendações são surpreendentemente precisas!"
+              rating={5}
+            />
+            <TestimonialCard 
+              name="Ana Luiza"
+              quote="Finalmente acabaram as discussões sobre o que assistir com meu namorado. O FilmeJá sempre acerta!"
+              rating={5}
+            />
+            <TestimonialCard 
+              name="Rodrigo Mendes"
+              quote="Vale cada centavo. Descobri séries incríveis que nunca teria encontrado sozinho."
+              rating={4}
+            />
+          </div>
+        </div>
+      </section>
+      
+      {/* CTA Section */}
+      <section className="py-16 px-4 bg-[url('https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80')] bg-cover bg-center relative">
+        <div className="absolute inset-0 bg-filmeja-dark/90"></div>
+        <div className="container mx-auto relative z-10">
+          <div className="max-w-3xl mx-auto text-center">
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
+              Comece agora por apenas R$9,99/mês e nunca mais perca tempo escolhendo o que assistir
+            </h2>
+            <Link to="/signup">
+              <Button size="lg" className="bg-filmeja-purple hover:bg-filmeja-purple/90 text-white mb-4">
+                Assinar com Stripe
+              </Button>
+            </Link>
+            <p className="text-gray-300 text-sm">
+              Pagamento 100% seguro • Cancele quando quiser
+            </p>
+          </div>
+        </div>
+      </section>
       
       {/* Footer */}
       <Footer />
