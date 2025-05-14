@@ -1,5 +1,5 @@
 
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import HeroSection from '@/components/HeroSection';
 import ContentCarousel from '@/components/ContentCarousel';
@@ -11,13 +11,33 @@ import { Link } from 'react-router-dom';
 import HowItWorksStep from '@/components/HowItWorksStep';
 import BenefitCard from '@/components/BenefitCard';
 import TestimonialCard from '@/components/TestimonialCard';
+import { ContentItem } from '@/types/movie';
 
 const Index = () => {
   // Get a reference to the how it works section
   const howItWorksRef = useRef<HTMLDivElement>(null);
   
-  // In a real implementation, these would be fetched from API with React Query
-  const trendingContent = getTrending();
+  // State for trending content
+  const [trendingContent, setTrendingContent] = useState<ContentItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  // Fetch trending content on component mount
+  useEffect(() => {
+    const fetchTrendingContent = async () => {
+      try {
+        const content = await getTrending();
+        setTrendingContent(content);
+      } catch (error) {
+        console.error('Error fetching trending content:', error);
+        // Use empty array as fallback if fetch fails
+        setTrendingContent([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchTrendingContent();
+  }, []);
 
   // Scroll to the how it works section
   const scrollToHowItWorks = () => {
@@ -106,7 +126,14 @@ const Index = () => {
           {/* Content Preview */}
           <div className="bg-black/40 backdrop-blur-sm border border-white/10 rounded-lg p-4 md:p-8 max-w-5xl mx-auto">
             <h3 className="text-xl font-bold text-white mb-4">Suas recomendações personalizadas</h3>
-            <ContentCarousel title="" items={trendingContent} />
+            {loading ? (
+              <div className="flex justify-center items-center py-20">
+                <div className="w-6 h-6 border-2 border-filmeja-purple border-t-transparent rounded-full animate-spin"></div>
+                <span className="ml-2 text-white">Carregando conteúdo...</span>
+              </div>
+            ) : (
+              <ContentCarousel title="" items={trendingContent} />
+            )}
             
             <div className="mt-10 text-center">
               <p className="text-gray-300 mb-4">

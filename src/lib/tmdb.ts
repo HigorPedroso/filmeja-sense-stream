@@ -369,7 +369,8 @@ export const getContentDetails = async (id: number, type: 'movie' | 'tv'): Promi
       if (!mockItem) {
         throw new Error('Content not found');
       }
-      return getContentDetails(id);
+      // Fix: Pass both id and the media_type from mockItem
+      return getContentDetails(id, mockItem.media_type);
     }
     
     // Extract trailer key
