@@ -5,29 +5,40 @@ import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { MOCK_MOOD_OPTIONS } from '@/lib/tmdb';
 import { getRecommendationsByMood } from '@/lib/tmdb';
-import { MoodType } from '@/types/movie';
+import { ContentItem, MoodType } from '@/types/movie';
 import MovieCard from '@/components/MovieCard';
+import { Loader2 } from 'lucide-react';
 
 const MoodSelection = () => {
   const [selectedMood, setSelectedMood] = useState<MoodType | null>(null);
   const [showRecommendations, setShowRecommendations] = useState(false);
+  const [recommendations, setRecommendations] = useState<ContentItem[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   
   const handleMoodSelect = (mood: MoodType) => {
     setSelectedMood(mood);
   };
   
-  const handleGetRecommendations = () => {
+  const handleGetRecommendations = async () => {
     if (selectedMood) {
-      setShowRecommendations(true);
+      setIsLoading(true);
+      try {
+        const results = await getRecommendationsByMood(selectedMood);
+        setRecommendations(results);
+        setShowRecommendations(true);
+      } catch (error) {
+        console.error('Error fetching recommendations:', error);
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
   
   const handleReset = () => {
     setSelectedMood(null);
     setShowRecommendations(false);
+    setRecommendations([]);
   };
-  
-  const recommendations = selectedMood ? getRecommendationsByMood(selectedMood) : [];
   
   return (
     <div className="min-h-screen bg-filmeja-dark flex flex-col">
@@ -62,10 +73,17 @@ const MoodSelection = () => {
             <Button 
               onClick={handleGetRecommendations} 
               className="bg-filmeja-purple hover:bg-filmeja-purple/90 text-white"
-              disabled={!selectedMood}
+              disabled={!selectedMood || isLoading}
               size="lg"
             >
-              Ver recomendações
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Buscando recomendações...
+                </>
+              ) : (
+                'Ver recomendações'
+              )}
             </Button>
           </div>
         ) : (
@@ -98,6 +116,15 @@ const MoodSelection = () => {
                 <MovieCard key={`${item.media_type}-${item.id}`} item={item} />
               ))}
             </div>
+            
+            {recommendations.length === 0 && (
+              <div className="text-center py-12">
+                <p className="text-gray-300 text-lg">
+                  Não encontramos recomendações para seu humor atual. 
+                  Tente novamente ou escolha um humor diferente.
+                </p>
+              </div>
+            )}
           </>
         )}
       </main>

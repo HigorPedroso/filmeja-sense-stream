@@ -1,27 +1,55 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { getTrending, searchContent } from '@/lib/tmdb';
 import MovieCard from '@/components/MovieCard';
 import { Input } from '@/components/ui/input';
-import { Search } from 'lucide-react';
+import { Loader2, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ContentItem } from '@/types/movie';
 
 const Explore = () => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState([]);
+  const [searchResults, setSearchResults] = useState<ContentItem[]>([]);
+  const [trendingContent, setTrendingContent] = useState<ContentItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSearching, setIsSearching] = useState(false);
   
-  // Get trending content initially
-  const trendingContent = getTrending();
+  // Load trending content on component mount
+  useEffect(() => {
+    const loadTrendingContent = async () => {
+      try {
+        setIsLoading(true);
+        const trending = await getTrending();
+        setTrendingContent(trending);
+      } catch (error) {
+        console.error('Error loading trending content:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadTrendingContent();
+  }, []);
   
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    const results = searchContent(searchQuery);
-    setSearchResults(results);
+    if (!searchQuery.trim()) return;
+    
+    setIsSearching(true);
+    try {
+      const results = await searchContent(searchQuery);
+      setSearchResults(results);
+    } catch (error) {
+      console.error('Error searching content:', error);
+    } finally {
+      setIsSearching(false);
+    }
   };
   
   const displayContent = searchQuery ? searchResults : trendingContent;
+  const isShowingSearchResults = searchQuery.length > 0;
   
   return (
     <div className="min-h-screen bg-filmeja-dark flex flex-col">
@@ -43,21 +71,49 @@ const Explore = () => {
               type="submit" 
               size="icon" 
               className="absolute right-1 top-1/2 -translate-y-1/2 bg-transparent hover:bg-filmeja-purple/20"
+              disabled={isSearching}
             >
-              <Search className="h-5 w-5 text-filmeja-purple" />
+              {isSearching ? (
+                <Loader2 className="h-5 w-5 animate-spin text-filmeja-purple" />
+              ) : (
+                <Search className="h-5 w-5 text-filmeja-purple" />
+              )}
             </Button>
           </form>
         </div>
         
-        {displayContent.length > 0 ? (
+        {isLoading ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 md:gap-6">
-            {displayContent.map((item) => (
-              <MovieCard key={`${item.media_type}-${item.id}`} item={item} />
+            {[...Array(12)].map((_, index) => (
+              <div key={index} className="animate-pulse">
+                <div className="bg-gray-700/30 rounded-lg aspect-[2/3]"></div>
+                <div className="h-4 bg-gray-700/30 rounded mt-2 w-3/4"></div>
+                <div className="h-3 bg-gray-700/30 rounded mt-2 w-1/2"></div>
+              </div>
             ))}
           </div>
+        ) : displayContent.length > 0 ? (
+          <>
+            <h2 className="text-xl font-semibold text-white mb-4">
+              {isShowingSearchResults 
+                ? `Resultados para "${searchQuery}"`
+                : "Conteúdo em destaque"
+              }
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 md:gap-6">
+              {displayContent.map((item) => (
+                <MovieCard key={`${item.media_type}-${item.id}`} item={item} />
+              ))}
+            </div>
+          </>
         ) : (
           <div className="text-center py-16">
-            <p className="text-gray-300 text-lg">Nenhum resultado encontrado para "{searchQuery}"</p>
+            <p className="text-gray-300 text-lg">
+              {isShowingSearchResults
+                ? `Nenhum resultado encontrado para "${searchQuery}"`
+                : "Nenhum conteúdo disponível no momento."
+              }
+            </p>
           </div>
         )}
       </main>
