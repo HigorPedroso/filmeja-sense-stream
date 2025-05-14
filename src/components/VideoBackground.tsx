@@ -1,6 +1,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import HeroCarousel from './HeroCarousel';
+import { getTrending } from '@/lib/tmdb';
 
 interface VideoBackgroundProps {
   videoSrc?: string; 
@@ -17,6 +18,36 @@ const VideoBackground: React.FC<VideoBackgroundProps> = ({
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [videoLoaded, setVideoLoaded] = useState(false);
+  const [backgrounds, setBackgrounds] = useState<string[]>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  useEffect(() => {
+    if (useSlideshow) {
+      const fetchBackgrounds = async () => {
+        try {
+          const trending = await getTrending();
+          const images = trending
+            .filter(item => item.backdrop_path)
+            .map(item => `https://image.tmdb.org/t/p/original${item.backdrop_path}`);
+          setBackgrounds(images);
+        } catch (error) {
+          console.error('Failed to fetch backgrounds:', error);
+        }
+      };
+      
+      fetchBackgrounds();
+    }
+  }, [useSlideshow]);
+
+  useEffect(() => {
+    if (useSlideshow && backgrounds.length > 0) {
+      const interval = setInterval(() => {
+        setCurrentIndex((prev) => (prev + 1) % backgrounds.length);
+      }, 5000); // Change image every 5 seconds
+
+      return () => clearInterval(interval);
+    }
+  }, [useSlideshow, backgrounds.length]);
 
   useEffect(() => {
     if (useSlideshow) return; // Skip video loading if using slideshow
@@ -46,7 +77,24 @@ const VideoBackground: React.FC<VideoBackgroundProps> = ({
     <div className="relative w-full h-[80vh] min-h-[600px] overflow-hidden">
       {useSlideshow ? (
         <div className="absolute inset-0 z-0">
-          <HeroCarousel />
+          {backgrounds.length > 0 && (
+            <>
+              <div
+                key={`current-${currentIndex}`}
+                className="absolute inset-0 bg-cover bg-center bg-no-repeat slide-enter"
+                style={{ 
+                  backgroundImage: `url(${backgrounds[currentIndex]})`,
+                }}
+              />
+              <div
+                key={`prev-${currentIndex}`}
+                className="absolute inset-0 bg-cover bg-center bg-no-repeat slide-exit"
+                style={{ 
+                  backgroundImage: `url(${backgrounds[(currentIndex - 1 + backgrounds.length) % backgrounds.length]})`,
+                }}
+              />
+            </>
+          )}
         </div>
       ) : (
         <>
@@ -70,8 +118,8 @@ const VideoBackground: React.FC<VideoBackgroundProps> = ({
         </>
       )}
       
-      {/* Gradient overlay for better text readability */}
-      <div className="absolute inset-0 bg-gradient-to-b from-filmeja-dark/70 to-filmeja-dark z-10"></div>
+      {/* Enhanced gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-to-b from-filmeja-dark/90 via-filmeja-dark/50 to-filmeja-dark z-10 b"></div>
       
       {/* Content */}
       <div className="relative z-20 h-full">

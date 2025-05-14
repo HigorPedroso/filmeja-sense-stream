@@ -8,13 +8,16 @@ import MovieCard from './MovieCard';
 interface ContentCarouselProps {
   title: string;
   items: ContentItem[];
+  renderExtra?: (item: ContentItem) => React.ReactNode;
   size?: 'small' | 'medium' | 'large';
+  onSaveItem?: (item: ContentItem) => void;
 }
 
 const ContentCarousel: React.FC<ContentCarouselProps> = ({ 
   title, 
   items,
-  size = 'medium'
+  size = 'medium',
+  onSaveItem
 }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -46,7 +49,11 @@ const ContentCarousel: React.FC<ContentCarouselProps> = ({
           >
             {items.map((item) => (
               <div key={`${item.media_type}-${item.id}`} className="snap-start shrink-0">
-                <MovieCard item={item} size={size} />
+                <MovieCard 
+                  item={item} 
+                  size={size} 
+                  onSave={() => onSaveItem?.(item)}
+                />
               </div>
             ))}
           </div>

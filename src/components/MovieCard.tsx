@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 interface MovieCardProps {
   item: ContentItem;
   size?: 'small' | 'medium' | 'large';
+  onSave?: () => void;  // Make sure this prop is defined
 }
 
 const MovieCard: React.FC<MovieCardProps> = ({ item, size = 'medium' }) => {

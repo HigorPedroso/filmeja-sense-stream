@@ -4,23 +4,32 @@ import Navbar from '@/components/Navbar';
 import HeroSection from '@/components/HeroSection';
 import ContentCarousel from '@/components/ContentCarousel';
 import Footer from '@/components/Footer';
-import { getTrending } from '@/lib/tmdb';
 import { Button } from '@/components/ui/button';
-import { ArrowDown, Heart, Search, Settings } from 'lucide-react';
+// Update the imports at the top to include Play
+import { ArrowDown, Heart, Search, Settings, Play } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import HowItWorksStep from '@/components/HowItWorksStep';
 import BenefitCard from '@/components/BenefitCard';
 import TestimonialCard from '@/components/TestimonialCard';
 import { ContentItem } from '@/types/movie';
 import MoodCarousel from '@/components/MoodCarousel';
+import { getTrending, getUpcoming2025 } from '@/lib/tmdb';
+import useTypewriter from '@/hooks/useTypewriter';
+import { BookmarkPlus } from 'lucide-react';
 
 const Index = () => {
   // Get a reference to the how it works section
   const howItWorksRef = useRef<HTMLDivElement>(null);
+  const plansRef = useRef<HTMLDivElement>(null);
   
   // State for trending content
   const [trendingContent, setTrendingContent] = useState<ContentItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [upcomingMovies, setUpcomingMovies] = useState<ContentItem[]>([]);
+  const [loadingUpcoming, setLoadingUpcoming] = useState(true);
+  const scrollToPlans = () => {
+    plansRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
   
   // Fetch trending content on component mount
   useEffect(() => {
@@ -40,10 +49,42 @@ const Index = () => {
     fetchTrendingContent();
   }, []);
 
+  useEffect(() => {
+    const fetchUpcomingMovies = async () => {
+      try {
+        const movies = await getUpcoming2025();
+        setUpcomingMovies(movies);
+      } catch (error) {
+        console.error('Error fetching upcoming movies:', error);
+        setUpcomingMovies([]);
+      } finally {
+        setLoadingUpcoming(false);
+      }
+    };
+    
+    fetchUpcomingMovies();
+  }, []);
+
   // Scroll to the how it works section
   const scrollToHowItWorks = () => {
     howItWorksRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
+
+  const headlines = [
+    "Não sabe o que assistir? O FilmeJá decide por você.",
+    "Sem ideia do que assistir? O FilmeJá escolhe pra você.",
+    "Cansado de procurar? Deixa que o FilmeJá resolve.",
+    "Tá perdido nos catálogos? O FilmeJá te guia.",
+    "Quer só apertar o play? O FilmeJá diz o que ver.",
+    "Horas procurando? Agora é só perguntar pro FilmeJá.",
+    "Dúvida na escolha? FilmeJá responde em segundos.",
+    "Um clique. Uma recomendação. FilmeJá.",
+    "Seu tempo vale mais. FilmeJá indica pra você.",
+    "Streaming sem enrolação. FilmeJá te mostra o melhor.",
+    "Quer assistir algo bom agora? FilmeJá tem a resposta."
+  ];
+
+  const currentHeadline = useTypewriter(headlines, 50, 4000);
 
   return (
     <div className="min-h-screen bg-filmeja-dark">
@@ -53,30 +94,28 @@ const Index = () => {
       {/* Hero Section with Image Slideshow - explicitly set useSlideshow to true */}
       <HeroSection useSlideshow={true}>
         <div className="max-w-3xl animate-fade-in">
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4">
-            Não sabe o que assistir? <span className="text-filmeja-purple">O FilmeJá decide por você.</span>
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 min-h-[3em] lg:min-h-[2em]">
+            <span className="text-white">{currentHeadline.split('FilmeJá')[0]}</span>
+            <span className="text-filmeja-purple">
+              {currentHeadline.includes('FilmeJá') ? 'FilmeJá' : ''}
+            </span>
+            <span className="text-white">
+              {currentHeadline.includes('FilmeJá') ? currentHeadline.split('FilmeJá')[1] : ''}
+            </span>
           </h1>
           <p className="text-lg md:text-xl text-gray-200 mb-8">
             Receba recomendações inteligentes de filmes e séries com base no seu humor ou personalidade.
           </p>
           <div className="flex flex-col sm:flex-row gap-4">
-            <Link to="/signup">
-              <Button size="lg" className="bg-filmeja-purple hover:bg-filmeja-purple/90 text-white">
-                Testar por R$9,99/mês
-              </Button>
-            </Link>
             <Button 
               size="lg" 
               variant="outline" 
               className="border-white text-white hover:bg-white/10"
               onClick={scrollToHowItWorks}
             >
-              Veja como funciona <ArrowDown className="ml-1" />
+              <Play className="mr-2 h-5 w-5" /> Veja como funciona <ArrowDown className="ml-1" />
             </Button>
           </div>
-          <p className="text-sm text-gray-300 mt-4">
-            Apenas R$ 9,99/mês. Cancele quando quiser.
-          </p>
         </div>
       </HeroSection>
       
@@ -110,7 +149,7 @@ const Index = () => {
             <HowItWorksStep 
               step={3}
               title="Assista na sua plataforma favorita"
-              description="Descubra exatamente onde o filme ou série está disponível e comece a assistir com apenas um clique."
+              description="Descobra exatamente onde o filme ou série está disponível e comece a assistir com apenas um clique."
               icon={<Settings className="h-6 w-6" />}
             />
           </div>
@@ -119,39 +158,41 @@ const Index = () => {
       
       {/* Preview Section */}
       <section className="py-16 px-4 bg-filmeja-dark/50">
-        <div className="container mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-white mb-3">Prévia do que te espera</h2>
-            <p className="text-gray-300 max-w-2xl mx-auto">
-              Uma interface elegante e intuitiva, inspirada nas melhores plataformas de streaming.
-            </p>
-          </div>
-          
-          {/* Content Preview */}
-          <div className="bg-black/40 backdrop-blur-sm border border-white/10 rounded-lg p-4 md:p-8 max-w-5xl mx-auto">
-            <h3 className="text-xl font-bold text-white mb-4">Suas recomendações personalizadas</h3>
-            {loading ? (
-              <div className="flex justify-center items-center py-20">
-                <div className="w-6 h-6 border-2 border-filmeja-purple border-t-transparent rounded-full animate-spin"></div>
-                <span className="ml-2 text-white">Carregando conteúdo...</span>
-              </div>
-            ) : (
-              <ContentCarousel title="" items={trendingContent} />
-            )}
-            
-            <div className="mt-10 text-center">
-              <p className="text-gray-300 mb-4">
-                E muito mais conteúdo personalizado, atualizado diariamente.
-              </p>
-              <Link to="/signup">
-                <Button className="bg-filmeja-purple hover:bg-filmeja-purple/90 text-white">
-                  Experimentar agora
-                </Button>
-              </Link>
-            </div>
-          </div>
+  <div className="container mx-auto">
+    <div className="text-center mb-12">
+      <h2 className="text-3xl font-bold text-white mb-3">Não Perca: Os Lançamentos Mais Quentes de 2025 Atualizados em Tempo Real</h2>
+      <p className="text-gray-300 max-w-2xl mx-auto">
+        Descubra os filmes mais aguardados que chegam em breve
+      </p>
+    </div>
+    
+    <div className="bg-black/40 backdrop-blur-sm border border-white/10 rounded-lg p-4 md:p-8 max-w-5xl mx-auto">
+      {loadingUpcoming ? (
+        <div className="flex justify-center items-center py-20">
+          <div className="w-6 h-6 border-2 border-filmeja-purple border-t-transparent rounded-full animate-spin"></div>
+          <span className="ml-2 text-white">Carregando lançamentos...</span>
         </div>
-      </section>
+      ) : (
+        <ContentCarousel 
+          title="" 
+          items={upcomingMovies}
+          onSaveItem={(item) => scrollToPlans()}
+        />
+      )}
+      
+      <div className="mt-10 text-center">
+        <p className="text-gray-300 mb-4">
+          Fique por dentro dos próximos lançamentos e nunca perca um filme aguardado
+        </p>
+        <Link to="/signup">
+          <Button className="bg-filmeja-purple hover:bg-filmeja-purple/90 text-white">
+            Ver mais lançamentos
+          </Button>
+        </Link>
+      </div>
+    </div>
+  </div>
+</section>
       
       {/* Benefits Section */}
       <section className="py-16 px-4">
@@ -223,7 +264,7 @@ const Index = () => {
       </section>
       
       {/* CTA Section */}
-      <section className="py-16 px-4 bg-[url('https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80')] bg-cover bg-center relative">
+      <section ref={plansRef} className="py-16 px-4 bg-[url('https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80')] bg-cover bg-center relative">
         <div className="absolute inset-0 bg-filmeja-dark/90"></div>
         <div className="container mx-auto relative z-10">
           <div className="max-w-3xl mx-auto text-center">
