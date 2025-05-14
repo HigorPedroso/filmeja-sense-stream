@@ -23,7 +23,9 @@ export interface TVShow {
 
 export interface ContentItem {
   id: number;
-  title: string; // Movie title or TV show name
+  title?: string;  // for movies
+  name?: string;   // for TV shows
+  first_air_date?: string;  // for TV shows
   poster_path: string;
   backdrop_path: string;
   release_date: string; // Movie release_date or TV first_air_date

@@ -1,129 +1,86 @@
 
-import React, { useEffect, useRef, useState } from 'react';
 import HeroCarousel from './HeroCarousel';
 import { getTrending } from '@/lib/tmdb';
+import { useEffect, useState } from 'react';
 
-interface VideoBackgroundProps {
-  videoSrc?: string; 
-  fallbackImage?: string;
-  children?: React.ReactNode;
-  useSlideshow?: boolean;
-}
-
-const VideoBackground: React.FC<VideoBackgroundProps> = ({ 
-  videoSrc = "https://assets.nflxext.com/ffe/siteui/acquisition/home/hero-background-desktop.mp4", 
-  fallbackImage = "https://assets.nflxext.com/ffe/siteui/vlv3/b8eb602d-55f0-4b9f-a58d-b32a5ce4dd80/e0b42fc2-d3e4-4071-9ae3-371f0e825131/BR-pt-20240318-popsignuptwoweeks-perspective_alpha_website_medium.jpg",
-  children,
-  useSlideshow = false
-}) => {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [videoLoaded, setVideoLoaded] = useState(false);
-  const [backgrounds, setBackgrounds] = useState<string[]>([]);
+const VideoBackground = () => {
+  const [videos, setVideos] = useState<string[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
-    if (useSlideshow) {
-      const fetchBackgrounds = async () => {
-        try {
-          const trending = await getTrending();
-          const images = trending
-            .filter(item => item.backdrop_path)
-            .map(item => `https://image.tmdb.org/t/p/original${item.backdrop_path}`);
-          setBackgrounds(images);
-        } catch (error) {
-          console.error('Failed to fetch backgrounds:', error);
+    const fetchVideos = async () => {
+      try {
+        const response = await fetch(
+          `https://api.themoviedb.org/3/movie/now_playing?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=pt-BR&page=1`
+        );
+        const data = await response.json();
+        
+        const trailerPromises = data.results.slice(0, 5).map(async (movie: any) => {
+          const videoResponse = await fetch(
+            `https://api.themoviedb.org/3/movie/${movie.id}/videos?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=pt-BR`
+          );
+          const videoData = await videoResponse.json();
+          
+          // Get YouTube trailer with fallback to English language
+          let trailer = videoData.results?.find(
+            (v: any) => v.type === "Trailer" && v.site === "YouTube"
+          );
+          
+          if (!trailer) {
+            const enVideoResponse = await fetch(
+              `https://api.themoviedb.org/3/movie/${movie.id}/videos?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=en-US`
+            );
+            const enVideoData = await enVideoResponse.json();
+            trailer = enVideoData.results?.find(
+              (v: any) => v.type === "Trailer" && v.site === "YouTube"
+            );
+          }
+          
+          return trailer?.key || null;
+        });
+
+        const trailerKeys = (await Promise.all(trailerPromises))
+          .filter((key): key is string => Boolean(key));
+
+        if (trailerKeys.length > 0) {
+          setVideos(trailerKeys);
         }
-      };
-      
-      fetchBackgrounds();
-    }
-  }, [useSlideshow]);
+      } catch (error) {
+        console.error('Error fetching videos:', error);
+      }
+    };
+
+    fetchVideos();
+  }, []);
 
   useEffect(() => {
-    if (useSlideshow && backgrounds.length > 0) {
-      const interval = setInterval(() => {
-        setCurrentIndex((prev) => (prev + 1) % backgrounds.length);
-      }, 5000); // Change image every 5 seconds
+    if (videos.length === 0) return;
 
-      return () => clearInterval(interval);
-    }
-  }, [useSlideshow, backgrounds.length]);
+    const interval = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % videos.length);
+    }, 15000);
 
-  useEffect(() => {
-    if (useSlideshow) return; // Skip video loading if using slideshow
-    
-    const videoElement = videoRef.current;
-    if (!videoElement) return;
+    return () => clearInterval(interval);
+  }, [videos]);
 
-    const handleCanPlay = () => {
-      setVideoLoaded(true);
-    };
-
-    const handleError = () => {
-      console.error('Video failed to load');
-      setVideoLoaded(false);
-    };
-
-    videoElement.addEventListener('canplay', handleCanPlay);
-    videoElement.addEventListener('error', handleError);
-
-    return () => {
-      videoElement.removeEventListener('canplay', handleCanPlay);
-      videoElement.removeEventListener('error', handleError);
-    };
-  }, [useSlideshow]);
+  if (!videos.length) return null;
 
   return (
-    <div className="relative w-full h-[80vh] min-h-[600px] overflow-hidden">
-      {useSlideshow ? (
-        <div className="absolute inset-0 z-0">
-          {backgrounds.length > 0 && (
-            <>
-              <div
-                key={`current-${currentIndex}`}
-                className="absolute inset-0 bg-cover bg-center bg-no-repeat slide-enter"
-                style={{ 
-                  backgroundImage: `url(${backgrounds[currentIndex]})`,
-                }}
-              />
-              <div
-                key={`prev-${currentIndex}`}
-                className="absolute inset-0 bg-cover bg-center bg-no-repeat slide-exit"
-                style={{ 
-                  backgroundImage: `url(${backgrounds[(currentIndex - 1 + backgrounds.length) % backgrounds.length]})`,
-                }}
-              />
-            </>
-          )}
+    <div className="fixed inset-0 -z-5">
+      <div className="absolute inset-0 bg-gradient-to-b from-filmeja-dark/80 via-filmeja-dark/70 to-filmeja-dark/80 z-20" />
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="relative w-full h-full">
+          <iframe
+            key={videos[currentIndex]}
+            src={`https://www.youtube.com/embed/${videos[currentIndex]}?autoplay=1&mute=1&controls=0&showinfo=0&rel=0&loop=1&playlist=${videos[currentIndex]}&enablejsapi=1`}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            className="absolute w-full h-full scale-150 origin-center"
+            style={{
+              pointerEvents: 'none',
+              opacity: 0.5,
+            }}
+          />
         </div>
-      ) : (
-        <>
-          {!videoLoaded && (
-            <div 
-              className="absolute inset-0 bg-cover bg-center bg-no-repeat z-0" 
-              style={{ backgroundImage: `url(${fallbackImage})` }}
-            />
-          )}
-          
-          <video
-            ref={videoRef}
-            className={`absolute inset-0 w-full h-full object-cover z-0 ${videoLoaded ? 'opacity-100' : 'opacity-0'}`}
-            autoPlay
-            muted
-            loop
-            playsInline
-          >
-            <source src={videoSrc} type="video/mp4" />
-          </video>
-        </>
-      )}
-      
-      {/* Enhanced gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-b from-filmeja-dark/90 via-filmeja-dark/50 to-filmeja-dark z-10 b"></div>
-      
-      {/* Content */}
-      <div className="relative z-20 h-full">
-        {children}
       </div>
     </div>
   );
