@@ -4,7 +4,7 @@ import Navbar from '@/components/Navbar';
 import HeroSection from '@/components/HeroSection';
 import ContentCarousel from '@/components/ContentCarousel';
 import Footer from '@/components/Footer';
-import { getPopularMovies, getPopularTVShows, getTrending } from '@/lib/tmdb';
+import { getTrending } from '@/lib/tmdb';
 import { Button } from '@/components/ui/button';
 import { ArrowDown, Heart, Search, Settings } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -49,8 +49,8 @@ const Index = () => {
       {/* Navbar with transparent background on the hero section */}
       <Navbar transparent />
       
-      {/* Hero Section with Video Background */}
-      <HeroSection>
+      {/* Hero Section with Image Slideshow - explicitly set useSlideshow to true */}
+      <HeroSection useSlideshow={true}>
         <div className="max-w-3xl animate-fade-in">
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4">
             Não sabe o que assistir? <span className="text-filmeja-purple">O FilmeJá decide por você.</span>
