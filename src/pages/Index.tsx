@@ -12,6 +12,7 @@ import HowItWorksStep from '@/components/HowItWorksStep';
 import BenefitCard from '@/components/BenefitCard';
 import TestimonialCard from '@/components/TestimonialCard';
 import { ContentItem } from '@/types/movie';
+import MoodCarousel from '@/components/MoodCarousel';
 
 const Index = () => {
   // Get a reference to the how it works section
@@ -78,6 +79,9 @@ const Index = () => {
           </p>
         </div>
       </HeroSection>
+      
+      {/* Mood Carousel - NEW SECTION */}
+      <MoodCarousel />
       
       {/* How It Works Section */}
       <section ref={howItWorksRef} className="py-16 px-4">
