@@ -12,7 +12,8 @@ export function formatMovieToContentItem(movie: any): ContentItem {
     overview: movie.overview,
     vote_average: movie.vote_average,
     media_type: 'movie',
-    genre_ids: movie.genre_ids
+    genre_ids: movie.genre_ids,
+    genres: movie.genres || [] // Add empty array as default
   };
 }
 
@@ -27,6 +28,7 @@ export function formatTVShowToContentItem(tvShow: any): ContentItem {
     overview: tvShow.overview,
     vote_average: tvShow.vote_average,
     media_type: 'tv',
-    genre_ids: tvShow.genre_ids
+    genre_ids: tvShow.genre_ids,
+    genres: tvShow.genres || [] // Add empty array as default
   };
 }

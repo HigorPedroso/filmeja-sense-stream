@@ -1,4 +1,3 @@
-
 import { ContentItem, MoodType } from "@/types/movie";
 
 // Mock data for development (fallback)
@@ -12,7 +11,8 @@ export const MOCK_MOVIES: ContentItem[] = [
     overview: "As reservas naturais da Terra estão chegando ao fim e um grupo de astronautas recebe a missão de verificar possíveis planetas para receberem a população mundial, possibilitando a continuação da espécie.",
     vote_average: 8.4,
     media_type: "movie",
-    genre_ids: [12, 18, 878]
+    genre_ids: [12, 18, 878],
+    genres: []
   },
   {
     id: 2,
@@ -23,7 +23,8 @@ export const MOCK_MOVIES: ContentItem[] = [
     overview: "Chris Gardner é um vendedor talentoso e inteligente, mas seu emprego não paga o suficiente para ele e seu filho. Quando eles são despejados, ele se inscreve para um estágio em uma corretora de valores.",
     vote_average: 8.0,
     media_type: "movie",
-    genre_ids: [18]
+    genre_ids: [18],
+    genres: []
   },
   {
     id: 3,
@@ -34,7 +35,8 @@ export const MOCK_MOVIES: ContentItem[] = [
     overview: "Um homem deprimido que sofre de insônia conhece um estranho vendedor de sabonetes e juntos formam um clube clandestino onde homens lutam entre si.",
     vote_average: 8.4,
     media_type: "movie",
-    genre_ids: [18, 53]
+    genre_ids: [18, 53],
+    genres: []
   },
   {
     id: 4,
@@ -45,7 +47,8 @@ export const MOCK_MOVIES: ContentItem[] = [
     overview: "Quando um garoto desaparece, a cidade toda participa nas buscas. Mas o que encontram são segredos, forças sobrenaturais e uma menina.",
     vote_average: 8.6,
     media_type: "tv",
-    genre_ids: [18, 10765]
+    genre_ids: [18, 10765],
+    genres: []
   },
   {
     id: 5,
@@ -56,7 +59,8 @@ export const MOCK_MOVIES: ContentItem[] = [
     overview: "Ao saber que tem câncer, um professor de química decide fabricar e vender metanfetamina para garantir o futuro da família.",
     vote_average: 8.8,
     media_type: "tv",
-    genre_ids: [18, 80]
+    genre_ids: [18, 80],
+    genres: []
   },
   {
     id: 6,
@@ -67,7 +71,8 @@ export const MOCK_MOVIES: ContentItem[] = [
     overview: "A história do cientista americano J. Robert Oppenheimer e seu papel no desenvolvimento da bomba atômica.",
     vote_average: 8.2,
     media_type: "movie",
-    genre_ids: [18, 36]
+    genre_ids: [18, 36],
+    genres: []
   },
   {
     id: 7,
@@ -78,7 +83,8 @@ export const MOCK_MOVIES: ContentItem[] = [
     overview: "Durante a Segunda Guerra Mundial, Bruno, um garoto de oito anos, e sua família saem de Berlim para residir próximo a um campo de concentração onde seu pai acaba de se tornar comandante.",
     vote_average: 8.1,
     media_type: "movie",
-    genre_ids: [18, 10752]
+    genre_ids: [18, 10752],
+    genres: []
   },
   {
     id: 8,
@@ -89,7 +95,8 @@ export const MOCK_MOVIES: ContentItem[] = [
     overview: "Vinte anos após a queda da civilização moderna, Joel é contratado para tirar Ellie de uma zona de quarentena perigosa.",
     vote_average: 8.7,
     media_type: "tv",
-    genre_ids: [18, 10765]
+    genre_ids: [18, 10765],
+    genres: []
   }
 ];
 

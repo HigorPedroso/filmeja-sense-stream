@@ -85,7 +85,13 @@ export const getContentDetails = async (id: number, type: 'movie' | 'tv'): Promi
     }
     
     return {
-      ...mockItem,
+      id: mockItem.id,
+      title: mockItem.title || mockItem.name || 'Untitled',
+      overview: mockItem.overview,
+      poster_path: mockItem.poster_path,
+      backdrop_path: mockItem.backdrop_path,
+      release_date: mockItem.release_date,
+      vote_average: mockItem.vote_average,
       genres: [
         { id: 18, name: 'Drama' },
         { id: 878, name: 'Ficção Científica' }
@@ -96,7 +102,8 @@ export const getContentDetails = async (id: number, type: 'movie' | 'tv'): Promi
         MOCK_STREAMING_PROVIDERS[0],
         MOCK_STREAMING_PROVIDERS[1]
       ],
-      trailer_key: 'zSWdZVtXT7E'
+      trailer_key: 'zSWdZVtXT7E',
+      media_type: mockItem.media_type
     };
   }
 };

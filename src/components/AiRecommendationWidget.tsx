@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,7 +15,8 @@ const mockRecommendation: ContentItem = {
   release_date: '2014-11-06',
   vote_average: 8.6,
   media_type: 'movie',
-  genre_ids: [12, 18, 878]
+  genre_ids: [12, 18, 878],
+  genres: [] // Add empty genres array
 };
 
 const AiRecommendationWidget: React.FC = () => {

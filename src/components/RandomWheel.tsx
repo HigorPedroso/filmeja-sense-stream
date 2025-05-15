@@ -17,7 +17,8 @@ const mockRecommendations: ContentItem[] = [
     release_date: '2010-07-22',
     vote_average: 8.4,
     media_type: 'movie',
-    genre_ids: [28, 878, 12]
+    genre_ids: [28, 878, 12],
+    genres: []
   },
   {
     id: 234567,
@@ -28,7 +29,8 @@ const mockRecommendations: ContentItem[] = [
     release_date: '2016-07-15',
     vote_average: 8.6,
     media_type: 'tv',
-    genre_ids: [18, 9648, 10765]
+    genre_ids: [18, 9648, 10765],
+    genres: []
   },
   {
     id: 345678,
@@ -39,7 +41,8 @@ const mockRecommendations: ContentItem[] = [
     release_date: '2002-08-31',
     vote_average: 8.5,
     media_type: 'movie',
-    genre_ids: [18, 80]
+    genre_ids: [18, 80],
+    genres: []
   }
 ];
 

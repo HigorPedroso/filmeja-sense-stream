@@ -22,7 +22,6 @@ export interface TVShow {
 }
 
 export interface ContentItem {
-  genres: any;
   id: number;
   title?: string;  // for movies
   name?: string;   // for TV shows
@@ -34,6 +33,7 @@ export interface ContentItem {
   vote_average: number;
   media_type: 'movie' | 'tv';
   genre_ids: number[];
+  genres?: Genre[]; // Making genres optional
 }
 
 export interface Genre {
