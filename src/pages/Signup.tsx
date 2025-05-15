@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,23 +7,105 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, User } from 'lucide-react';
 import VideoBackground from '@/components/VideoBackground';
 import { useToast } from '@/components/ui/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 const Signup = () => {
   const [isLogin, setIsLogin] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [session, setSession] = useState(null);
+  
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Mock authentication function
-  const handleAuthentication = () => {
-    toast({
-      title: isLogin ? 'Login bem-sucedido!' : 'Conta criada com sucesso!',
-      description: 'Redirecionando para a dashboard...',
+  // Check if user is already logged in
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      if (session) navigate('/dashboard');
     });
 
-    // Redirect to dashboard after a brief delay
-    setTimeout(() => {
-      navigate('/dashboard');
-    }, 1500);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setSession(session);
+        if (session) navigate('/dashboard');
+      }
+    );
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
+
+  const handleAuthentication = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      if (isLogin) {
+        // Login with email and password
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (error) throw error;
+
+        toast({
+          title: 'Login bem-sucedido!',
+          description: 'Redirecionando para a dashboard...',
+        });
+      } else {
+        // Sign up with email and password
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              full_name: fullName,
+            },
+          },
+        });
+
+        if (error) throw error;
+
+        toast({
+          title: 'Conta criada com sucesso!',
+          description: 'Redirecionando para a dashboard...',
+        });
+      }
+
+      // The redirect will happen automatically via onAuthStateChange
+    } catch (error) {
+      toast({
+        title: 'Erro!',
+        description: error.message || 'Ocorreu um erro durante a autenticação.',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin + '/dashboard',
+        },
+      });
+
+      if (error) throw error;
+    } catch (error) {
+      toast({
+        title: 'Erro!',
+        description: error.message || 'Ocorreu um erro ao conectar com Google.',
+        variant: 'destructive',
+      });
+      setLoading(false);
+    }
   };
 
   return (
@@ -44,11 +126,13 @@ const Signup = () => {
               : 'Comece sua jornada por apenas R$9,99/mês'}
           </p>
           
-          <div className="space-y-4">
+          <form onSubmit={handleAuthentication} className="space-y-4">
             <Button 
               variant="outline" 
               className="w-full bg-white/5 border-white/10 text-white hover:bg-white/10"
-              onClick={() => {}}
+              onClick={handleGoogleLogin}
+              type="button"
+              disabled={loading}
             >
               <img src="/google.svg" alt="Google" className="w-5 h-5 mr-2" />
               Continuar com Google
@@ -69,6 +153,10 @@ const Signup = () => {
                 <Input
                   placeholder="Nome completo"
                   className="pl-10 bg-white/5 border-white/10 text-white"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  required={!isLogin}
+                  disabled={loading}
                 />
               </div>
             )}
@@ -79,6 +167,10 @@ const Signup = () => {
                 type="email"
                 placeholder="Email"
                 className="pl-10 bg-white/5 border-white/10 text-white"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                disabled={loading}
               />
             </div>
 
@@ -88,16 +180,21 @@ const Signup = () => {
                 type="password"
                 placeholder="Senha"
                 className="pl-10 bg-white/5 border-white/10 text-white"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                disabled={loading}
               />
             </div>
 
             <Button 
               className="w-full bg-filmeja-purple hover:bg-filmeja-purple/90 text-white"
-              onClick={handleAuthentication}
+              type="submit"
+              disabled={loading}
             >
-              {isLogin ? 'Entrar' : 'Criar conta'}
+              {loading ? 'Carregando...' : isLogin ? 'Entrar' : 'Criar conta'}
             </Button>
-          </div>
+          </form>
 
           <div className="text-center mt-6">
             <p className="text-gray-400">
@@ -105,6 +202,8 @@ const Signup = () => {
               <button
                 onClick={() => setIsLogin(!isLogin)}
                 className="text-filmeja-purple hover:underline ml-2"
+                type="button"
+                disabled={loading}
               >
                 {isLogin ? 'Criar conta' : 'Fazer login'}
               </button>
@@ -122,15 +221,6 @@ const Signup = () => {
             </Link>
             .
           </p>
-
-          <div className="mt-6 text-center">
-            <Link 
-              to="/dashboard" 
-              className="text-filmeja-purple hover:underline text-sm"
-            >
-              Acesso direto à dashboard (Demo)
-            </Link>
-          </div>
         </div>
       </div>
     </div>
