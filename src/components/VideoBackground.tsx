@@ -1,87 +1,40 @@
 
-import HeroCarousel from './HeroCarousel';
-import { getTrending } from '@/lib/tmdb';
-import { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 const VideoBackground = () => {
-  const [videos, setVideos] = useState<string[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
-
+  const [videoLoaded, setVideoLoaded] = useState<boolean>(false);
+  
+  // Sample atmospheric video backgrounds
+  const backgrounds = [
+    'https://assets.mixkit.co/videos/preview/mixkit-star-field-with-slow-movement-31439-large.mp4',
+    'https://assets.mixkit.co/videos/preview/mixkit-dark-abstract-waves-background-loop-40144-large.mp4',
+    'https://assets.mixkit.co/videos/preview/mixkit-purple-wavy-background-with-dots-40143-large.mp4'
+  ];
+  
+  const randomVideo = backgrounds[Math.floor(Math.random() * backgrounds.length)];
+  
   useEffect(() => {
-    const fetchVideos = async () => {
-      try {
-        const response = await fetch(
-          `https://api.themoviedb.org/3/movie/now_playing?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=pt-BR&page=1`
-        );
-        const data = await response.json();
-        
-        const trailerPromises = data.results.slice(0, 5).map(async (movie: any) => {
-          const videoResponse = await fetch(
-            `https://api.themoviedb.org/3/movie/${movie.id}/videos?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=pt-BR`
-          );
-          const videoData = await videoResponse.json();
-          
-          // Get YouTube trailer with fallback to English language
-          let trailer = videoData.results?.find(
-            (v: any) => v.type === "Trailer" && v.site === "YouTube"
-          );
-          
-          if (!trailer) {
-            const enVideoResponse = await fetch(
-              `https://api.themoviedb.org/3/movie/${movie.id}/videos?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=en-US`
-            );
-            const enVideoData = await enVideoResponse.json();
-            trailer = enVideoData.results?.find(
-              (v: any) => v.type === "Trailer" && v.site === "YouTube"
-            );
-          }
-          
-          return trailer?.key || null;
-        });
-
-        const trailerKeys = (await Promise.all(trailerPromises))
-          .filter((key): key is string => Boolean(key));
-
-        if (trailerKeys.length > 0) {
-          setVideos(trailerKeys);
-        }
-      } catch (error) {
-        console.error('Error fetching videos:', error);
-      }
-    };
-
-    fetchVideos();
+    const timer = setTimeout(() => {
+      setVideoLoaded(true);
+    }, 1000);
+    
+    return () => clearTimeout(timer);
   }, []);
-
-  useEffect(() => {
-    if (videos.length === 0) return;
-
-    const interval = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % videos.length);
-    }, 15000);
-
-    return () => clearInterval(interval);
-  }, [videos]);
-
-  if (!videos.length) return null;
-
+  
   return (
-    <div className="fixed inset-0 -z-5">
-      <div className="absolute inset-0 bg-gradient-to-b from-filmeja-dark/80 via-filmeja-dark/70 to-filmeja-dark/80 z-20" />
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="relative w-full h-full">
-          <iframe
-            key={videos[currentIndex]}
-            src={`https://www.youtube.com/embed/${videos[currentIndex]}?autoplay=1&mute=1&controls=0&showinfo=0&rel=0&loop=1&playlist=${videos[currentIndex]}&enablejsapi=1`}
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            className="absolute w-full h-full scale-150 origin-center"
-            style={{
-              pointerEvents: 'none',
-              opacity: 0.5,
-            }}
-          />
-        </div>
-      </div>
+    <div className="fixed inset-0 -z-10 overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-b from-filmeja-dark/70 via-filmeja-dark/80 to-filmeja-dark z-10"></div>
+      <video
+        className={`absolute inset-0 object-cover w-full h-full ${
+          videoLoaded ? 'opacity-30' : 'opacity-0'
+        } transition-opacity duration-1000`}
+        autoPlay
+        muted
+        loop
+        playsInline
+      >
+        <source src={randomVideo} type="video/mp4" />
+      </video>
     </div>
   );
 };

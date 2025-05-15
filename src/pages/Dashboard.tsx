@@ -7,7 +7,7 @@ import { Film, User, LogOut, BookOpen, Home, Star, Clock, Heart } from 'lucide-r
 import { Button } from '@/components/ui/button';
 import ContentCarousel from '@/components/ContentCarousel';
 import VideoBackground from '@/components/VideoBackground';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import MoodSelector from '@/components/MoodSelector';
 import GenreSelector from '@/components/GenreSelector';
 import AiRecommendationWidget from '@/components/AiRecommendationWidget';
