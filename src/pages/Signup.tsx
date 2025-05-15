@@ -3,12 +3,28 @@ import React, { useState } from 'react';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, User } from 'lucide-react';
 import VideoBackground from '@/components/VideoBackground';
+import { useToast } from '@/components/ui/use-toast';
 
 const Signup = () => {
   const [isLogin, setIsLogin] = useState(true);
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  // Mock authentication function
+  const handleAuthentication = () => {
+    toast({
+      title: isLogin ? 'Login bem-sucedido!' : 'Conta criada com sucesso!',
+      description: 'Redirecionando para a dashboard...',
+    });
+
+    // Redirect to dashboard after a brief delay
+    setTimeout(() => {
+      navigate('/dashboard');
+    }, 1500);
+  };
 
   return (
     <>
@@ -75,7 +91,10 @@ const Signup = () => {
               />
             </div>
 
-            <Button className="w-full bg-filmeja-purple hover:bg-filmeja-purple/90 text-white">
+            <Button 
+              className="w-full bg-filmeja-purple hover:bg-filmeja-purple/90 text-white"
+              onClick={handleAuthentication}
+            >
               {isLogin ? 'Entrar' : 'Criar conta'}
             </Button>
           </div>
@@ -103,11 +122,19 @@ const Signup = () => {
             </Link>
             .
           </p>
+
+          <div className="mt-6 text-center">
+            <Link 
+              to="/dashboard" 
+              className="text-filmeja-purple hover:underline text-sm"
+            >
+              Acesso direto à dashboard (Demo)
+            </Link>
+          </div>
         </div>
       </div>
     </div>
     </>
-    
   );
 };
 

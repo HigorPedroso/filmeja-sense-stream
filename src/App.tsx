@@ -10,6 +10,7 @@ import Explore from "./pages/Explore";
 import MoodSelection from "./pages/MoodSelection";
 import ContentDetails from "./pages/ContentDetails";
 import Signup from "./pages/Signup";
+import Dashboard from "./pages/Dashboard";
 
 const queryClient = new QueryClient();
 
@@ -25,6 +26,7 @@ const App = () => (
           <Route path="/mood" element={<MoodSelection />} />
           <Route path="/details/:type/:id" element={<ContentDetails />} />
           <Route path="/signup" element={<Signup />} />
+          <Route path="/dashboard" element={<Dashboard />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
