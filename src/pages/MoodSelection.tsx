@@ -17,6 +17,7 @@ const MoodSelection = () => {
   const [showRecommendations, setShowRecommendations] = useState(false);
   const [recommendations, setRecommendations] = useState<ContentItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
   
   const [showModal, setShowModal] = useState(false);
   
@@ -35,19 +36,23 @@ const MoodSelection = () => {
     }
   };
   
-  const handleGetRecommendations = async () => {
-    if (selectedMood) {
-      setIsLoading(true);
-      try {
-        const results = await getRecommendationsByMood(selectedMood);
-        setRecommendations(results);
-        setShowRecommendations(true);
-      } catch (error) {
-        console.error('Error fetching recommendations:', error);
-      } finally {
-        setIsLoading(false);
-      }
+  const handleGetRecommendations = async (moodId: string) => {
+    setLoading(true);
+    setSelectedMood(moodId);
+    setShowModal(true); // Show modal immediately
+
+    try {
+      // Add delay for smoother UX
+      const [movies] = await Promise.all([
+        getMoviesByMood(moodId),
+        new Promise((resolve) => setTimeout(resolve, 3000)),
+      ]);
+      setRecommendations(movies.slice(0, 3));
+    } catch (error) {
+      console.error("Error fetching recommendations:", error);
     }
+
+    setLoading(false);
   };
   
   const handleReset = () => {
