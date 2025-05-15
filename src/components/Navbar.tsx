@@ -38,9 +38,9 @@ const Navbar: React.FC<NavbarProps> = ({ transparent = false }) => {
           <Link to="/" className="text-white hover:text-filmeja-purple transition-colors">
             Início
           </Link>
-          <Link to="/explore" className="text-white hover:text-filmeja-purple transition-colors">
+          {/* <Link to="/explore" className="text-white hover:text-filmeja-purple transition-colors">
             Explorar
-          </Link>
+          </Link> */}
           <Link to="/mood" className="text-white hover:text-filmeja-purple transition-colors">
             Por Humor
           </Link>
@@ -54,7 +54,7 @@ const Navbar: React.FC<NavbarProps> = ({ transparent = false }) => {
             <Search className="h-5 w-5" />
           </Button>
 
-          <Link to="/login">
+          <Link to="/signup">
             <Button variant="ghost" size="icon" className="text-white hover:text-filmeja-purple">
               <User className="h-5 w-5" />
             </Button>
@@ -62,7 +62,7 @@ const Navbar: React.FC<NavbarProps> = ({ transparent = false }) => {
 
           <Link to="/signup">
             <Button className="bg-filmeja-purple hover:bg-filmeja-purple/90 text-white">
-              Assinar
+              Começar
             </Button>
           </Link>
         </div>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import GenreModal from "./GenreModal";
 import { ContentItem } from "@/types/movie";
@@ -19,6 +19,7 @@ const GenreSelector = () => {
   const [recommendations, setRecommendations] = useState<ContentItem[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [currentAnimatedIndex, setCurrentAnimatedIndex] = useState(0);
   const navigate = useNavigate();
 
   const fetchRecommendations = async (genreId: number) => {
@@ -51,6 +52,14 @@ const GenreSelector = () => {
     setLoading(false);
   };
 
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentAnimatedIndex((prev) => (prev + 1) % genres.length);
+    }, 1000); // Change button every 2 seconds
+  
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <section className="py-16 px-4">
       <div className="container mx-auto">
@@ -64,16 +73,17 @@ const GenreSelector = () => {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
-          {genres.map((genre) => (
+          {genres.map((genre, index) => (
             <button
-              key={genre.name}
-              onClick={() => handleGenreClick(genre)}
-              className={`${genre.color} hover:opacity-90 transition-opacity duration-300 
-                rounded-lg py-4 px-6 text-center text-white font-medium shadow-lg
-                hover:scale-105 transform transition-transform duration-300`}
-            >
-              {genre.name}
-            </button>
+            key={genre.name}
+            onClick={() => handleGenreClick(genre)}
+            className={`${genre.color} transition-all duration-500 ease-in-out
+              rounded-lg py-4 px-6 text-center text-white font-medium shadow-lg
+              ${index === currentAnimatedIndex ? 'scale-110 shadow-xl z-10' : 'scale-100'}
+              hover:opacity-90 hover:scale-105`}
+          >
+            {genre.name}
+          </button>
           ))}
         </div>
       </div>

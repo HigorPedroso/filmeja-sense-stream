@@ -22,6 +22,7 @@ export interface TVShow {
 }
 
 export interface ContentItem {
+  genres: any;
   id: number;
   title?: string;  // for movies
   name?: string;   // for TV shows

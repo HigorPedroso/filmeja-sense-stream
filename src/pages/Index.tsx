@@ -5,17 +5,39 @@ import ContentCarousel from "@/components/ContentCarousel";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 // Update the imports at the top to include Play
-import { ArrowDown, Heart, Search, Settings, Play } from "lucide-react";
+import {
+  ArrowDown,
+  Heart,
+  Search,
+  Settings,
+  Play,
+  Gamepad2,
+  Lightbulb,
+  BookOpen,
+  Users,
+  Coffee,
+  Palette,
+} from "lucide-react";
 import { Link } from "react-router-dom";
 import HowItWorksStep from "@/components/HowItWorksStep";
 import BenefitCard from "@/components/BenefitCard";
 import TestimonialCard from "@/components/TestimonialCard";
 import { ContentItem } from "@/types/movie";
 import MoodCarousel from "@/components/MoodCarousel";
-import { getTrending, getUpcoming2025, getUpcomingTVShows } from "@/lib/tmdb";
+import {
+  getTrending,
+  getUpcoming2025,
+  getUpcomingTVShows,
+  getTopRatedMovies,
+} from "@/lib/tmdb";
 import useTypewriter from "@/hooks/useTypewriter";
 import { BookmarkPlus } from "lucide-react";
 import GenreSelector from "@/components/GenreSelector";
+import { useCountUp } from "@/hooks/useCountUp";
+import { useInView } from "@/hooks/useInView";
+import DesktopMockup from "@/components/DesktopMockup";
+import MobileMockup from "@/components/MobileMockup";
+import StreamingServices from '@/components/StreamingServices';
 
 const Index = () => {
   // Get a reference to the how it works section
@@ -29,6 +51,9 @@ const Index = () => {
   const [loadingUpcoming, setLoadingUpcoming] = useState(true);
   const [upcomingTVShows, setUpcomingTVShows] = useState<ContentItem[]>([]);
   const [loadingTVShows, setLoadingTVShows] = useState(true);
+  const [topRatedMovies, setTopRatedMovies] = useState<ContentItem[]>([]);
+  const { ref: timeValueRef, isInView } = useInView();
+  const [count, setCount] = useState(0);
   const scrollToPlans = () => {
     plansRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -88,6 +113,43 @@ const Index = () => {
     howItWorksRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  useEffect(() => {
+    if (isInView) {
+      let startTimestamp: number | null = null;
+      const duration = 2000;
+      const endValue = 60;
+
+      const step = (timestamp: number) => {
+        if (!startTimestamp) startTimestamp = timestamp;
+        const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+
+        setCount(Math.floor(progress * endValue));
+
+        if (progress < 1) {
+          window.requestAnimationFrame(step);
+        }
+      };
+
+      window.requestAnimationFrame(step);
+    } else {
+      setCount(0);
+    }
+  }, [isInView]);
+
+  useEffect(() => {
+    const fetchTopRatedMovies = async () => {
+      try {
+        const movies = await getTopRatedMovies();
+        setTopRatedMovies(movies);
+      } catch (error) {
+        console.error("Error fetching top rated movies:", error);
+        setTopRatedMovies([]);
+      }
+    };
+
+    fetchTopRatedMovies();
+  }, []);
+
   const headlines = [
     "Não sabe o que assistir? O FilmeJá decide por você.",
     "Sem ideia do que assistir? O FilmeJá escolhe pra você.",
@@ -109,7 +171,7 @@ const Index = () => {
       {/* Navbar with transparent background on the hero section */}
       <Navbar transparent />
 
-      {/* Hero Section with Image Slideshow - explicitly set useSlideshow to true */}
+      {/* Hero Section with Image Slideshow */}
       <HeroSection useSlideshow={true}>
         <div className="max-w-3xl animate-fade-in">
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 min-h-[3em] lg:min-h-[2em]">
@@ -332,6 +394,8 @@ const Index = () => {
         </div>
       </section>
 
+      <StreamingServices />
+
       {/* Testimonials Section */}
       <section className="py-16 px-4 bg-gradient-to-b from-filmeja-dark/50 to-filmeja-dark">
         <div className="container mx-auto">
@@ -365,6 +429,302 @@ const Index = () => {
         </div>
       </section>
 
+      {/* Stats Section */}
+      <section className="py-24 relative overflow-hidden bg-filmeja-dark">
+        {/* Background Image with reduced opacity */}
+        <div
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat scale-105 transform transition-transform duration-[30s] hover:scale-110 opacity-30"
+          style={{
+            backgroundImage: `url('https://images.unsplash.com/photo-1586899028174-e7098604235b?q=80&w=2071&auto=format&fit=crop')`,
+          }}
+        />
+
+        {/* Gradient Overlay with theme color */}
+        <div className="absolute inset-0 bg-gradient-to-br from-filmeja-dark via-filmeja-dark/80 to-filmeja-dark backdrop-blur-sm" />
+
+        {/* Content remains the same */}
+        <div className="container mx-auto px-4 relative z-10">
+          <h2 className="text-4xl md:text-5xl font-bold text-white text-center mb-16 max-w-4xl mx-auto leading-tight">
+            Todo mundo ama assistir, mas ninguém gosta de perder tempo
+            decidindo.
+          </h2>
+
+          {/* Cards with adjusted background */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+            <div className="bg-filmeja-dark/50 backdrop-blur-md rounded-xl p-8 border border-white/10 transform hover:scale-105 transition-transform duration-300">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="text-6xl font-bold text-filmeja-purple">
+                  +10
+                </div>
+                <div className="text-2xl text-white font-semibold">minutos</div>
+              </div>
+              <p className="text-gray-300 text-lg">
+                Segundo um estudo global da Accenture, brasileiros levam no
+                mínimo 10 minutos para decidir o que assistir
+              </p>
+            </div>
+
+            <div className="bg-black/30 backdrop-blur-md rounded-xl p-8 border border-white/10 transform hover:scale-105 transition-transform duration-300">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="text-6xl font-bold text-filmeja-purple">44</div>
+                <div className="text-2xl text-white font-semibold">%</div>
+              </div>
+              <p className="text-gray-300 text-lg">
+                das pessoas não conseguem encontrar nada que valha a pena
+                assistir. Quase metade do público gasta tempo procurando e
+                termina frustrado.
+              </p>
+            </div>
+
+            <div className="bg-black/30 backdrop-blur-md rounded-xl p-8 border border-white/10 transform hover:scale-105 transition-transform duration-300">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="text-6xl font-bold text-filmeja-purple">
+                  +60
+                </div>
+                <div className="text-2xl text-white font-semibold">horas</div>
+              </div>
+              <p className="text-gray-300 text-lg">
+                horas perdidas por ano procurando o que assistir
+              </p>
+            </div>
+          </div>
+
+          <div className="text-center mt-12">
+            <p className="text-gray-200 text-xl max-w-2xl mx-auto font-medium">
+              O excesso de opções virou um problema.
+              <span className="text-filmeja-purple">
+                {" "}
+                O FilmeJá resolve isso em segundos.
+              </span>
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Time Value Section */}
+      <section
+        ref={timeValueRef}
+        className="py-24 relative overflow-hidden bg-filmeja-dark"
+      >
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto text-center">
+            <div className="flex items-center justify-center gap-3 mb-6">
+              <div className="text-8xl md:text-9xl font-bold text-filmeja-purple">
+                {count}
+              </div>
+              <div className="text-6xl md:text-7xl text-white font-bold">h</div>
+            </div>
+
+            <h3 className="text-2xl md:text-3xl text-white font-medium mb-8">
+              É isso que você perde só tentando decidir o que assistir.
+            </h3>
+
+            <h4 className="text-xl text-gray-300 mb-16">
+              Menos rolagem. Mais diversão. Mais vida.
+            </h4>
+
+            {/* Activity Cards Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
+              <div className="bg-filmeja-dark/50 backdrop-blur-sm rounded-lg p-6 border border-white/10">
+                <div className="flex flex-col items-center gap-2">
+                  <div className="text-red-400 mb-2">
+                    <Heart className="w-8 h-8" />
+                  </div>
+                  <h5 className="text-white font-semibold">Cuidar da Saúde</h5>
+                  <p className="text-sm text-gray-400">
+                    Tempo para exercícios e bem-estar
+                  </p>
+                  <div className="mt-2 text-red-400 font-bold">35h</div>
+                </div>
+              </div>
+
+              <div className="bg-filmeja-dark/50 backdrop-blur-sm rounded-lg p-6 border border-white/10">
+                <div className="flex flex-col items-center gap-2">
+                  <div className="text-blue-400 mb-2">
+                    <Users className="w-8 h-8" />
+                  </div>
+                  <h5 className="text-white font-semibold">Família e Amigos</h5>
+                  <p className="text-sm text-gray-400">
+                    Momentos especiais com quem você ama
+                  </p>
+                  <div className="mt-2 text-blue-400 font-bold">30h</div>
+                </div>
+              </div>
+
+              <div className="bg-filmeja-dark/50 backdrop-blur-sm rounded-lg p-6 border border-white/10">
+                <div className="flex flex-col items-center gap-2">
+                  <div className="text-yellow-400 mb-2">
+                    <BookOpen className="w-8 h-8" />
+                  </div>
+                  <h5 className="text-white font-semibold">Leitura</h5>
+                  <p className="text-sm text-gray-400">
+                    Ler aquele livro que está parado
+                  </p>
+                  <div className="mt-2 text-yellow-400 font-bold">20h</div>
+                </div>
+              </div>
+
+              <div className="bg-filmeja-dark/50 backdrop-blur-sm rounded-lg p-6 border border-white/10">
+                <div className="flex flex-col items-center gap-2">
+                  <div className="text-purple-400 mb-2">
+                    <Lightbulb className="w-8 h-8" />
+                  </div>
+                  <h5 className="text-white font-semibold">
+                    Aprender Algo Novo
+                  </h5>
+                  <p className="text-sm text-gray-400">
+                    Desenvolver novas habilidades
+                  </p>
+                  <div className="mt-2 text-purple-400 font-bold">15h</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Second Row */}
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-w-3xl mx-auto mt-4">
+              <div className="bg-filmeja-dark/50 backdrop-blur-sm rounded-lg p-6 border border-white/10">
+                <div className="flex flex-col items-center gap-2">
+                  <div className="text-green-400 mb-2">
+                    <Gamepad2 className="w-8 h-8" />
+                  </div>
+                  <h5 className="text-white font-semibold">Hobbies</h5>
+                  <p className="text-sm text-gray-400">
+                    Dedicar tempo ao que você gosta
+                  </p>
+                  <div className="mt-2 text-green-400 font-bold">15h</div>
+                </div>
+              </div>
+
+              <div className="bg-filmeja-dark/50 backdrop-blur-sm rounded-lg p-6 border border-white/10">
+                <div className="flex flex-col items-center gap-2">
+                  <div className="text-orange-400 mb-2">
+                    <Coffee className="w-8 h-8" />
+                  </div>
+                  <h5 className="text-white font-semibold">Relaxar</h5>
+                  <p className="text-sm text-gray-400">
+                    Momentos de paz e tranquilidade
+                  </p>
+                  <div className="mt-2 text-orange-400 font-bold">10h</div>
+                </div>
+              </div>
+
+              <div className="bg-filmeja-dark/50 backdrop-blur-sm rounded-lg p-6 border border-white/10">
+                <div className="flex flex-col items-center gap-2">
+                  <div className="text-pink-400 mb-2">
+                    <Palette className="w-8 h-8" />
+                  </div>
+                  <h5 className="text-white font-semibold">Criatividade</h5>
+                  <p className="text-sm text-gray-400">
+                    Explorar seu lado artístico
+                  </p>
+                  <div className="mt-2 text-pink-400 font-bold">15h</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Cross-Platform Section */}
+      <section className="py-24 relative overflow-hidden bg-filmeja-dark">
+        <div className="container mx-auto px-4">
+          <div className="max-w-6xl mx-auto">
+            <div className="text-center mb-4">
+              <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
+                Descubra o que assistir em qualquer lugar.
+              </h2>
+              <p className="text-xl text-gray-300 max-w-2xl mx-auto">
+                No celular, tablet ou desktop — o FilmeJá te recomenda filmes e
+                séries perfeitos, onde você estiver.
+              </p>
+            </div>
+
+            <div className="relative flex flex-col lg:flex-row items-center gap-8 justify-center">
+              {/* Desktop Mockup */}
+              <div className="w-full max-w-5xl mx-auto rounded-xl p-1 ">
+                <div className="flex flex-row items-center justify-between">
+                  <DesktopMockup>
+                    <div className="flex flex-col gap-4 mt-2">
+                      <h3 className="text-filmeja-purple text-2xl font-bold text-center">
+                        Filme<span className="text-white">Já</span>
+                      </h3>
+                      <div className="flex gap-4 animate-scroll">
+                        {topRatedMovies.map((movie, index) => (
+                          <div
+                            key={index}
+                            className="flex-none w-[120px] aspect-[2/3] rounded-lg overflow-hidden"
+                          >
+                            <img
+                              src={`https://image.tmdb.org/t/p/w500${movie.poster_path}`}
+                              alt={movie.title}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </DesktopMockup>
+
+                  <MobileMockup>
+                    <div className="relative h-[500px] overflow-hidden rounded-lg bg-filmeja-dark/80">
+                      <div className="flex flex-col gap-3 p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="text-white text-lg font-semibold">
+                            Para você agora
+                          </h3>
+                          <span className="text-filmeja-purple text-sm">
+                            20:45
+                          </span>
+                        </div>
+
+                        {topRatedMovies.slice(0, 3).map((movie, index) => (
+                          <div
+                            key={index}
+                            className="relative group cursor-pointer"
+                          >
+                            <div className="relative w-full aspect-[16/9] rounded-lg overflow-hidden">
+                              <img
+                                src={`https://image.tmdb.org/t/p/w500${movie.poster_path}`}
+                                alt={movie.title}
+                                className="w-full h-full object-cover transform transition-transform group-hover:scale-105"
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </div>
+                            <div className="mt-2">
+                              <h4 className="text-white font-medium text-sm group-hover:text-filmeja-purple transition-colors">
+                                {movie.title}
+                              </h4>
+                              <p className="text-gray-400 text-xs mt-1 line-clamp-2">
+                                {movie.overview}
+                              </p>
+                            </div>
+                            <div className="absolute top-2 right-2 bg-filmeja-purple/90 text-white text-xs px-2 py-1 rounded-full">
+                              {movie.vote_average.toFixed(1)} ★
+                            </div>
+                          </div>
+                        ))}
+
+                        <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-filmeja-dark to-transparent">
+                          <p className="text-white/80 text-sm text-center">
+                            Deslize para mais recomendações personalizadas ✨
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </MobileMockup>
+                </div>
+              </div>
+            </div>
+
+            <div className="text-center mt-0">
+              <p className="text-xl text-filmeja-purple font-semibold">
+                Recomendações inteligentes sempre ao seu alcance.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* CTA Section */}
       <section
         ref={plansRef}
@@ -382,7 +742,7 @@ const Index = () => {
                 size="lg"
                 className="bg-filmeja-purple hover:bg-filmeja-purple/90 text-white mb-4"
               >
-                Assinar com Stripe
+                Começar
               </Button>
             </Link>
             <p className="text-gray-300 text-sm">

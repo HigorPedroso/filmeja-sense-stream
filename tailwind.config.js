@@ -7,7 +7,7 @@ export default {
 		"./components/**/*.{ts,tsx}",
 		"./app/**/*.{ts,tsx}",
 		"./src/**/*.{ts,tsx}",
-	],
+	  ],
 	prefix: "",
 	theme: {
 		container: {
@@ -113,6 +113,20 @@ export default {
 				'slide-in': 'slide-in 0.4s ease-out',
 				'pulse-gentle': 'pulse-gentle 2s ease-in-out infinite',
 				'zoom-in': 'zoom-in 0.2s ease-out forwards',
+				'scroll-vertical': 'scrollVertical 20s linear infinite',
+			},
+			theme: {
+				extend: {
+					keyframes: {
+						marquee: {
+							'0%': { transform: 'translateX(0%)' },
+							'100%': { transform: 'translateX(-100%)' }
+						}
+					},
+					animation: {
+						'marquee': 'marquee 40s linear infinite'
+					}
+				}
 			},
 		},
 	},

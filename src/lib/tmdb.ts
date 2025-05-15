@@ -1,5 +1,8 @@
 
 // This file now serves as a re-export of the new modular structure
+
+import { ContentItem } from '@/types/movie';
+
 // to maintain backward compatibility with existing imports
 export * from './tmdb/index';
 
@@ -112,4 +115,52 @@ export const getUpcomingTVShows = async () => {
     title: show.name,
     release_date: show.first_air_date
   }));
+};
+
+const mapToContentItem = (item: any): ContentItem => {
+  return {
+    id: item.id,
+    title: item.title || item.name,
+    overview: item.overview,
+    poster_path: item.poster_path,
+    backdrop_path: item.backdrop_path,
+    media_type: item.media_type || 'movie',
+    release_date: item.release_date || item.first_air_date,
+    vote_average: item.vote_average,
+    genre_ids: item.genre_ids,
+    genres: item.genres
+  };
+};
+
+export const getTopRatedMovies = async (): Promise<ContentItem[]> => {
+  try {
+    const response = await fetch(
+      `${BASE_URL}/movie/upcoming?api_key=${TMDB_API_KEY}&language=pt-BR`
+    );
+    const data = await response.json();
+    return data.results.map(mapToContentItem);
+  } catch (error) {
+    console.error("Error fetching top rated movies:", error);
+    return [];
+  }
+};
+
+export const getRecommendationsByMood = async (mood: string): Promise<ContentItem[]> => {
+  try {
+    const genres = moodGenreMap[mood as keyof typeof moodGenreMap] || [];
+    
+    const response = await fetch(
+      `${BASE_URL}/discover/movie?api_key=${TMDB_API_KEY}&with_genres=${genres.join(',')}&sort_by=popularity.desc&language=pt-BR`
+    );
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch mood recommendations');
+    }
+
+    const data = await response.json();
+    return data.results.slice(0, 3).map(mapToContentItem);
+  } catch (error) {
+    console.error('Error fetching mood recommendations:', error);
+    return [];
+  }
 };

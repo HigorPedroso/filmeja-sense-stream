@@ -8,6 +8,9 @@ import { getRecommendationsByMood } from '@/lib/tmdb';
 import { ContentItem, MoodType } from '@/types/movie';
 import MovieCard from '@/components/MovieCard';
 import { Loader2 } from 'lucide-react';
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Lock, Star } from "lucide-react";
+import MovieSkeleton from "@/components/MovieSkeleton";
 
 const MoodSelection = () => {
   const [selectedMood, setSelectedMood] = useState<MoodType | null>(null);
@@ -15,8 +18,21 @@ const MoodSelection = () => {
   const [recommendations, setRecommendations] = useState<ContentItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   
-  const handleMoodSelect = (mood: MoodType) => {
+  const [showModal, setShowModal] = useState(false);
+  
+  const handleMoodSelect = async (mood: MoodType) => {
     setSelectedMood(mood);
+    setShowModal(true);
+    setIsLoading(true);
+    
+    try {
+      const results = await getRecommendationsByMood(mood);
+      setRecommendations(results);
+    } catch (error) {
+      console.error('Error fetching recommendations:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
   
   const handleGetRecommendations = async () => {
