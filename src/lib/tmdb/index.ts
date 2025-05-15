@@ -17,3 +17,4 @@ export { getTrending } from './trending';
 export { searchContent } from './search';
 export { getRecommendationsByMood } from './recommendations';
 export { getContentDetails } from './content-details';
+export { getMoviesByMood } from './utils';

@@ -4,13 +4,13 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { MOCK_MOOD_OPTIONS } from '@/lib/tmdb';
-import { getRecommendationsByMood } from '@/lib/tmdb';
 import { ContentItem, MoodType } from '@/types/movie';
 import MovieCard from '@/components/MovieCard';
 import { Loader2 } from 'lucide-react';
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Lock, Star } from "lucide-react";
 import MovieSkeleton from "@/components/MovieSkeleton";
+import { getMoviesByMood } from '@/lib/tmdb/utils';
 
 const MoodSelection = () => {
   const [selectedMood, setSelectedMood] = useState<MoodType | null>(null);
@@ -27,7 +27,7 @@ const MoodSelection = () => {
     setIsLoading(true);
     
     try {
-      const results = await getRecommendationsByMood(mood);
+      const results = await getMoviesByMood(mood);
       setRecommendations(results);
     } catch (error) {
       console.error('Error fetching recommendations:', error);
@@ -36,18 +36,20 @@ const MoodSelection = () => {
     }
   };
   
-  const handleGetRecommendations = async (moodId: string) => {
+  const handleGetRecommendations = async () => {
+    if (!selectedMood) return;
+    
     setLoading(true);
-    setSelectedMood(moodId);
     setShowModal(true); // Show modal immediately
 
     try {
       // Add delay for smoother UX
       const [movies] = await Promise.all([
-        getMoviesByMood(moodId),
+        getMoviesByMood(selectedMood),
         new Promise((resolve) => setTimeout(resolve, 3000)),
       ]);
       setRecommendations(movies.slice(0, 3));
+      setShowRecommendations(true);
     } catch (error) {
       console.error("Error fetching recommendations:", error);
     }
