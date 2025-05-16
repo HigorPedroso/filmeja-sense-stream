@@ -23,3 +23,19 @@
 .animate-scroll-vertical {
   animation: scroll-vertical 30s linear infinite;
 }
+
+.ripple-effect {
+  position: fixed;
+  border-radius: 50%;
+  pointer-events: none;
+  transform: scale(0);
+  animation: ripple 1s ease-out;
+  background: linear-gradient(to right, rgb(120, 0, 255), rgb(0, 70, 255));
+}
+
+@keyframes ripple {
+  to {
+    transform: scale(4);
+    opacity: 0;
+  }
+}

@@ -28,7 +28,10 @@ import ImageBackground from "@/components/ImageBackground";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion, AnimatePresence } from "framer-motion";
-import trailerSound from '@/assets/sounds/trailer-whoosh.mp3'; // You'll need to add this sound file
+import trailerSound from "@/assets/sounds/trailer-whoosh.mp3"; // You'll need to add this sound file
+import { Onboarding } from "@/components/Onboarding/Onboarding";
+import { supabase } from "@/integrations/supabase/client";
+import { ContentModal } from "@/components/ContentModal/ContentModal";
 
 // Mock user data - in a real app, this would come from authentication
 const mockUser = {
@@ -57,6 +60,55 @@ const moodToGenres: Record<string, number[]> = {
   thoughtful: [18, 878, 9648, 99], // Drama, Sci-Fi, Mystery, Documentary
 };
 
+const moodToGenresTV: Record<string, number[]> = {
+  happy: [35, 10762, 16], // Comedy, Kids, Animation
+  sad: [18, 10768, 10749], // Drama, War & Politics, Romance
+  excited: [10759, 9648, 10765], // Action & Adventure, Mystery, Sci-Fi & Fantasy
+  relaxed: [99, 10751], // Documentary, Family
+  romantic: [10749, 10766], // Romance, Soap
+  scared: [9648, 80, 10765], // Mystery, Crime, Sci-Fi & Fantasy (substitui Horror)
+  thoughtful: [18, 99, 9648], // Drama, Documentary, Mystery
+};
+
+const genreCategories = [
+  {
+    name: "Ação e Aventura",
+    icon: "🎬",
+    genres: [
+      { id: 28, name: "Ação", color: "bg-red-500/20" },
+      { id: 12, name: "Aventura", color: "bg-orange-500/20" },
+      { id: 53, name: "Thriller", color: "bg-yellow-500/20" },
+    ],
+  },
+  {
+    name: "Drama e Emoção",
+    icon: "🎭",
+    genres: [
+      { id: 18, name: "Drama", color: "bg-blue-500/20" },
+      { id: 10749, name: "Romance", color: "bg-pink-500/20" },
+      { id: 10751, name: "Família", color: "bg-green-500/20" },
+    ],
+  },
+  {
+    name: "Fantasia e Ficção",
+    icon: "✨",
+    genres: [
+      { id: 14, name: "Fantasia", color: "bg-purple-500/20" },
+      { id: 878, name: "Ficção Científica", color: "bg-indigo-500/20" },
+      { id: 16, name: "Animação", color: "bg-cyan-500/20" },
+    ],
+  },
+  {
+    name: "Outros Gêneros",
+    icon: "🎪",
+    genres: [
+      { id: 35, name: "Comédia", color: "bg-yellow-400/20" },
+      { id: 27, name: "Terror", color: "bg-red-900/20" },
+      { id: 9648, name: "Mistério", color: "bg-violet-500/20" },
+    ],
+  },
+];
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -74,8 +126,17 @@ const Dashboard = () => {
   const [showTrailerModal, setShowTrailerModal] = useState(false);
   const [showMoodOverlay, setShowMoodOverlay] = useState(false);
   const [isTrailerAnimating, setIsTrailerAnimating] = useState(false);
+  const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
+  const [isCheckingOnboarding, setIsCheckingOnboarding] = useState(true);
   const getMoodName = (mood: MoodType): string => {
     return moodNames[mood] || mood;
+  };
+  const [showGenreModal, setShowGenreModal] = useState(false);
+  const [genre, setGenre] = useState<{ id: number; name: string } | null>(null);
+
+  const handleGenreSelect = (selectedGenre: { id: number; name: string }) => {
+    setGenre(selectedGenre);
+    fetchGenreRecommendation(selectedGenre);
   };
 
   // Fetch trending content on mount
@@ -97,24 +158,9 @@ const Dashboard = () => {
     fetchTrending();
   }, [toast]);
 
-  // Handle mood selection
-  const handleMoodSelect = async (mood: MoodType) => {
-    setSelectedMood(mood);
-    try {
-      const recommendations = await getRecommendationsByMood(mood);
-      setMoodRecommendations(recommendations || []);
-      toast({
-        title: `Recomendações para quando você está ${getMoodName(mood)}`,
-        description: "Confira nossa seleção especial!",
-      });
-    } catch (error) {
-      console.error("Error fetching mood recommendations:", error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível carregar as recomendações de humor",
-        variant: "destructive",
-      });
-    }
+  const handleMoodSelect = (mood: string) => {
+    setGenre(null);
+    fetchMoodRecommendation(mood);
   };
 
   // Handle upgrade to premium
@@ -137,104 +183,647 @@ const Dashboard = () => {
     navigate("/");
   };
 
+  const [recommendationCount, setRecommendationCount] = useState(0);
+  const [userContentPreference, setUserContentPreference] = useState<
+    "movies" | "series" | null
+  >(null);
+
+  // Add this effect to fetch user preferences when component mounts
+  useEffect(() => {
+    const fetchUserPreferences = async () => {
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data } = await supabase
+          .from("user_preferences")
+          .select("content_type")
+          .eq("user_id", user.id)
+          .single();
+
+        if (data) {
+          setUserContentPreference(
+            data.content_type === "both"
+              ? Math.random() > 0.5
+                ? "movies"
+                : "series"
+              : data.content_type
+          );
+        }
+      } catch (error) {
+        console.error("Error fetching user preferences:", error);
+      }
+    };
+
+    fetchUserPreferences();
+  }, []);
+
   const fetchMoodRecommendation = async (mood: string) => {
     setIsLoadingRecommendation(true);
     setShowRecommendationModal(true);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      const genres = moodToGenres[mood].join(",");
-      const randomPage = Math.floor(Math.random() * 5) + 1;
-      const randomSort = [
-        'popularity.desc',
-        'vote_average.desc',
-        'vote_count.desc',
-        'primary_release_date.desc'
-      ][Math.floor(Math.random() * 4)];
 
-      // Fetch multiple pages to increase the pool of movies
-      const moviePromises = [1, 2, 3].map(page =>
-        fetch(
-          `https://api.themoviedb.org/3/discover/movie?api_key=${
-            import.meta.env.VITE_TMDB_API_KEY
-          }&with_genres=${genres}&sort_by=${randomSort}&page=${page}&vote_count.gte=100&language=pt-BR&with_original_language=en|pt|es|fr`
-        ).then(res => res.json())
+    function extractJsonFromResponse(text: string) {
+      try {
+        return JSON.parse(text);
+      } catch {
+        const jsonMatch = text.match(/```(?:json)?\s*(\[[\s\S]*?\])\s*```/);
+        if (jsonMatch?.[1]) {
+          try {
+            return JSON.parse(jsonMatch[1].trim());
+          } catch {
+            const arrayMatch = text.match(/\[\s*{[\s\S]*?}\s*\]/);
+            if (arrayMatch?.[0]) {
+              try {
+                return JSON.parse(arrayMatch[0]);
+              } catch {
+                console.error("Failed to parse array structure");
+              }
+            }
+          }
+        }
+        
+        const suggestions = [];
+        const matches = text.matchAll(/{[^}]*"title"[^}]*"tmdbId"[^}]*}/g);
+        for (const match of matches) {
+          try {
+            suggestions.push(JSON.parse(match[0]));
+          } catch {
+            continue;
+          }
+        }
+        return suggestions;
+      }
+    }
+  
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+  
+      // Fetch watched content from Supabase
+      const { data: watchedContent } = await supabase
+        .from("watched_content")
+        .select("tmdb_id, media_type")
+        .eq("user_id", user?.id);
+  
+      // Fetch details for watched content
+      const watchedDetails = await Promise.all(
+        (watchedContent || []).map(async (item) => {
+          try {
+            const response = await fetch(
+              `https://api.themoviedb.org/3/${item.media_type}/${item.tmdb_id}?api_key=${
+                import.meta.env.VITE_TMDB_API_KEY
+              }&language=pt-BR`
+            );
+            const data = await response.json();
+            return {
+              title: data.title || data.name,
+              tmdbId: data.id,
+              type: item.media_type
+            };
+          } catch (error) {
+            console.error("Error fetching TMDB details:", error);
+            return null;
+          }
+        })
+      );
+  
+      const validWatchedContent = watchedDetails.filter(Boolean);
+  
+      // Determine content type
+      const shouldFetchMovies = userContentPreference === "movies" ? recommendationCount < 2 : recommendationCount >= 2;
+      const mediaType = shouldFetchMovies ? "movie" : "tv";
+  
+      // Get genres for the mood
+      const genres = mediaType === "movie" ? moodToGenres[mood] : moodToGenresTV[mood];
+      const genreNames = genres.map(id => genreCategories.flatMap(cat => cat.genres).find(g => g.id === id)?.name).filter(Boolean);
+  
+      // Generate Gemini prompt
+      const prompt = `
+      Você é um assistente que responde apenas em JSON válido. 
+      O usuário está se sentindo "${moodNames[mood as MoodType]}" e gosta dos seguintes gêneros: ${genreNames.join(", ")}.
+      O usuário já assistiu os seguintes títulos:
+      ${JSON.stringify(validWatchedContent)}
+  
+      Forneça uma lista de 50 ${mediaType === "movie" ? "filmes" : "séries"} que são muito populares, bem avaliados e correspondem ao humor do usuário.
+      NÃO INCLUA os títulos que o usuário já assistiu.
+      Tem que estar presente nos principais streamings: Netflix, Max, Amazon Prime Video, Disney, etc. 
+      
+      Responda no seguinte formato JSON:
+      [
+        { "title": "Título", "tmdbId": 12345, "description": "Descrição do filme ou série", "imgUrl": "url da imagem", "tipo": "movie ou tv" }
+      ]
+      `;
+  
+      // Send to Gemini
+      const geminiResponse = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${
+          import.meta.env.VITE_GEMINI_API_KEY
+        }`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ 
+              parts: [{ 
+                text: prompt + "\nResponda apenas com o JSON, sem texto adicional." 
+              }] 
+            }],
+            generationConfig: {
+              temperature: 0.7,
+              topK: 40,
+              topP: 0.95,
+              maxOutputTokens: 1024,
+            },
+          }),
+        }
+      );
+  
+      // Process Gemini response and continue with existing logic
+      const geminiData = await geminiResponse.json();
+      const raw = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text;
+  
+      if (!raw) throw new Error("Resposta vazia do Gemini");
+  
+      let suggestions = extractJsonFromResponse(raw) || [];
+  
+      const suggestionsWithCorrectIds = await Promise.all(
+        suggestions.map(async (suggestion) => {
+          try {
+            const searchType = suggestion.tipo === "movie" ? "movie" : "tv";
+            const searchResponse = await fetch(
+              `https://api.themoviedb.org/3/search/${searchType}?api_key=${
+                import.meta.env.VITE_TMDB_API_KEY
+              }&query=${encodeURIComponent(suggestion.title)}&language=pt-BR`
+            );
+            const searchData = await searchResponse.json();
+            
+            if (searchData.results && searchData.results.length > 0) {
+              return {
+                ...suggestion,
+                tmdbId: searchData.results[0].id,
+              };
+            }
+            return suggestion;
+          } catch (error) {
+            console.error("Error searching TMDB:", error);
+            return suggestion;
+          }
+        })
       );
 
-      const movieResults = await Promise.all(moviePromises);
-      const allMovies = movieResults.flatMap(result => result.results);
-      
-      // Shuffle all movies
-      const shuffledMovies = allMovies.sort(() => Math.random() - 0.5);
-      
-      // Find a movie with any type of availability (not just flatrate)
-      let movie = null;
-      let providers = null;
-      
-      for (const potentialMovie of shuffledMovies) {
-        const providerResponse = await fetch(
-          `https://api.themoviedb.org/3/movie/${
-            potentialMovie.id
-          }/watch/providers?api_key=${import.meta.env.VITE_TMDB_API_KEY}`
-        );
-        const providerData = await providerResponse.json();
-        
-        // Check for any type of availability in Brazil
-        if (providerData.results.BR && 
-           (providerData.results.BR.flatrate?.length > 0 || 
-            providerData.results.BR.free?.length > 0 || 
-            providerData.results.BR.ads?.length > 0)) {
-          movie = potentialMovie;
-          providers = providerData.results.BR;
-          break;
-        }
+      let content = null;
+  let providers = null;
+  let details, videos, similar;
+
+  for (const suggestion of suggestionsWithCorrectIds) {
+    try {
+      const providerRes = await fetch(
+        `https://api.themoviedb.org/3/${mediaType}/${suggestion.tmdbId}/watch/providers?api_key=${import.meta.env.VITE_TMDB_API_KEY}`
+      );
+      const providerJson = await providerRes.json();
+      const br = providerJson.results.BR;
+
+      if (br && (br.flatrate?.length > 0 || br.free?.length > 0 || br.ads?.length > 0)) {
+        [details, videos, similar] = await Promise.all([
+          fetch(
+            `https://api.themoviedb.org/3/${mediaType}/${suggestion.tmdbId}?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=pt-BR`
+          ).then((r) => r.json()),
+          fetch(
+            `https://api.themoviedb.org/3/${mediaType}/${suggestion.tmdbId}/videos?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=pt-BR`
+          ).then((r) => r.json()),
+          fetch(
+            `https://api.themoviedb.org/3/${mediaType}/${suggestion.tmdbId}/similar?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=pt-BR`
+          ).then((r) => r.json()),
+        ]);
+
+        content = suggestion;
+        providers = br;
+        break;
       }
-  
-      // If still no movie found, just use the first movie without provider check
-      if (!movie && shuffledMovies.length > 0) {
-        movie = shuffledMovies[0];
-      }
-  
-      if (!movie) {
-        throw new Error("No movies found for this mood");
-      }
-  
-      // Fetch additional movie details
-      const [details, videos, similar] = await Promise.all([
-        fetch(
-          `https://api.themoviedb.org/3/movie/${movie.id}?api_key=${
-            import.meta.env.VITE_TMDB_API_KEY
-          }&language=pt-BR`
-        ).then((res) => res.json()),
-        fetch(
-          `https://api.themoviedb.org/3/movie/${movie.id}/videos?api_key=${
-            import.meta.env.VITE_TMDB_API_KEY
-          }&language=pt-BR`
-        ).then((res) => res.json()),
-        fetch(
-          `https://api.themoviedb.org/3/movie/${movie.id}/similar?api_key=${
-            import.meta.env.VITE_TMDB_API_KEY
-          }&language=pt-BR`
-        ).then((res) => res.json()),
-      ]);
-  
-      setMoodRecommendation({
-        ...movie,
-        ...details,
-        videos: videos.results,
-        providers: providers,
-        similar: similar.results,
-      });
     } catch (error) {
-      console.error("Error fetching mood recommendation:", error);
+      continue;
+    }
+  }
+
+  if (!content && suggestionsWithCorrectIds.length > 0) {
+    content = suggestionsWithCorrectIds[0];
+    [details, videos, similar] = await Promise.all([
+      fetch(
+        `https://api.themoviedb.org/3/${mediaType}/${content.tmdbId}?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=pt-BR`
+      ).then((r) => r.json()),
+      fetch(
+        `https://api.themoviedb.org/3/${mediaType}/${content.tmdbId}/videos?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=pt-BR`
+      ).then((r) => r.json()),
+      fetch(
+        `https://api.themoviedb.org/3/${mediaType}/${content.tmdbId}/similar?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=pt-BR`
+      ).then((r) => r.json()),
+    ]);
+  }
+
+  if (!content) {
+    throw new Error("No content found");
+  }
+
+  setMoodRecommendation({
+    ...content,
+    ...details,
+    overview: details.overview || content.description,
+    poster_path: content.imgUrl || details.poster_path,
+    videos: videos.results,
+    providers,
+    similar: similar.results,
+    mediaType,
+  });
+
+  setRecommendationCount((prev) => (prev + 1) % 3);
+  setIsLoadingRecommendation(false);
+
+    } catch (error) {
+      console.error("Error fetching recommendation:", error);
       toast({
         title: "Erro",
-        description: "Não foi possível encontrar um filme disponível em streaming",
+        description: "Não foi possível encontrar conteúdo disponível em streaming",
         variant: "destructive",
       });
       setShowRecommendationModal(false);
+      setIsLoadingRecommendation(false);
     }
+  };
+
+  const fetchGenreRecommendation = async (genre: { id: number, name: string }) => {
+    setIsLoadingRecommendation(true);
+    setShowRecommendationModal(true);
+  
+    function extractJsonFromResponse(text: string) {
+      try {
+        return JSON.parse(text);
+      } catch {
+        const jsonMatch = text.match(/```(?:json)?\s*(\[[\s\S]*?\])\s*```/);
+        if (jsonMatch?.[1]) {
+          try {
+            return JSON.parse(jsonMatch[1].trim());
+          } catch {
+            const arrayMatch = text.match(/\[\s*{[\s\S]*?}\s*\]/);
+            if (arrayMatch?.[0]) {
+              try {
+                return JSON.parse(arrayMatch[0]);
+              } catch {
+                console.error("Failed to parse array structure");
+              }
+            }
+          }
+        }
+        
+        const suggestions = [];
+        const matches = text.matchAll(/{[^}]*"title"[^}]*"tmdbId"[^}]*}/g);
+        for (const match of matches) {
+          try {
+            suggestions.push(JSON.parse(match[0]));
+          } catch {
+            continue;
+          }
+        }
+        return suggestions;
+      }
+    }
+  
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+
+      // Fetch watched content from Supabase
+      const { data: watchedContent } = await supabase
+      .from("watched_content")
+      .select("tmdb_id, media_type")
+      .eq("user_id", user?.id);
+
+    // Fetch details for each watched content from TMDB
+    const watchedDetails = await Promise.all(
+      (watchedContent || []).map(async (item) => {
+        try {
+          const response = await fetch(
+            `https://api.themoviedb.org/3/${item.media_type}/${item.tmdb_id}?api_key=${
+              import.meta.env.VITE_TMDB_API_KEY
+            }&language=pt-BR`
+          );
+          const data = await response.json();
+          return {
+            title: data.title || data.name,
+            tmdbId: data.id,
+            type: item.media_type
+          };
+        } catch (error) {
+          console.error("Error fetching TMDB details:", error);
+          return null;
+        }
+      })
+    );
+
+    const validWatchedContent = watchedDetails.filter(Boolean);
+
+    const { data: preferences } = await supabase
+      .from("user_preferences")
+      .select("*")
+      .eq("user_id", user?.id)
+      .single();
+      
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      const watched = JSON.parse(localStorage.getItem("watchedMovies") || "[]");
+      const genreCount: Record<string, number> = {};
+      watched.forEach((m: any) =>
+        m.genres.forEach((g: string) => {
+          genreCount[g] = (genreCount[g] || 0) + 1;
+        })
+      );
+  
+      const topGenres = Object.entries(genreCount)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([g]) => g);
+  
+      const shouldFetchMovies =
+        userContentPreference === "movies" ? recommendationCount < 2 : recommendationCount >= 2;
+      const mediaType = shouldFetchMovies ? "movie" : "tv";
+
+      // 2. Gerar prompt para o Gemini
+      const prompt = `
+    Você é um assistente que responde apenas em JSON válido. 
+    O usuário já assistiu os seguintes títulos:
+    ${JSON.stringify(validWatchedContent)}
+
+    Forneça uma lista de 50 ${mediaType === "movie" ? "filmes" : "séries"} que são muito populares, bem avaliados e correspondem ao gênero: ${genre.name}. 
+    NÃO INCLUA os títulos que o usuário já assistiu.
+    Tem que estar presente nos principais streamings: Netflix, Max, Amazon Prime Video, Disney, etc. 
+    
+    Responda no seguinte formato JSON:
+    [
+      { "title": "Título", "tmdbId": 12345, "description": "Descrição do filme ou série", "imgUrl": "url da imagem", "tipo": "movie ou tv" }
+    ]
+    `;
+  
+      // 3. Enviar para o Gemini
+      const geminiResponse = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${
+          import.meta.env.VITE_GEMINI_API_KEY
+        }`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ 
+              parts: [{ 
+                text: prompt + "\nResponda apenas com o JSON, sem texto adicional." 
+              }] 
+            }],
+            generationConfig: {
+              temperature: 0.7,
+              topK: 40,
+              topP: 0.95,
+              maxOutputTokens: 1024,
+            },
+          }),
+        }
+      );
+  
+      const geminiData = await geminiResponse.json();
+      const raw = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+      if (!raw) throw new Error("Resposta vazia do Gemini");
+
+      let suggestions: { title: string; tmdbId: number; description: string, urlImg: string, tipo: string }[] = extractJsonFromResponse(raw) || [];
+
+      if (suggestions.length === 0) {
+        throw new Error("Gemini não retornou sugestões válidas.");
+      }
+
+      // Find correct TMDB IDs for suggestions
+      const suggestionsWithCorrectIds = await Promise.all(
+        suggestions.map(async (suggestion) => {
+          try {
+            const searchType = suggestion.tipo === "movie" ? "movie" : "tv";
+            const searchResponse = await fetch(
+              `https://api.themoviedb.org/3/search/${searchType}?api_key=${
+                import.meta.env.VITE_TMDB_API_KEY
+              }&query=${encodeURIComponent(suggestion.title)}&language=pt-BR`
+            );
+            const searchData = await searchResponse.json();
+            
+            if (searchData.results && searchData.results.length > 0) {
+              // Check if user has already watched this content
+              const { data: watchedData } = await supabase
+                .from("watched_content")
+                .select("*")
+                .eq("user_id", user?.id)
+                .eq("tmdb_id", searchData.results[0].id)
+                .eq("media_type", searchType)
+                .single();
+
+              // If content has been watched, mark it
+              return {
+                ...suggestion,
+                tmdbId: searchData.results[0].id,
+                alreadyWatched: !!watchedData
+              };
+            }
+            return suggestion;
+          } catch (error) {
+            console.error("Error searching TMDB:", error);
+            return suggestion;
+          }
+        })
+      );
+
+      function fisherYatesShuffle<T>(array: T[]): T[] {
+        const arr = [...array]; // cria uma cópia para não modificar o original
+        for (let i = arr.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1)); // índice aleatório entre 0 e i
+          [arr[i], arr[j]] = [arr[j], arr[i]]; // troca os elementos de posição
+        }
+        return arr;
+      }
+
+      const unwatchedSuggestions = suggestionsWithCorrectIds.filter(s => !s.alreadyWatched);
+      // Shuffle all suggestions before processing
+      const shuffledSuggestions = fisherYatesShuffle(unwatchedSuggestions);
+
+      // Try each suggestion until we find one that works
+      let content = null;
+      let providers = null;
+      let details, videos, similar;
+
+      for (const suggestion of shuffledSuggestions) {
+        try {
+          // Try to get providers
+          const providerRes = await fetch(
+            `https://api.themoviedb.org/3/${mediaType}/${suggestion.tmdbId}/watch/providers?api_key=${import.meta.env.VITE_TMDB_API_KEY}`
+          );
+          const providerJson = await providerRes.json();
+          const br = providerJson.results.BR;
+
+          // Check if content is available
+          if (br && (br.flatrate?.length > 0 || br.free?.length > 0 || br.ads?.length > 0)) {
+            // Get additional details
+            [details, videos, similar] = await Promise.all([
+              fetch(
+                `https://api.themoviedb.org/3/${mediaType}/${suggestion.tmdbId}?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=pt-BR`
+              ).then((r) => r.json()),
+              fetch(
+                `https://api.themoviedb.org/3/${mediaType}/${suggestion.tmdbId}/videos?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=pt-BR`
+              ).then((r) => r.json()),
+              fetch(
+                `https://api.themoviedb.org/3/${mediaType}/${suggestion.tmdbId}/similar?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=pt-BR`
+              ).then((r) => r.json()),
+            ]);
+
+            content = suggestion;
+            providers = br;
+            break;
+          }
+        } catch (error) {
+          console.error("Error checking content:", error);
+          continue;
+        }
+      }
+
+      if (!content && suggestions.length > 0) {
+        // If no streaming content found, use the first suggestion as fallback
+        content = suggestions[0];
+        [details, videos, similar] = await Promise.all([
+          fetch(
+            `https://api.themoviedb.org/3/${mediaType}/${content.tmdbId}?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=pt-BR`
+          ).then((r) => r.json()),
+          fetch(
+            `https://api.themoviedb.org/3/${mediaType}/${content.tmdbId}/videos?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=pt-BR`
+          ).then((r) => r.json()),
+          fetch(
+            `https://api.themoviedb.org/3/${mediaType}/${content.tmdbId}/similar?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=pt-BR`
+          ).then((r) => r.json()),
+        ]);
+      }
+
+      if (!content) {
+        throw new Error("Nenhum conteúdo encontrado");
+      }
+
+      setMoodRecommendation({
+        ...content,
+        ...details,
+        overview: details.overview || content.description,
+        videos: videos.results,
+        providers,
+        similar: similar.results,
+        mediaType,
+      });
+  
+      setRecommendationCount((prev) => (prev + 1) % 3);
+    } catch (error) {
+      console.error("Erro ao buscar recomendação:", error);
+  
+      toast({
+        title: "Erro",
+        description: "Não foi possível encontrar conteúdo disponível em streaming",
+        variant: "destructive",
+      });
+  
+      setShowRecommendationModal(false);
+    }
+  
     setIsLoadingRecommendation(false);
   };
+
+  const markAsWatched = async (content: any) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({
+          title: "Erro",
+          description: "Você precisa estar logado para marcar como assistido",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const { error } = await supabase
+        .from("watched_content")
+        .insert({
+          user_id: user.id,
+          tmdb_id: content.id || content.tmdbId,
+          media_type: content.mediaType,
+          title: content.title || content.name,
+          watched_at: new Date().toISOString()
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: "Conteúdo marcado como assistido!",
+      });
+
+      // Update local state to reflect the change
+      setMoodRecommendation(prev => ({
+        ...prev,
+        alreadyWatched: true
+      }));
+
+    } catch (error) {
+      console.error("Error marking content as watched:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível marcar como assistido",
+        variant: "destructive",
+      });
+    }
+  };
+  
+
+  useEffect(() => {
+    const checkOnboardingStatus = async () => {
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!user) {
+          setHasCompletedOnboarding(false);
+          return;
+        }
+
+        const { data, error } = await supabase
+          .from("user_preferences")
+          .select()
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (error && error.code !== "PGRST116") {
+          throw error;
+        }
+
+        setHasCompletedOnboarding(!!data);
+      } catch (error) {
+        console.error("Error checking onboarding status:", error);
+        setHasCompletedOnboarding(false);
+      } finally {
+        setIsCheckingOnboarding(false);
+      }
+    };
+
+    checkOnboardingStatus();
+  }, []);
+
+  if (isCheckingOnboarding) {
+    return (
+      <div className="min-h-screen bg-filmeja-dark flex items-center justify-center">
+        <div className="animate-spin">
+          <Film className="w-8 h-8 text-filmeja-purple" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!hasCompletedOnboarding) {
+    return <Onboarding />;
+  }
 
   return (
     <div className="min-h-screen bg-filmeja-dark overflow-x-hidden">
@@ -259,7 +848,7 @@ const Dashboard = () => {
         </div>
       )}
       <div
-        className={`fixed top-0 left-0 h-full transition-all duration-300 z-20 
+        className={`fixed top-0 left-0 h-full transition-all duration-300 z-50 
         bg-gradient-to-b from-black via-filmeja-dark/95 to-black/95
         before:absolute before:inset-0 before:bg-[radial-gradient(circle_at_100%_0%,rgba(120,0,255,0.15),transparent_50%)]
         after:absolute after:inset-0 after:bg-[radial-gradient(circle_at_0%_100%,rgba(0,70,255,0.15),transparent_50%)]
@@ -372,6 +961,21 @@ const Dashboard = () => {
         </div>
       </div>
       <ImageBackground useSlideshow={true}>
+        {/* Header with user info */}
+        <header className="bg-black/30 backdrop-blur-sm p-4 sticky top-0 z-10">
+          <div className="flex justify-end items-center">
+            <div className="flex items-center space-x-3">
+              <span className="text-white">{mockUser.name}</span>
+              <div className="w-8 h-8 rounded-full overflow-hidden">
+                <img
+                  src={mockUser.avatar}
+                  alt="Avatar"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            </div>
+          </div>
+        </header>
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4">
           <h1 className="text-5xl font-bold text-white mb-6 drop-shadow-lg">
             Como você quer descobrir seu próximo filme?
@@ -391,11 +995,7 @@ const Dashboard = () => {
             </Button>
 
             <Button
-              onClick={() =>
-                document
-                  .getElementById("genreSection")
-                  ?.scrollIntoView({ behavior: "smooth" })
-              }
+              onClick={() => setShowGenreModal(true)}
               className="bg-filmeja-blue/20 hover:bg-filmeja-blue/40 border-2 border-filmeja-blue text-white px-8 py-4 rounded-xl backdrop-blur-sm transition-all"
             >
               <Film className="w-5 h-5 mr-3" />
@@ -457,384 +1057,81 @@ const Dashboard = () => {
             </div>
           )}
         </div>
-        {showRecommendationModal && (
-          <Dialog
-            open={showRecommendationModal}
-            onOpenChange={setShowRecommendationModal}
-          >
-            <DialogContent className="sm:max-w-5xl bg-filmeja-dark/95 border-filmeja-purple/20">
-              {isLoadingRecommendation ? (
-                <div className="relative">
-                  <div className="flex flex-col md:flex-row gap-6">
-                    {/* Left Column - Poster and Quick Info Skeleton */}
-                    <div className="md:w-1/3">
-                      <Skeleton className="w-full aspect-[2/3] rounded-lg" />
-                      <div className="mt-4 space-y-2">
-                        {[...Array(3)].map((_, i) => (
-                          <div
-                            key={i}
-                            className="flex items-center justify-between"
-                          >
-                            <Skeleton className="h-4 w-20" />
-                            <Skeleton className="h-4 w-24" />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Right Column - Details Skeleton */}
-                    <div className="md:w-2/3">
-                      <div className="flex justify-between items-start">
-                        <div className="space-y-2">
-                          <Skeleton className="h-8 w-64" />
-                          <Skeleton className="h-4 w-48" />
-                        </div>
-                      </div>
-
-                      {/* Rating Skeleton */}
-                      <div className="flex items-center gap-2 my-4">
-                        <div className="flex gap-1">
-                          {[...Array(5)].map((_, i) => (
-                            <Skeleton
-                              key={i}
-                              className="w-4 h-4 rounded-full"
-                            />
-                          ))}
-                        </div>
-                        <Skeleton className="h-4 w-32" />
-                      </div>
-
-                      {/* Genres Skeleton */}
-                      <div className="flex flex-wrap gap-2 mb-4">
-                        {[...Array(4)].map((_, i) => (
-                          <Skeleton key={i} className="h-6 w-20 rounded-full" />
-                        ))}
-                      </div>
-
-                      {/* Overview Skeleton */}
-                      <div className="space-y-2 mb-6">
-                        {[...Array(3)].map((_, i) => (
-                          <Skeleton key={i} className="h-4 w-full" />
-                        ))}
-                      </div>
-
-                      {/* Streaming Providers Skeleton */}
-                      <div className="mb-6">
-                        <Skeleton className="h-6 w-32 mb-2" />
-                        <div className="flex flex-wrap gap-3">
-                          {[...Array(3)].map((_, i) => (
-                            <div key={i} className="flex items-center gap-2">
-                              <Skeleton className="w-6 h-6 rounded-full" />
-                              <Skeleton className="h-6 w-24" />
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Action Buttons Skeleton */}
-                      <div className="flex flex-wrap gap-3">
-                        {[...Array(3)].map((_, i) => (
-                          <Skeleton key={i} className="h-10 w-32" />
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                moodRecommendation && (
-                  <div className="relative">
-                    {/* Background Image with Blur */}
-                    <div
-                      className="absolute inset-0 opacity-20 blur-md"
-                      style={{
-                        backgroundImage: `url(https://image.tmdb.org/t/p/original${moodRecommendation.backdrop_path})`,
-                        backgroundSize: "cover",
-                        backgroundPosition: "center",
-                      }}
-                    />
-
-                    <div className="relative z-10">
-                      <div className="flex flex-col md:flex-row gap-6">
-                        {/* Left Column - Poster and Quick Info */}
-                        <div className="md:w-1/3">
-                          <img
-                            src={`https://image.tmdb.org/t/p/w500${moodRecommendation.poster_path}`}
-                            alt={moodRecommendation.title}
-                            className="rounded-lg w-full object-cover shadow-xl"
-                          />
-
-                          {/* Quick Stats */}
-                          <div className="mt-4 space-y-2">
-                            <div className="flex items-center justify-between text-sm text-gray-300">
-                              <span>Lançamento:</span>
-                              <span>
-                                {new Date(
-                                  moodRecommendation.release_date
-                                ).getFullYear()}
-                              </span>
-                            </div>
-                            <div className="flex items-center justify-between text-sm text-gray-300">
-                              <span>Duração:</span>
-                              <span>{moodRecommendation.runtime} minutos</span>
-                            </div>
-                            <div className="flex items-center justify-between text-sm text-gray-300">
-                              <span>Idioma:</span>
-                              <span>
-                                {moodRecommendation.original_language.toUpperCase()}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Right Column - Details */}
-                        <div className="md:w-2/3">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <h2 className="text-2xl font-bold text-white mb-1">
-                                {moodRecommendation.title}
-                              </h2>
-                              {moodRecommendation.title !==
-                                moodRecommendation.original_title && (
-                                <p className="text-sm text-gray-400 mb-2">
-                                  {moodRecommendation.original_title}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Rating */}
-                          <div className="flex items-center gap-2 mb-4">
-                            <div className="flex items-center">
-                              {Array.from({ length: 5 }).map((_, i) => (
-                                <Star
-                                  key={i}
-                                  className={`w-4 h-4 ${
-                                    i < moodRecommendation.vote_average / 2
-                                      ? "text-yellow-500 fill-current"
-                                      : "text-gray-600"
-                                  }`}
-                                />
-                              ))}
-                            </div>
-                            <span className="text-white">
-                              {moodRecommendation.vote_average.toFixed(1)}
-                            </span>
-                            <span className="text-gray-400 text-sm">
-                              ({moodRecommendation.vote_count} avaliações)
-                            </span>
-                          </div>
-
-                          {/* Genres */}
-                          <div className="flex flex-wrap gap-2 mb-4">
-                            {moodRecommendation.genres?.map((genre: any) => (
-                              <span
-                                key={genre.id}
-                                className="px-3 py-1 bg-white/10 rounded-full text-sm text-white"
-                              >
-                                {genre.name}
-                              </span>
-                            ))}
-                          </div>
-
-                          {/* Overview */}
-                          <p className="text-gray-300 mb-6">
-                            {moodRecommendation.overview}
-                          </p>
-
-                          {/* Streaming Providers */}
-                          {moodRecommendation.providers?.flatrate && (
-                            <div className="mb-6">
-                              <h3 className="text-white font-semibold mb-2">
-                                Disponível em:
-                              </h3>
-                              <div className="flex flex-wrap gap-3">
-                                {moodRecommendation.providers.flatrate.map(
-                                  (provider: any) => (
-                                    <div
-                                      key={provider.provider_id}
-                                      className="flex items-center bg-white/10 rounded-full px-3 py-1"
-                                    >
-                                      <img
-                                        src={`https://image.tmdb.org/t/p/original${provider.logo_path}`}
-                                        alt={provider.provider_name}
-                                        className="w-6 h-6 rounded-full mr-2"
-                                      />
-                                      <span className="text-sm text-white">
-                                        {provider.provider_name}
-                                      </span>
-                                    </div>
-                                  )
-                                )}
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Action Buttons */}
-                          <div className="flex flex-wrap gap-3">
-                            <Button
-                              className="bg-filmeja-purple hover:bg-filmeja-purple/90"
-                              onClick={() => {
-                                /* Add watch/details navigation */
-                              }}
-                            >
-                              Assistir Agora
-                            </Button>
-                            <Button
-                              variant="outline"
-                              className="border-white/20 hover:bg-white/10"
-                              onClick={() =>
-                                fetchMoodRecommendation(selectedMood || "happy")
-                              }
-                            >
-                              Outra Sugestão
-                            </Button>
-                            <Button
-                              variant="outline"
-                              className="border-white/20 hover:bg-white/10"
-                            >
-                              <Heart className="w-4 h-4 mr-2" />
-                              Favoritar
-                            </Button>
-                          </div>
-
-                          {/* Trailer Section */}
-                          {moodRecommendation.videos?.length > 0 && (
-  <>
-    <motion.div
-      whileHover={{ scale: 1.05 }}
-      whileTap={{ scale: 0.95 }}
-    >
-      <Button
-        className="mt-6 bg-[#E50914] hover:bg-[#F40D17] text-white flex items-center gap-2 px-6 py-3 rounded-full transition-all duration-300 shadow-lg hover:shadow-red-600/20"
-        onClick={async () => {
-          setIsTrailerAnimating(true);
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          setShowTrailerModal(true);
-          setIsTrailerAnimating(false);
-        }}
-        disabled={isTrailerAnimating}
-      >
-        {isTrailerAnimating ? (
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-          >
-            <Play className="w-5 h-5" />
-          </motion.div>
-        ) : (
-          <Play className="w-5 h-5" />
-        )}
-        Ver Trailer
-      </Button>
-    </motion.div>
-
-    <AnimatePresence>
-      {showTrailerModal && (
-        <Dialog
-          open={showTrailerModal}
-          onOpenChange={setShowTrailerModal}
-        >
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            transition={{ duration: 0.3 }}
-          >
-            <DialogContent className="max-w-7xl bg-[#0F0F0F]/95 backdrop-blur-xl border-none p-0 font-inter">
-              <div className="relative">
-                <div className="absolute top-4 right-4 z-20 flex items-center gap-4">
-                  {moodRecommendation.providers?.flatrate && (
-                    <div className="flex items-center gap-2 bg-black/50 backdrop-blur-md rounded-full px-4 py-2">
-                      <span className="text-white text-sm">Disponível em:</span>
-                      <div className="flex -space-x-2">
-                        {moodRecommendation.providers.flatrate.map((provider: any) => (
-                          <img
-                            key={provider.provider_id}
-                            src={`https://image.tmdb.org/t/p/original${provider.logo_path}`}
-                            alt={provider.provider_name}
-                            className="w-8 h-8 rounded-full border-2 border-black"
-                            title={provider.provider_name}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  )}
+        {showGenreModal && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-filmeja-dark/90 rounded-2xl max-w-4xl w-full max-h-[80vh] overflow-y-auto"
+            >
+              <div className="p-8">
+                <div className="flex justify-between items-center mb-8">
+                  <h2 className="text-2xl font-bold text-white">
+                    Escolha um Gênero
+                  </h2>
                   <Button
                     variant="ghost"
-                    className="rounded-full bg-black/50 backdrop-blur-md hover:bg-black/70 text-white"
-                    onClick={() => setShowTrailerModal(false)}
+                    onClick={() => setShowGenreModal(false)}
+                    className="text-gray-400 hover:text-white"
                   >
-                    <X className="h-5 w-5" />
+                    <X className="w-6 h-6" />
                   </Button>
                 </div>
 
-                <div className="relative">
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2 }}
-                    className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/90 to-transparent"
-                  >
-                    <h2 className="text-2xl font-bold text-white mb-2">
-                      {moodRecommendation.title}
-                    </h2>
-                    {moodRecommendation.title !== moodRecommendation.original_title && (
-                      <p className="text-sm text-gray-400">
-                        {moodRecommendation.original_title}
-                      </p>
-                    )}
-                  </motion.div>
-
-                  <div className="aspect-video w-full bg-black">
-                    {moodRecommendation.videos[0]?.key ? (
-                      <iframe
-                        width="100%"
-                        height="100%"
-                        src={`https://www.youtube.com/embed/${moodRecommendation.videos[0].key}?autoplay=1&rel=0`}
-                        title="Trailer"
-                        frameBorder="0"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen
-                      ></iframe>
-                    ) : (
-                      <div className="flex items-center justify-center h-full">
-                        <motion.div
-                          animate={{
-                            scale: [1, 1.2, 1],
-                            opacity: [1, 0.8, 1],
-                          }}
-                          transition={{
-                            duration: 2,
-                            repeat: Infinity,
-                            ease: "easeInOut",
-                          }}
-                        >
-                          <Play className="w-16 h-16 text-red-600" />
-                          <p className="text-white mt-4 text-center">
-                            Carregando trailer...
-                          </p>
-                        </motion.div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </DialogContent>
-          </motion.div>
-        </Dialog>
-      )}
-    </AnimatePresence>
-  </>
-)}
-                        </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {genreCategories.map((category) => (
+                    <div key={category.name} className="space-y-4">
+                      <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                        <span>{category.icon}</span>
+                        {category.name}
+                      </h3>
+                      <div className="grid grid-cols-1 gap-3">
+                        {category.genres.map((genre) => (
+                         <motion.button
+                         key={genre.id}
+                         whileHover={{ scale: 1.02 }}
+                         whileTap={{ scale: 0.98 }}
+                         onClick={() => {
+                           handleGenreSelect(genre);
+                           setShowGenreModal(false);
+                         }}
+                         className={`${genre.color} p-4 rounded-xl text-left transition-all
+                           hover:bg-opacity-30 border border-white/10 backdrop-blur-sm
+                           group relative overflow-hidden`}
+                       >
+                         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent
+                           translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500"
+                         />
+                         <span className="text-white font-medium">
+                           {genre.name}
+                         </span>
+                       </motion.button>
+                        ))}
                       </div>
                     </div>
-                  </div>
-                )
-              )}
-            </DialogContent>
-          </Dialog>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          </div>
         )}
+        <ContentModal
+  isOpen={showRecommendationModal}
+  onOpenChange={setShowRecommendationModal}
+  content={moodRecommendation}
+  isLoading={isLoadingRecommendation}
+  onRequestNew={() => {
+    // Check if the current recommendation is from genre or mood
+    if (genre) {
+      fetchGenreRecommendation(genre);
+    } else {
+      fetchMoodRecommendation(selectedMood || "happy");
+    }
+  }}
+  selectedMood={selectedMood}
+  onMarkAsWatched={markAsWatched}
+/>
       </ImageBackground>
 
       {/* Main content */}
@@ -843,22 +1140,6 @@ const Dashboard = () => {
           isExpanded ? "ml-[280px]" : "ml-[70px]"
         }`}
       >
-        {/* Header with user info */}
-        <header className="bg-black/30 backdrop-blur-sm p-4 sticky top-0 z-10">
-          <div className="flex justify-end items-center">
-            <div className="flex items-center space-x-3">
-              <span className="text-white">{mockUser.name}</span>
-              <div className="w-8 h-8 rounded-full overflow-hidden">
-                <img
-                  src={mockUser.avatar}
-                  alt="Avatar"
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            </div>
-          </div>
-        </header>
-
         {/* Main content area */}
         <main className="p-6">
           <h1 className="text-3xl font-bold mb-8 text-white">
