@@ -50,6 +50,7 @@ export const ContentModal = ({
   isLoading,
   onRequestNew,
   selectedMood,
+  onMarkAsWatched,
 }: ContentModalProps) => {
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -62,6 +63,7 @@ export const ContentModal = ({
               content={content}
               onRequestNew={onRequestNew}
               selectedMood={selectedMood}
+              onMarkAsWatched={onMarkAsWatched}
             />
           )
         )}
@@ -157,6 +159,8 @@ const ContentModalContent = ({
   });
   const { toast } = useToast();
   const [isWatched, setIsWatched] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [showStreamingModal, setShowStreamingModal] = useState(false);
 
   useEffect(() => {
     if (content) {
@@ -168,17 +172,57 @@ const ContentModalContent = ({
     }
   }, [content]);
 
+  useEffect(() => {
+    const checkIfFavorite = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        const { data } = await supabase
+          .from("favorite_content")
+          .select()
+          .eq("user_id", user.id)
+          .eq("tmdb_id", String(content.id))
+          .single();
+
+        setIsFavorite(!!data);
+      }
+    };
+
+    checkIfFavorite();
+  }, [content.id]);
+
   const handleTrailerClick = async () => {
     setShowTrailerModal(true);
+    setIsTransitioning(true);
 
-    if (contentData.videos?.length > 0) {
-      setTrailerSource("tmdb");
-      return;
+    const handleWatchClick = () => {
+      if (content.providers?.flatrate?.length > 0) {
+        setShowStreamingModal(true);
+      } else {
+        toast({
+          title: "Indisponível",
+          description:
+            "Este conteúdo não está disponível em nenhum serviço de streaming no momento.",
+          variant: "destructive",
+        });
+      }
+    };
+
+    try {
+      if (contentData.videos?.length > 0) {
+        setTrailerSource("tmdb");
+        const url = `https://www.youtube.com/embed/${contentData.videos[0]?.key}?autoplay=1`;
+        setTrailerUrl(url);
+      } else {
+        setTrailerSource("youtube");
+        const url = await getTrailerUrl();
+        setTrailerUrl(url);
+      }
+    } catch (error) {
+      console.error("Error setting trailer URL:", error);
     }
 
-    setIsTransitioning(true);
-    await new Promise((resolve) => setTimeout(resolve, 800));
-    setTrailerSource("youtube");
     setIsTransitioning(false);
   };
 
@@ -262,10 +306,62 @@ const ContentModalContent = ({
   };
 
   const handleNextSuggestion = async () => {
-    if (isWatched) {
-      await onMarkAsWatched(content);
+    setShowTrailerModal(false);
+    setTrailerSource(null);
+    setTrailerUrl("");
+    if (onRequestNew) {
+      await onRequestNew();
     }
-    onRequestNew();
+  };
+
+  const handleFavoriteToggle = async () => {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        toast({
+          title: "Erro",
+          description: "Você precisa estar logado para favoritar",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (isFavorite) {
+        await supabase
+          .from("favorite_content")
+          .delete()
+          .eq("user_id", user.id)
+          .eq("tmdb_id", String(content.id));
+
+        setIsFavorite(false);
+        toast({
+          title: "Removido",
+          description: "Conteúdo removido dos favoritos",
+        });
+      } else {
+        await supabase.from("favorite_content").insert({
+          user_id: user.id,
+          tmdb_id: String(content.id),
+          media_type: content.mediaType,
+          title: content.title || content.name,
+        });
+
+        setIsFavorite(true);
+        toast({
+          title: "Adicionado",
+          description: "Conteúdo adicionado aos favoritos",
+        });
+      }
+    } catch (error) {
+      console.error("Error toggling favorite:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar os favoritos",
+        variant: "destructive",
+      });
+    }
   };
 
   useEffect(() => {
@@ -287,6 +383,19 @@ const ContentModalContent = ({
 
     checkIfWatched();
   }, [content.id]);
+
+  const handleWatchClick = () => {
+    if (content.providers?.flatrate?.length > 0) {
+      setShowStreamingModal(true);
+    } else {
+      toast({
+        title: "Indisponível",
+        description:
+          "Este conteúdo não está disponível em nenhum serviço de streaming no momento.",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <div className="relative">
@@ -409,9 +518,8 @@ const ContentModalContent = ({
             <div className="flex flex-wrap gap-3">
               <Button
                 className="bg-filmeja-purple hover:bg-filmeja-purple/90"
-                onClick={() => {
-                  /* Add watch/details navigation */
-                }}
+                onClick={handleWatchClick}
+                disabled={!content.providers?.flatrate?.length}
               >
                 <Play className="w-4 h-4 mr-2" />
                 Assistir Agora
@@ -452,10 +560,23 @@ const ContentModalContent = ({
               </motion.div>
               <Button
                 variant="outline"
-                className="border-white/20 hover:bg-white/10"
+                className={`border-white/20 hover:bg-white/10 ${
+                  isFavorite ? "bg-filmeja-purple/20" : ""
+                }`}
+                onClick={handleFavoriteToggle}
               >
-                <Heart className="w-4 h-4 mr-2" />
-                Adicionar à Lista
+                <motion.div
+                  className="relative z-10 flex items-center"
+                  whileHover={{ scale: 1.05 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 10 }}
+                >
+                  <Heart
+                    className={`w-4 h-4 mr-2 ${
+                      isFavorite ? "fill-filmeja-purple" : ""
+                    }`}
+                  />
+                  {isFavorite ? "Remover dos Favoritos" : "Adicionar à Lista"}
+                </motion.div>
               </Button>
               <Button
                 variant="outline"
@@ -477,9 +598,11 @@ const ContentModalContent = ({
                   <span className="ml-2">
                     {isWatched
                       ? content?.mediaType === "tv"
-                        ? "Já assisti por completo"
-                        : "Já assistido"
-                      : "Marcar como visto"}
+                        ? "Já assisti todas as temporadas"
+                        : "Já assisti este filme"
+                      : content?.mediaType === "tv"
+                      ? "Marcar todas temporadas como vistas"
+                      : "Marcar filme como visto"}
                   </span>
                 </motion.div>
               </Button>
@@ -552,6 +675,68 @@ const ContentModalContent = ({
           </motion.div>
         )}
       </AnimatePresence>
+      {showStreamingModal && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
+        >
+          <motion.div
+            initial={{ scale: 0.9, y: 20, opacity: 0 }}
+            animate={{ scale: 1, y: 0, opacity: 1 }}
+            exit={{ scale: 0.9, y: 20, opacity: 0 }}
+            transition={{ type: "spring", duration: 0.5 }}
+            className="bg-filmeja-dark/95 rounded-xl p-6 max-w-lg w-full relative border border-filmeja-purple/20"
+          >
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute right-2 top-2 text-white/60 hover:text-white"
+              onClick={() => setShowStreamingModal(false)}
+            >
+              <X className="w-5 h-5" />
+            </Button>
+
+            <h3 className="text-xl font-semibold text-white mb-4">
+              Onde Assistir
+            </h3>
+
+            <div className="space-y-3">
+              {content.providers?.flatrate?.map(
+                (provider: any, index: number) => (
+                  <motion.div
+                    key={provider.provider_id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                  >
+                    <Button
+                      variant="outline"
+                      className="w-full bg-white/5 hover:bg-white/10 border-white/10 group"
+                      onClick={() =>
+                        window.open(provider.provider_url, "_blank")
+                      }
+                    >
+                      <div className="flex items-center w-full">
+                        <img
+                          src={`https://image.tmdb.org/t/p/original${provider.logo_path}`}
+                          alt={provider.provider_name}
+                          className="w-8 h-8 rounded-full mr-3"
+                        />
+                        <span className="flex-1 text-left text-white group-hover:text-filmeja-purple transition-colors">
+                          {provider.provider_name}
+                        </span>
+                        <Play className="w-4 h-4 text-white/60 group-hover:text-filmeja-purple transition-colors" />
+                      </div>
+                    </Button>
+                  </motion.div>
+                )
+              )}
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
     </div>
   );
 };

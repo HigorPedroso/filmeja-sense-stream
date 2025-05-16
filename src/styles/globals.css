@@ -39,3 +39,11 @@
     opacity: 0;
   }
 }
+
+.clip-triangle {
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+
+.clip-triangle-down {
+  clip-path: polygon(50% 100%, 0 0, 100% 0);
+}
