@@ -9,6 +9,33 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      favorite_content: {
+        Row: {
+          added_at: string
+          id: string
+          media_type: string
+          title: string
+          tmdb_id: string
+          user_id: string | null
+        }
+        Insert: {
+          added_at?: string
+          id?: string
+          media_type: string
+          title: string
+          tmdb_id: string
+          user_id?: string | null
+        }
+        Update: {
+          added_at?: string
+          id?: string
+          media_type?: string
+          title?: string
+          tmdb_id?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       favorites: {
         Row: {
           created_at: string | null
@@ -102,6 +129,72 @@ export type Database = {
           runtime?: number | null
           title?: string
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      user_preferences: {
+        Row: {
+          content_type: string | null
+          created_at: string
+          genres: string[] | null
+          id: string
+          languages: string[] | null
+          updated_at: string
+          user_id: string
+          watch_duration: string | null
+          watch_time: string | null
+        }
+        Insert: {
+          content_type?: string | null
+          created_at?: string
+          genres?: string[] | null
+          id?: string
+          languages?: string[] | null
+          updated_at?: string
+          user_id: string
+          watch_duration?: string | null
+          watch_time?: string | null
+        }
+        Update: {
+          content_type?: string | null
+          created_at?: string
+          genres?: string[] | null
+          id?: string
+          languages?: string[] | null
+          updated_at?: string
+          user_id?: string
+          watch_duration?: string | null
+          watch_time?: string | null
+        }
+        Relationships: []
+      }
+      watched_content: {
+        Row: {
+          created_at: string | null
+          id: string
+          media_type: string
+          title: string
+          tmdb_id: number
+          user_id: string | null
+          watched_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          media_type: string
+          title: string
+          tmdb_id: number
+          user_id?: string | null
+          watched_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          media_type?: string
+          title?: string
+          tmdb_id?: number
+          user_id?: string | null
+          watched_at?: string | null
         }
         Relationships: []
       }

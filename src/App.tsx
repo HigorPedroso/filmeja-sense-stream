@@ -16,6 +16,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import { FavoritesPage } from "./pages/FavoritesPage";
 import { getUserFavorites } from "@/lib/favorites";
 import { useState, useEffect } from "react";
+import SuperDashboard from "./pages/SuperDashboard";
 
 const queryClient = new QueryClient();
 
@@ -49,8 +50,6 @@ const App = () => {
                   <Dashboard />
                 </ProtectedRoute>
               } />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
               <Route
                 path="/favorites"
                 element={
@@ -59,6 +58,16 @@ const App = () => {
                   </ProtectedRoute>
                 }
               />
+              {/* SuperDashboard admin routes */}
+              <Route path="/super" element={<SuperDashboard />} />
+              <Route path="/super/users" element={<SuperDashboard />} />
+              <Route path="/super/analytics" element={<SuperDashboard />} />
+              <Route path="/super/recommendations" element={<SuperDashboard />} />
+              <Route path="/super/calendar" element={<SuperDashboard />} />
+              <Route path="/super/messages" element={<SuperDashboard />} />
+              <Route path="/super/finances" element={<SuperDashboard />} />
+              <Route path="/super/settings" element={<SuperDashboard />} />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
