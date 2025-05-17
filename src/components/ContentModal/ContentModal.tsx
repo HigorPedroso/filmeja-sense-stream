@@ -43,6 +43,14 @@ interface Database {
   };
 }
 
+const loadingPhrases = [
+  "🎬 Preparando a próxima aventura...",
+  "✨ Carregando um universo épico...",
+  "🍿 Quase lá...",
+  "🎥 Revelando histórias incríveis...",
+  "🌟 Aquecendo os motores...",
+];
+
 export const ContentModal = ({
   isOpen,
   onOpenChange,
@@ -54,7 +62,7 @@ export const ContentModal = ({
 }: ContentModalProps) => {
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-5xl bg-filmeja-dark/95 border-filmeja-purple/20">
+      <DialogContent className="sm:max-w-5xl bg-filmeja-dark/95 border-filmeja-purple/20 h-[90vh] md:h-auto overflow-y-auto">
         {isLoading ? (
           <ContentModalSkeleton />
         ) : (
@@ -77,14 +85,42 @@ const ContentModalSkeleton = () => {
     <div className="relative">
       <div className="flex flex-col md:flex-row gap-6">
         <div className="md:w-1/3">
-          <Skeleton className="w-full aspect-[2/3] rounded-lg" />
-          <div className="mt-4 space-y-2">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="flex items-center justify-between">
-                <Skeleton className="h-4 w-20" />
-                <Skeleton className="h-4 w-24" />
-              </div>
-            ))}
+          <div className="relative">
+            <Skeleton className="w-full aspect-[2/3] rounded-lg bg-white/5" />
+            <motion.div
+              className="absolute inset-0 flex items-center justify-center"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+            >
+              <motion.div
+                className="text-center px-4"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+              >
+                <AnimatePresence mode="wait">
+                  {loadingPhrases.map((phrase, index) => (
+                    <motion.p
+                      key={phrase}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{
+                        opacity: [0, 1, 1, 0],
+                        y: [10, 0, 0, -10],
+                      }}
+                      transition={{
+                        duration: 3,
+                        times: [0, 0.1, 0.9, 1],
+                        repeat: Infinity,
+                        repeatDelay: loadingPhrases.length * 3,
+                        delay: index * 3,
+                      }}
+                      className="absolute inset-0 flex items-center justify-center text-sm md:text-base text-white/60 font-medium"
+                    >
+                      {phrase}
+                    </motion.p>
+                  ))}
+                </AnimatePresence>
+              </motion.div>
+            </motion.div>
           </div>
         </div>
 
@@ -146,12 +182,14 @@ const ContentModalContent = ({
   selectedMood,
   onMarkAsWatched,
 }) => {
+  // Remove the scroll position state and useEffect
   const [showTrailerModal, setShowTrailerModal] = useState(false);
   const [trailerSource, setTrailerSource] = useState<"tmdb" | "youtube" | null>(
     null
   );
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [trailerUrl, setTrailerUrl] = useState<string>("");
+  const [currentScrollPosition, setCurrentScrollPosition] = useState(0);
   const [contentData, setContentData] = useState({
     title: content?.title || content?.name,
     videos: content?.videos,
@@ -192,22 +230,18 @@ const ContentModalContent = ({
     checkIfFavorite();
   }, [content.id]);
 
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrollPosition(window.scrollY);
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   const handleTrailerClick = async () => {
     setShowTrailerModal(true);
     setIsTransitioning(true);
-
-    const handleWatchClick = () => {
-      if (content.providers?.flatrate?.length > 0) {
-        setShowStreamingModal(true);
-      } else {
-        toast({
-          title: "Indisponível",
-          description:
-            "Este conteúdo não está disponível em nenhum serviço de streaming no momento.",
-          variant: "destructive",
-        });
-      }
-    };
 
     try {
       if (contentData.videos?.length > 0) {
@@ -409,15 +443,16 @@ const ContentModalContent = ({
       />
 
       <div className="relative z-10">
-        <div className="flex flex-col md:flex-row gap-6">
+        <div className="flex flex-col md:flex-row gap-4 md:gap-6">
+          {/* Poster Section */}
           <div className="md:w-1/3">
-            <div className="relative">
+            <div className="relative max-w-[300px] mx-auto md:max-w-none">
               <div className="absolute -top-2 -right-2 z-10">
                 <motion.div
                   initial={{ scale: 0, rotate: -10 }}
                   animate={{ scale: 1, rotate: 0 }}
                   transition={{ type: "spring", duration: 0.6 }}
-                  className={`px-3 py-1 rounded-full text-sm font-medium ${
+                  className={`px-2 md:px-3 py-1 rounded-full text-xs md:text-sm font-medium ${
                     content.mediaType === "movie"
                       ? "bg-filmeja-purple text-white"
                       : "bg-filmeja-blue text-white"
@@ -433,7 +468,47 @@ const ContentModalContent = ({
               />
             </div>
 
-            <div className="mt-4 space-y-2">
+            {/* Mobile-only quick action buttons */}
+            <div className="flex justify-center gap-3 mt-4 md:hidden">
+              <Button
+                variant="outline"
+                size="icon"
+                className="w-12 h-12 rounded-full border-white/20 hover:bg-white/10"
+                onClick={handleTrailerClick}
+              >
+                <Play className="w-5 h-5" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className={`w-12 h-12 rounded-full border-white/20 hover:bg-white/10 ${
+                  isFavorite ? "bg-filmeja-purple/20" : ""
+                }`}
+                onClick={handleFavoriteToggle}
+              >
+                <Heart
+                  className={`w-5 h-5 ${
+                    isFavorite ? "fill-filmeja-purple" : ""
+                  }`}
+                />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className={`w-12 h-12 rounded-full border-white/20 hover:bg-white/10 ${
+                  isWatched ? "bg-filmeja-purple/20" : ""
+                }`}
+                onClick={markAsWatched}
+              >
+                {isWatched ? (
+                  <Check className="w-5 h-5" />
+                ) : (
+                  <Eye className="w-5 h-5" />
+                )}
+              </Button>
+            </div>
+
+            <div className="mt-4 space-y-2 text-xs md:text-sm">
               <div className="flex items-center justify-between text-sm text-gray-300">
                 <span>Lançamento:</span>
                 <span>{new Date(content.release_date).getFullYear()}</span>
@@ -449,13 +524,16 @@ const ContentModalContent = ({
             </div>
           </div>
 
+          {/* Content Section */}
           <div className="md:w-2/3">
             <div className="flex justify-between items-start">
               <div>
-                <h2 className="text-2xl font-bold text-white mb-1">
+                <h2 className="text-xl md:text-2xl font-bold text-white mb-1">
                   {content.title}
                 </h2>
-                <p className="text-gray-400 text-sm">{content.tagline}</p>
+                <p className="text-gray-400 text-xs md:text-sm">
+                  {content.tagline}
+                </p>
               </div>
             </div>
 
@@ -622,55 +700,198 @@ const ContentModalContent = ({
       <AnimatePresence>
         {showTrailerModal && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            transition={{ type: "spring", duration: 0.5 }}
-            className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="fixed inset-0 bg-black/95 z-[60] flex flex-col"
           >
-            <div className="relative w-full max-w-4xl aspect-video">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute -top-10 right-0 text-white hover:bg-white/10"
-                onClick={() => {
-                  setShowTrailerModal(false);
-                  setTrailerSource(null);
-                }}
+            {/* Desktop Layout */}
+            <div className="hidden md:flex md:flex-col h-full">
+              {/* Top Bar with Blur Effect */}
+              <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex justify-between items-center px-8 py-6 relative"
               >
-                <X className="w-6 h-6" />
-              </Button>
+                <div className="absolute inset-0 bg-black/40 backdrop-blur-md" />
+                <div className="flex items-center gap-6 relative z-10">
+                  <motion.h2
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className="text-white text-2xl font-medium"
+                  >
+                    {content.title}
+                  </motion.h2>
+                  {content.providers?.flatrate && (
+                    <motion.div 
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      className="flex items-center gap-3 bg-white/5 backdrop-blur-sm px-4 py-2 rounded-full"
+                    >
+                      {content.providers.flatrate.map((provider: any) => (
+                        <motion.div
+                          key={provider.provider_id}
+                          whileHover={{ scale: 1.1 }}
+                          className="relative group"
+                        >
+                          <div className="absolute -inset-1 bg-gradient-to-r from-filmeja-purple to-filmeja-blue rounded-full opacity-0 group-hover:opacity-50 blur-sm transition-opacity" />
+                          <img
+                            src={`https://image.tmdb.org/t/p/original${provider.logo_path}`}
+                            alt={provider.provider_name}
+                            className="w-8 h-8 rounded-full relative z-10"
+                          />
+                          <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity bg-black/80 backdrop-blur-sm text-xs text-white px-3 py-1.5 rounded-full">
+                            {provider.provider_name}
+                          </div>
+                        </motion.div>
+                      ))}
+                    </motion.div>
+                  )}
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-white/80 hover:text-white hover:bg-white/10 rounded-full transition-all duration-200 relative z-10"
+                  onClick={() => {
+                    setShowTrailerModal(false);
+                    setTrailerSource(null);
+                  }}
+                >
+                  <X className="w-6 h-6" />
+                </Button>
+              </motion.div>
+              
+              {/* Centered Video Container */}
+              <div className="flex-1 flex items-center justify-center px-8">
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ type: "spring", damping: 20 }}
+                  className="w-full max-w-[90%] xl:max-w-[80%] aspect-video relative rounded-xl overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.3)]"
+                >
+                  <AnimatePresence mode="wait">
+                    {isTransitioning ? (
+                      <motion.div
+                        key="loading"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+                      >
+                        <div className="text-white text-center">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-filmeja-purple mx-auto mb-2" />
+                          <p className="text-sm">Buscando trailer...</p>
+                        </div>
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        key="player"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="w-full h-full"
+                      >
+                        <iframe
+                          className="w-full h-full"
+                          src={trailerUrl}
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                        />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+              </div>
+            </div>
 
-              <AnimatePresence mode="wait">
-                {isTransitioning ? (
-                  <motion.div
-                    key="transition"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="absolute inset-0 flex items-center justify-center"
-                  >
-                    <div className="text-white text-xl">
-                      Buscando trailer alternativo...
-                    </div>
-                  </motion.div>
-                ) : (
-                  <motion.div
-                    key="player"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="w-full h-full"
-                  >
-                    <iframe
-                      className="w-full h-full rounded-lg"
-                      src={trailerUrl}
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                    />
-                  </motion.div>
-                )}
-              </AnimatePresence>
+            {/* Mobile Layout (keep existing mobile layout) */}
+            <div className="md:hidden flex flex-col h-full">
+              {/* Mobile Header */}
+              <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="md:hidden px-4 py-3 flex justify-end"
+              >
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-white/80 hover:text-white"
+                  onClick={() => {
+                    setShowTrailerModal(false);
+                    setTrailerSource(null);
+                  }}
+                >
+                  <X className="w-5 h-5" />
+                </Button>
+              </motion.div>
+
+              {/* Mobile Content Info */}
+              <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="md:hidden flex-1 flex flex-col items-center justify-center px-4 text-center"
+              >
+                <img
+                  src={`https://image.tmdb.org/t/p/w92${content.poster_path}`}
+                  alt={content.title}
+                  className="w-20 h-20 rounded-lg object-cover mb-4"
+                />
+                <h3 className="text-white font-semibold text-xl mb-2">
+                  {content.title}
+                </h3>
+                <p className="text-gray-400 text-sm mb-4">{content.tagline}</p>
+                <div className="flex items-center gap-2 mb-2">
+                  {content.genres?.slice(0, 2).map((genre: any) => (
+                    <span
+                      key={genre.id}
+                      className="text-xs px-2 py-1 rounded-full bg-white/10 text-white/80"
+                    >
+                      {genre.name}
+                    </span>
+                  ))}
+                </div>
+              </motion.div>
+
+              {/* Video Container at Bottom for Mobile, Centered for Desktop */}
+              <div
+                className={`relative w-full md:max-w-4xl aspect-video ${
+                  window.innerWidth < 768 ? "mt-auto" : ""
+                }`}
+              >
+                <AnimatePresence mode="wait">
+                  {isTransitioning ? (
+                    <motion.div
+                      key="loading"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="absolute inset-0 flex items-center justify-center bg-black/60"
+                    >
+                      <div className="text-white text-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-filmeja-purple mx-auto mb-2" />
+                        <p className="text-sm">Buscando trailer...</p>
+                      </div>
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key="player"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="w-full h-full"
+                    >
+                      <iframe
+                        className="w-full h-full"
+                        src={trailerUrl}
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             </div>
           </motion.div>
         )}
@@ -680,14 +901,14 @@ const ContentModalContent = ({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center px-4 py-6 sm:px-6 md:px-8 overflow-y-auto"
         >
           <motion.div
-            initial={{ scale: 0.9, y: 20, opacity: 0 }}
+            initial={{ scale: 0.95, y: 30, opacity: 0 }}
             animate={{ scale: 1, y: 0, opacity: 1 }}
-            exit={{ scale: 0.9, y: 20, opacity: 0 }}
+            exit={{ scale: 0.95, y: 30, opacity: 0 }}
             transition={{ type: "spring", duration: 0.5 }}
-            className="bg-filmeja-dark/95 rounded-xl p-6 max-w-lg w-full relative border border-filmeja-purple/20"
+            className="bg-filmeja-dark/95 rounded-2xl p-4 sm:p-5 md:p-6 w-full max-w-md md:max-w-lg relative border border-filmeja-purple/20 shadow-xl"
           >
             <Button
               variant="ghost"
@@ -698,7 +919,7 @@ const ContentModalContent = ({
               <X className="w-5 h-5" />
             </Button>
 
-            <h3 className="text-xl font-semibold text-white mb-4">
+            <h3 className="text-lg sm:text-xl font-semibold text-white mb-4 sm:mb-5">
               Onde Assistir
             </h3>
 
@@ -724,7 +945,7 @@ const ContentModalContent = ({
                           alt={provider.provider_name}
                           className="w-8 h-8 rounded-full mr-3"
                         />
-                        <span className="flex-1 text-left text-white group-hover:text-filmeja-purple transition-colors">
+                        <span className="flex-1 text-left text-white group-hover:text-filmeja-purple transition-colors text-sm sm:text-base">
                           {provider.provider_name}
                         </span>
                         <Play className="w-4 h-4 text-white/60 group-hover:text-filmeja-purple transition-colors" />

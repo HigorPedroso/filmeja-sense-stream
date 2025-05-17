@@ -242,14 +242,22 @@ const Index = () => {
               icon={<Settings className="h-6 w-6" />}
             />
           </div>
-          <div className="text-center">
+          <div className="flex justify-center items-center px-4">
             <Button
               size="lg"
-              className="bg-filmeja-purple hover:bg-filmeja-purple/90 text-white"
+              className="bg-filmeja-purple hover:bg-filmeja-purple/90 text-white w-full sm:w-auto flex items-center justify-center gap-3 
+              shadow-lg shadow-filmeja-purple/20 hover:shadow-filmeja-purple/40
+              animate-bounce-gentle
+              relative overflow-hidden
+              group ring-2 ring-offset-2 ring-offset-filmeja-dark ring-filmeja-purple/50 animate-ring-pulse"
               onClick={() => scrollToPlans()}
             >
-              <Play className="mr-2 h-5 w-5" />
-              Quero ver minha recomendação agora
+              <Play className="mr-2 h-5 w-5 animate-pulse" />
+              <span className="text-center relative z-10">
+                Quero ver minha<br />
+                recomendação agora
+              </span>
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-out" />
             </Button>
           </div>
         </div>
@@ -289,11 +297,10 @@ const Index = () => {
                 Fique por dentro dos próximos lançamentos e nunca perca um filme
                 aguardado
               </p>
-              <Link to="/signup">
-                <Button className="bg-filmeja-purple hover:bg-filmeja-purple/90 text-white">
+                <Button onClick={() => scrollToPlans()} className="bg-filmeja-purple hover:bg-filmeja-purple/90 text-white">
                   Ver mais lançamentos
                 </Button>
-              </Link>
+
             </div>
           </div>
         </div>
@@ -330,11 +337,9 @@ const Index = () => {
                 Fique por dentro das próximas séries e acompanhe todos os
                 lançamentos
               </p>
-              <Link to="/signup">
-                <Button className="bg-filmeja-purple hover:bg-filmeja-purple/90 text-white">
+                <Button onClick={() => scrollToPlans()} className="bg-filmeja-purple hover:bg-filmeja-purple/90 text-white">
                   Ver mais séries
                 </Button>
-              </Link>
             </div>
           </div>
         </div>
@@ -381,14 +386,22 @@ const Index = () => {
               description="Um serviço exclusivo para quem valoriza qualidade e não quer perder tempo escolhendo o que assistir."
             />
           </div>
-          <div className="text-center">
+          <div className="flex justify-center items-center px-4">
             <Button
               size="lg"
-              className="bg-filmeja-purple hover:bg-filmeja-purple/90 text-white"
+              className="bg-filmeja-purple hover:bg-filmeja-purple/90 text-white w-full sm:w-auto flex items-center justify-center gap-3 
+              shadow-lg shadow-filmeja-purple/20 hover:shadow-filmeja-purple/40
+              animate-bounce-gentle
+              relative overflow-hidden
+              group ring-2 ring-offset-2 ring-offset-filmeja-dark ring-filmeja-purple/50 animate-ring-pulse"
               onClick={() => scrollToPlans()}
             >
-              <Play className="mr-2 h-5 w-5" />
-              Quero ver minha recomendação agora
+              <Play className="mr-2 h-5 w-5 animate-pulse" />
+              <span className="text-center relative z-10">
+                Quero ver minha<br />
+                recomendação agora
+              </span>
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-out" />
             </Button>
           </div>
         </div>

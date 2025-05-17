@@ -50,9 +50,9 @@ const Navbar: React.FC<NavbarProps> = ({ transparent = false }) => {
         </nav>
 
         <div className="flex items-center space-x-4">
-          <Button variant="ghost" size="icon" className="text-white hover:text-filmeja-purple">
+          {/* <Button variant="ghost" size="icon" className="text-white hover:text-filmeja-purple">
             <Search className="h-5 w-5" />
-          </Button>
+          </Button> */}
 
           <Link to="/signup">
             <Button variant="ghost" size="icon" className="text-white hover:text-filmeja-purple">

@@ -36,23 +36,27 @@ const MoodCarousel: React.FC = () => {
   };
 
   const MovieSkeleton = () => (
-    <div className="relative">
-      <div className="aspect-[2/3] w-full overflow-hidden rounded-lg">
+    <div className="relative w-full max-w-sm mx-auto">
+      <div className="aspect-[2/3] w-full overflow-hidden rounded-lg max-h-[60vh] sm:max-h-[70vh]">
         <Skeleton className="w-full h-full bg-white/5 animate-pulse" />
+        <div className="absolute inset-0 flex items-center justify-center flex-col gap-6 z-10">
+          <Skeleton className="w-10 h-10 rounded-full bg-white/5 animate-pulse" />
+          <Skeleton className="w-48 h-7 rounded-lg bg-white/5 animate-pulse" />
+          <Skeleton className="w-32 h-10 rounded-lg bg-white/5 animate-pulse" />
+        </div>
       </div>
       <div className="p-4">
-        <Skeleton className="h-6 w-3/4 mb-2 bg-white/5 animate-pulse" />
-        <div className="flex items-center gap-1 mb-2">
+        <Skeleton className="h-8 w-4/5 mb-4 bg-white/5 animate-pulse" />
+        <div className="flex items-center gap-1.5 mb-4">
           {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} className="w-4 h-4 rounded-full bg-white/5 animate-pulse" />
+            <Skeleton key={i} className="w-5 h-5 rounded-full bg-white/5 animate-pulse" />
           ))}
-          <Skeleton className="w-8 h-4 ml-2 bg-white/5 animate-pulse" />
+          <Skeleton className="w-12 h-5 ml-2 bg-white/5 animate-pulse" />
         </div>
-        <Skeleton className="h-4 w-full mb-2 bg-white/5 animate-pulse" />
-        <Skeleton className="h-4 w-3/4 bg-white/5 animate-pulse" />
-        <div className="flex flex-wrap gap-2 mt-2">
-          <Skeleton className="h-6 w-16 rounded-full bg-white/5 animate-pulse" />
-          <Skeleton className="h-6 w-20 rounded-full bg-white/5 animate-pulse" />
+        <Skeleton className="h-20 w-full mb-4 bg-white/5 animate-pulse" />
+        <div className="flex flex-wrap gap-2">
+          <Skeleton className="h-7 w-24 rounded-full bg-white/5 animate-pulse" />
+          <Skeleton className="h-7 w-32 rounded-full bg-white/5 animate-pulse" />
         </div>
       </div>
     </div>
@@ -85,31 +89,25 @@ const MoodCarousel: React.FC = () => {
       </div>
 
       <Dialog open={showModal} onOpenChange={setShowModal}>
-        <DialogContent className="sm:max-w-5xl">
+        <DialogContent className="sm:max-w-lg h-[85vh] sm:h-auto overflow-y-auto flex flex-col items-center justify-center [&>button]:z-[100]">
           {loading ? (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {Array.from({ length: 3 }).map((_, index) => (
-                <MovieSkeleton key={index} />
-              ))}
-            </div>
+            <MovieSkeleton />
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {recommendations.map((movie, index) => (
+            <div className="w-full max-w-sm mx-auto">
+              {recommendations.slice(0, 1).map((movie) => (
                 <div key={movie.id} className="relative">
-                  <div className="aspect-[2/3] w-full overflow-hidden rounded-lg">
+                  <div className="aspect-[2/3] w-full overflow-hidden rounded-lg max-h-[60vh] sm:max-h-[70vh]">
                     <div className="absolute inset-0 bg-black/50 backdrop-blur-md flex items-center justify-center flex-col gap-4 z-10">
-                      <Lock className="w-8 h-8 text-white/90" />
-                      <h3 className="text-lg font-semibold text-white text-center px-2 text-shadow">
+                      <Lock className="w-10 h-10 text-white/90" />
+                      <h3 className="text-xl font-semibold text-white text-center px-4 text-shadow">
                         Recomendação Bloqueada
                       </h3>
-                      {index === 1 && (
-                        <Button
-                          className="bg-filmeja-purple hover:bg-filmeja-purple/90 shadow-lg"
-                          onClick={() => navigate("/signup")}
-                        >
-                          Desbloquear
-                        </Button>
-                      )}
+                      <Button
+                        className="bg-filmeja-purple hover:bg-filmeja-purple/90 shadow-lg px-6 py-2 text-base"
+                        onClick={() => navigate("/signup")}
+                      >
+                        Desbloquear
+                      </Button>
                     </div>
                     <img
                       src={`https://image.tmdb.org/t/p/w500${movie.poster_path}`}
@@ -118,27 +116,27 @@ const MoodCarousel: React.FC = () => {
                     />
                   </div>
                   <div className="p-4">
-                    <h2 className="text-lg font-bold text-white mb-2 line-clamp-1">
+                    <h2 className="text-xl font-bold text-white mb-3">
                       {movie.title}
                     </h2>
-                    <div className="flex items-center gap-1 mb-2">
+                    <div className="flex items-center gap-1.5 mb-3">
                       {Array.from({ length: 5 }).map((_, i) => (
                         <Star
                           key={i}
                           fill="currentColor"
-                          className="w-4 h-4 text-filmeja-purple"
+                          className="w-5 h-5 text-filmeja-purple"
                         />
                       ))}
-                      <span className="text-white text-sm ml-2">5.0</span>
+                      <span className="text-white text-base ml-2">5.0</span>
                     </div>
-                    <p className="text-gray-300 text-sm line-clamp-2">
+                    <p className="text-gray-300 text-base mb-3">
                       {movie.overview}
                     </p>
-                    <div className="flex flex-wrap gap-2 mt-2">
+                    <div className="flex flex-wrap gap-2">
                       {movie.genres?.map((genre: any) => (
                         <span
                           key={genre.id}
-                          className="px-2 py-1 bg-white/10 rounded-full text-xs text-white"
+                          className="px-3 py-1.5 bg-white/10 rounded-full text-sm text-white"
                         >
                           {genre.name}
                         </span>

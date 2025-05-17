@@ -38,6 +38,7 @@ import { TopTrendingList } from "@/components/TopMovies/TopMovies";
 import { getUserFavorites, FavoriteItem } from "@/lib/favorites";
 import StreamingServices from "@/components/StreamingServices";
 import { RecommendedByAI } from "@/components/RecommendedByAI/RecommendedByAI";
+
 // Mock user data - in a real app, this would come from authentication
 const mockUser = {
   name: "Gabriel Costa",
@@ -113,6 +114,19 @@ const genreCategories = [
     ],
   },
 ];
+
+const moodEmojis: Record<string, string> = {
+  happy: "😊",
+  sad: "😢",
+  excited: "🤩",
+  relaxed: "😌",
+  romantic: "🥰",
+  thoughtful: "🤔",
+  energetic: "⚡",
+  nostalgic: "🌟",
+  adventurous: "🌎",
+  mysterious: "🔍",
+};
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -890,11 +904,12 @@ const Dashboard = () => {
       )}
       <div
         className={`fixed top-0 left-0 h-full transition-all duration-300 z-50 
-        bg-gradient-to-b from-black via-filmeja-dark/95 to-black/95
-        before:absolute before:inset-0 before:bg-[radial-gradient(circle_at_100%_0%,rgba(120,0,255,0.15),transparent_50%)]
-        after:absolute after:inset-0 after:bg-[radial-gradient(circle_at_0%_100%,rgba(0,70,255,0.15),transparent_50%)]
-        backdrop-blur-xl border-r border-white/[0.02]
-        ${isExpanded ? "w-[280px]" : "w-[70px]"}`}
+  bg-gradient-to-b from-black via-filmeja-dark/95 to-black/95
+  before:absolute before:inset-0 before:bg-[radial-gradient(circle_at_100%_0%,rgba(120,0,255,0.15),transparent_50%)]
+  after:absolute after:inset-0 after:bg-[radial-gradient(circle_at_0%_100%,rgba(0,70,255,0.15),transparent_50%)]
+  backdrop-blur-xl border-r border-white/[0.02]
+  hidden md:block
+  ${isExpanded ? "w-[280px]" : "w-[70px]"}`}
       >
         <div className="flex flex-col h-full px-4 relative z-10">
           {/* Rest of the sidebar content remains the same */}
@@ -1001,13 +1016,36 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
+
+      <div className="fixed bottom-0 left-0 right-0 bg-filmeja-dark/95 border-t border-white/[0.02] backdrop-blur-xl md:hidden z-50">
+        <nav className="flex justify-around items-center py-3 px-4">
+          <Button variant="ghost" className="text-gray-300" title="Início">
+            <Home className="w-5 h-5" />
+          </Button>
+          <Button variant="ghost" className="text-gray-300" title="Minha Lista">
+            <Heart className="w-5 h-5" />
+          </Button>
+          <Button
+            variant="ghost"
+            className="text-gray-300"
+            title="Recomendados"
+          >
+            <Star className="w-5 h-5" />
+          </Button>
+          <Button variant="ghost" className="text-gray-300" title="Minha Conta">
+            <User className="w-5 h-5" />
+          </Button>
+        </nav>
+      </div>
       <ImageBackground useSlideshow={true}>
         {/* Header with user info */}
         <header className="p-4 sticky top-0 z-10">
           <div className="flex justify-end items-center">
             <div className="flex items-center space-x-3">
-              <span className="text-white">{mockUser.name}</span>
-              <div className="w-8 h-8 rounded-full overflow-hidden">
+              <span className="text-white text-sm md:text-base">
+                {mockUser.name}
+              </span>
+              <div className="w-8 h-8 md:w-10 md:h-10 rounded-full overflow-hidden">
                 <img
                   src={mockUser.avatar}
                   alt="Avatar"
@@ -1017,82 +1055,41 @@ const Dashboard = () => {
             </div>
           </div>
         </header>
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4">
-          <h1 className="text-5xl font-bold text-white mb-6 drop-shadow-lg">
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4 py-8 md:py-0">
+          <h1 className="text-3xl md:text-5xl font-bold text-white mb-4 md:mb-6 drop-shadow-lg leading-tight">
             Como você quer descobrir seu próximo filme?
           </h1>
-          <p className="text-xl text-gray-200 mb-12 max-w-2xl drop-shadow-md">
+          <p className="text-lg md:text-xl text-gray-200 mb-8 md:mb-12 max-w-2xl drop-shadow-md px-2">
             Escolha uma das opções abaixo e deixe-nos guiar você até o
             entretenimento perfeito
           </p>
 
-          <div className="flex flex-col md:flex-row gap-6">
+          {/* Updated container classes for better centering */}
+          <div className="flex flex-col md:flex-row items-center justify-center w-full max-w-sm md:max-w-3xl gap-4 md:gap-6">
             <Button
               onClick={() => setShowMoodOverlay(true)}
-              className="bg-filmeja-purple/20 hover:bg-filmeja-purple/40 border-2 border-filmeja-purple text-white px-8 py-4 rounded-xl backdrop-blur-sm transition-all"
+              className="w-full md:w-auto bg-filmeja-purple/20 hover:bg-filmeja-purple/40 border-2 border-filmeja-purple text-white px-6 md:px-8 py-4 rounded-xl backdrop-blur-sm transition-all active:scale-95 touch-manipulation"
             >
-              <Heart className="w-5 h-5 mr-3" />
+              <Heart className="w-5 h-5 mr-2 md:mr-3" />
               Por Humor
             </Button>
 
             <Button
               onClick={() => setShowGenreModal(true)}
-              className="bg-filmeja-blue/20 hover:bg-filmeja-blue/40 border-2 border-filmeja-blue text-white px-8 py-4 rounded-xl backdrop-blur-sm transition-all"
+              className="w-full md:w-auto bg-filmeja-blue/20 hover:bg-filmeja-blue/40 border-2 border-filmeja-blue text-white px-6 md:px-8 py-4 rounded-xl backdrop-blur-sm transition-all active:scale-95 touch-manipulation"
             >
-              <Film className="w-5 h-5 mr-3" />
+              <Film className="w-5 h-5 mr-2 md:mr-3" />
               Por Gênero
             </Button>
 
             <Button
               onClick={() => setShowAiChat(true)}
-              className="bg-gradient-to-r from-filmeja-purple/20 to-filmeja-blue/20 hover:from-filmeja-purple/40 hover:to-filmeja-blue/40 border-2 border-white text-white px-8 py-4 rounded-xl backdrop-blur-sm transition-all"
+              className="w-full md:w-auto bg-gradient-to-r from-filmeja-purple/20 to-filmeja-blue/20 hover:from-filmeja-purple/40 hover:to-filmeja-blue/40 border-2 border-white text-white px-6 md:px-8 py-4 rounded-xl backdrop-blur-sm transition-all active:scale-95 touch-manipulation"
             >
-              <Sparkles className="w-5 h-5 mr-3" />
+              <Sparkles className="w-5 h-5 mr-2 md:mr-3" />
               Converse com IA
             </Button>
           </div>
-          {showMoodOverlay && (
-            <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center">
-              <div className="bg-filmeja-dark/90 p-8 rounded-2xl max-w-4xl w-full mx-4">
-                <h2 className="text-2xl font-bold text-white mb-8">
-                  Como você está se sentindo hoje?
-                </h2>
-                <div className="flex flex-wrap justify-center gap-4">
-                  {[
-                    { mood: "happy", name: "Feliz", emoji: "😊" },
-                    { mood: "sad", name: "Triste", emoji: "😢" },
-                    { mood: "excited", name: "Animado", emoji: "🤩" },
-                    { mood: "relaxed", name: "Relaxado", emoji: "😌" },
-                    { mood: "romantic", name: "Romântico", emoji: "🥰" },
-                    { mood: "scared", name: "Assustado", emoji: "😨" },
-                    { mood: "thoughtful", name: "Pensativo", emoji: "🤔" },
-                  ].map(({ mood, name, emoji }) => (
-                    <Button
-                      key={mood}
-                      onClick={() => {
-                        handleMoodSelect(mood);
-                        setShowMoodOverlay(false);
-                      }}
-                      className="flex items-center space-x-2 px-6 py-3 bg-white/5 hover:bg-filmeja-purple/20 rounded-full transition-all duration-300 hover:scale-105"
-                    >
-                      <span className="text-2xl" aria-hidden="true">
-                        {emoji}
-                      </span>
-                      <span className="text-white font-medium whitespace-nowrap">
-                        {name}
-                      </span>
-                    </Button>
-                  ))}
-                </div>
-                <Button
-                  onClick={() => setShowMoodOverlay(false)}
-                  className="mt-8 px-6 py-2 text-gray-400 hover:text-white transition-colors"
-                >
-                  Fechar
-                </Button>
-              </div>
-            </div>
-          )}
         </div>
         {showGenreModal && (
           <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
@@ -1100,23 +1097,23 @@ const Dashboard = () => {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-filmeja-dark/90 rounded-2xl max-w-4xl w-full max-h-[80vh] overflow-y-auto"
+              className="bg-filmeja-dark/90 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
             >
-              <div className="p-8">
-                <div className="flex justify-between items-center mb-8">
-                  <h2 className="text-2xl font-bold text-white">
+              <div className="p-6 md:p-8">
+                <div className="flex justify-between items-center mb-6 md:mb-8 sticky top-0 bg-filmeja-dark/90 py-2">
+                  <h2 className="text-xl md:text-2xl font-bold text-white">
                     Escolha um Gênero
                   </h2>
                   <Button
                     variant="ghost"
                     onClick={() => setShowGenreModal(false)}
-                    className="text-gray-400 hover:text-white"
+                    className="text-gray-400 hover:text-white p-2 -mr-2"
                   >
                     <X className="w-6 h-6" />
                   </Button>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                   {genreCategories.map((category) => (
                     <div key={category.name} className="space-y-4">
                       <h3 className="text-lg font-semibold text-white flex items-center gap-2">
@@ -1205,12 +1202,77 @@ const Dashboard = () => {
             </motion.div>
           </div>
         )}
+
+        {showMoodOverlay && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-gradient-to-br from-filmeja-dark/90 to-black/90 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-white/10"
+            >
+              <div className="p-6 md:p-8">
+                <div className="flex justify-between items-center mb-8 md:mb-10">
+                  <div>
+                    <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">
+                      Como você está se sentindo hoje? ✨
+                    </h2>
+                    <p className="text-gray-400 text-sm md:text-base">
+                      Escolha seu humor e deixe-nos encontrar o filme perfeito
+                      para você
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    onClick={() => setShowMoodOverlay(false)}
+                    className="text-gray-400 hover:text-white"
+                  >
+                    <X className="w-6 h-6" />
+                  </Button>
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-5">
+                  {Object.entries(moodNames).map(([mood, name]) => (
+                    <motion.button
+                      key={mood}
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.97 }}
+                      onClick={() => {
+                        setSelectedMood(mood as MoodType);
+                        handleMoodSelect(mood);
+                        setShowMoodOverlay(false);
+                      }}
+                      className="p-4 rounded-xl transition-all
+        bg-white/5 hover:bg-white/10 border border-white/10
+        backdrop-blur-sm group relative overflow-hidden
+        hover:border-filmeja-purple/50 hover:shadow-lg hover:shadow-filmeja-purple/20
+        min-h-[64px] flex items-center"
+                    >
+                      <div
+                        className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent
+        translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500"
+                      />
+                      <div className="flex items-center gap-2 w-full">
+                        <span className="text-2xl flex-shrink-0">
+                          {moodEmojis[mood] || "🎬"}
+                        </span>
+                        <span className="text-white font-medium text-base md:text-lg truncate">
+                          {name}
+                        </span>
+                      </div>
+                    </motion.button>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
       </ImageBackground>
 
       {/* Main content */}
       <div
         className={`transition-all duration-300 ${
-          isExpanded ? "ml-[280px]" : "ml-[70px]"
+          isExpanded ? "md:ml-[280px]" : "md:ml-[70px]"
         }`}
       >
         {/* Main content area */}

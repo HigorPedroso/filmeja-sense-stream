@@ -118,13 +118,23 @@ export default {
 			theme: {
 				extend: {
 					keyframes: {
-						marquee: {
-							'0%': { transform: 'translateX(0%)' },
-							'100%': { transform: 'translateX(-100%)' }
+						'pulse-subtle': {
+							'0%, 100%': { transform: 'scale(1)' },
+							'50%': { transform: 'scale(1.005)' },
+						},
+						'bounce-gentle': {
+							'0%, 100%': { transform: 'translateY(-2%)' },
+							'50%': { transform: 'translateY(0)' }
+						},
+						'ring-pulse': {
+							'0%, 100%': { opacity: 1 },
+							'50%': { opacity: 0.5 }
 						}
 					},
 					animation: {
-						'marquee': 'marquee 40s linear infinite'
+						'pulse-subtle': 'pulse-subtle 3s ease-in-out infinite',
+						'bounce-gentle': 'bounce-gentle 2s ease-in-out infinite',
+						'ring-pulse': 'ring-pulse 2s ease-in-out infinite'
 					}
 				}
 			},
