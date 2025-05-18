@@ -1,40 +1,88 @@
 
 import { useAuth } from "@/hooks/useAuth";
-import { User } from "@supabase/supabase-js";
 import { useState, useEffect } from "react";
 import AvatarSelectionModal from "./AvatarSelectionModal";
 import { Crown } from "lucide-react";
 import { Badge } from "./ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import PremiumPaymentModal from "./PremiumPaymentModal";
+import { useToast } from "@/components/ui/use-toast";
+import { useLocation } from "react-router-dom";
 
 const HeaderDashboard = () => {
   const { user } = useAuth();
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
   const [isPremiumModalOpen, setIsPremiumModalOpen] = useState(false);
   const [isPremium, setIsPremium] = useState(false);
+  const [isCheckingStatus, setIsCheckingStatus] = useState(false);
+  const { toast } = useToast();
+  const location = useLocation();
   const randomAvatarId = Math.floor(Math.random() * 100);
   const defaultAvatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${randomAvatarId}`;
 
+  // Check for payment success/cancel query params
   useEffect(() => {
-    const checkPremiumStatus = async () => {
-      if (user) {
-        try {
-          const response = await fetch('https://yynlzhfibeozrwrtrjbs.supabase.co/functions/v1/check-subscription', {
-            method: 'GET',
-            headers: {
-              'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
-            },
-          });
-          
-          const { isPremium } = await response.json();
-          setIsPremium(isPremium);
-        } catch (error) {
-          console.error("Error checking premium status:", error);
-        }
-      }
-    };
+    const queryParams = new URLSearchParams(location.search);
+    const paymentStatus = queryParams.get('payment');
     
+    if (paymentStatus === 'success') {
+      toast({
+        title: "Pagamento bem-sucedido!",
+        description: "Bem-vindo ao Premium! Agora você tem acesso a todos os recursos exclusivos.",
+        variant: "default",
+      });
+      // Remove query params after showing toast
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, "", newUrl);
+      // Force refresh subscription status
+      checkPremiumStatus();
+    } else if (paymentStatus === 'canceled') {
+      toast({
+        title: "Pagamento cancelado",
+        description: "O processo de pagamento foi cancelado. Você pode tentar novamente quando quiser.",
+        variant: "destructive",
+      });
+      // Remove query params after showing toast
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, "", newUrl);
+    }
+  }, [location.search, toast]);
+
+  const checkPremiumStatus = async () => {
+    if (user && !isCheckingStatus) {
+      setIsCheckingStatus(true);
+      try {
+        const accessToken = (await supabase.auth.getSession()).data.session?.access_token;
+        
+        if (!accessToken) {
+          console.error("No access token available");
+          setIsCheckingStatus(false);
+          return;
+        }
+        
+        const response = await fetch('https://yynlzhfibeozrwrtrjbs.supabase.co/functions/v1/check-subscription', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`
+          },
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Error checking premium status: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        setIsPremium(data.isPremium);
+      } catch (error) {
+        console.error("Error checking premium status:", error);
+      } finally {
+        setIsCheckingStatus(false);
+      }
+    }
+  };
+
+  // Check premium status on mount and when user changes
+  useEffect(() => {
     checkPremiumStatus();
   }, [user]);
 

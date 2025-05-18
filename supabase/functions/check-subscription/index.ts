@@ -5,12 +5,16 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "GET, OPTIONS"
 };
 
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { 
+      headers: corsHeaders,
+      status: 204
+    });
   }
 
   try {
@@ -39,6 +43,8 @@ serve(async (req) => {
       });
     }
 
+    console.log("Checking subscription for user:", user.id);
+
     // Get subscription status from database
     const { data: subscription, error: subscriptionError } = await supabaseClient
       .from("subscribers")
@@ -47,12 +53,14 @@ serve(async (req) => {
       .single();
 
     if (subscriptionError && subscriptionError.code !== "PGRST116") {
+      console.error("Error fetching subscription:", subscriptionError);
       return new Response(JSON.stringify({ error: subscriptionError.message }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 500,
       });
     }
 
+    // Return subscription information
     return new Response(JSON.stringify({ 
       isPremium: subscription?.is_premium || false,
       subscription: subscription || null 

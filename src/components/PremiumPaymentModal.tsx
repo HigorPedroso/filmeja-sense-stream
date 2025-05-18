@@ -3,7 +3,6 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
-import { loadStripe } from "@stripe/stripe-js";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "./ui/button";
 import { Check, Crown, X } from "lucide-react";
@@ -21,22 +20,26 @@ const PremiumPaymentModal = ({ isOpen, onClose, onSuccess }: PremiumPaymentModal
   const handlePayment = async () => {
     try {
       setIsLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
       const { data: { session } } = await supabase.auth.getSession();
       
-      if (!user) throw new Error("User not found");
+      if (!session?.user) {
+        throw new Error("Usuário não autenticado");
+      }
 
       const { data, error } = await supabase.functions.invoke('create-checkout-session', {
-        body: {
-          priceId: import.meta.env.VITE_STRIPE_PRODUCT_ID,
-          customerId: user.id,
-          customerEmail: user.email,
-        }
+        body: {}  // The function will extract user details from the auth token
       });
 
-      if (error) throw error;
-      if (!data?.url) throw new Error('No checkout URL received');
+      if (error) {
+        console.error("Payment error:", error);
+        throw new Error(error.message || "Erro ao processar pagamento");
+      }
+      
+      if (!data?.url) {
+        throw new Error('URL de checkout não recebida');
+      }
 
+      // Redirect to Stripe checkout
       window.location.href = data.url;
       
     } catch (error) {
@@ -92,7 +95,7 @@ const PremiumPaymentModal = ({ isOpen, onClose, onSuccess }: PremiumPaymentModal
                 "Descubra filmes e séries perfeitos para você",
                 "Recursos premium liberados",
                 "Funcionalidades exclusivas para explorar",
-                "Suporte prioritário,atenção especial para você"
+                "Suporte prioritário, atenção especial para você"
               ].map((feature, index) => (
                 <motion.div
                   key={index}
