@@ -34,10 +34,12 @@ import { ContentModal } from "@/components/ContentModal/ContentModal";
 import { AiChat } from "@/components/AiChat/AiChat";
 import { fetchMoodRecommendation as fetchMoodRecommendationService } from "@/lib/recommendations/fetchMoodRecommendation";
 import SpinnerWheel from "@/components/SpinnerWheel";
-import { TopTrendingList } from "@/components/TopMovies/TopMovies";
 import { getUserFavorites, FavoriteItem } from "@/lib/favorites";
 import StreamingServices from "@/components/StreamingServices";
 import { RecommendedByAI } from "@/components/RecommendedByAI/RecommendedByAI";
+import HeaderDashboard from "@/components/HeaderDashboard";
+import PremiumPaymentModal from "@/components/PremiumPaymentModal";
+import TopTrendingList from "@/components/TopMovies/TopMovies";
 
 // Mock user data - in a real app, this would come from authentication
 const mockUser = {
@@ -161,6 +163,7 @@ const Dashboard = () => {
   const [userWatchedMovies, setUserWatchedMovies] = useState<ContentItem[]>([]);
   const [userWatchedSeries, setUserWatchedSeries] = useState<ContentItem[]>([]);
   const [userFavorites, setUserFavorites] = useState<FavoriteItem[]>([]);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [userContentPreference, setUserContentPreference] = useState<
     "movies" | "series" | null
   >(null);
@@ -293,24 +296,30 @@ const Dashboard = () => {
     });
   };
 
-  // Handle upgrade to premium
   const handleUpgradeToPremium = () => {
-    // Here you would redirect to Stripe payment
-    toast({
-      title: "Redirecionando para pagamento",
-      description: "Você será redirecionado para a página de pagamento",
-    });
-    // For demo purposes, let's toggle the premium status
-    setIsPremium(true);
+    setShowPaymentModal(true);
   };
 
   // Handle logout
-  const handleLogout = () => {
-    toast({
-      title: "Saindo...",
-      description: "Você foi desconectado com sucesso",
-    });
-    navigate("/");
+  const handleLogout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) throw error;
+
+      toast({
+        title: "Saindo...",
+        description: "Você foi desconectado com sucesso",
+      });
+      
+      navigate("/");
+    } catch (error) {
+      toast({
+        title: "Erro ao sair",
+        description: "Não foi possível fazer logout. Tente novamente.",
+        variant: "destructive",
+      });
+    }
   };
 
   // Add this effect to fetch user preferences when component mounts
@@ -1038,26 +1047,10 @@ const Dashboard = () => {
         </nav>
       </div>
       <ImageBackground useSlideshow={true}>
-        {/* Header with user info */}
-        <header className="p-4 sticky top-0 z-10">
-          <div className="flex justify-end items-center">
-            <div className="flex items-center space-x-3">
-              <span className="text-white text-sm md:text-base">
-                {mockUser.name}
-              </span>
-              <div className="w-8 h-8 md:w-10 md:h-10 rounded-full overflow-hidden">
-                <img
-                  src={mockUser.avatar}
-                  alt="Avatar"
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            </div>
-          </div>
-        </header>
+        <HeaderDashboard user={mockUser} />
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4 py-8 md:py-0">
           <h1 className="text-3xl md:text-5xl font-bold text-white mb-4 md:mb-6 drop-shadow-lg leading-tight">
-            Como você quer descobrir seu próximo filme?
+            Como você quer descobrir seu próximo filme ou série?
           </h1>
           <p className="text-lg md:text-xl text-gray-200 mb-8 md:mb-12 max-w-2xl drop-shadow-md px-2">
             Escolha uma das opções abaixo e deixe-nos guiar você até o
@@ -1087,7 +1080,7 @@ const Dashboard = () => {
               className="w-full md:w-auto bg-gradient-to-r from-filmeja-purple/20 to-filmeja-blue/20 hover:from-filmeja-purple/40 hover:to-filmeja-blue/40 border-2 border-white text-white px-6 md:px-8 py-4 rounded-xl backdrop-blur-sm transition-all active:scale-95 touch-manipulation"
             >
               <Sparkles className="w-5 h-5 mr-2 md:mr-3" />
-              Converse com IA
+              Converse com Filmin.IA
             </Button>
           </div>
         </div>
@@ -1267,6 +1260,19 @@ const Dashboard = () => {
             </motion.div>
           </div>
         )}
+
+  <PremiumPaymentModal
+    isOpen={showPaymentModal}
+    onClose={() => setShowPaymentModal(false)}
+    onSuccess={() => {
+      setIsPremium(true);
+      setShowPaymentModal(false);
+      toast({
+        title: "Bem-vindo ao Premium!",
+        description: "Seu acesso premium foi ativado com sucesso.",
+      });
+    }}
+  />
       </ImageBackground>
 
       {/* Main content */}

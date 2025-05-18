@@ -136,7 +136,7 @@ export function AiChat({ onShowContent }: AiChatProps) {
       <div className="p-3 md:p-4 border-b border-white/10">
         <h3 className="text-base md:text-lg font-semibold text-white flex items-center gap-2">
           <Bot className="w-5 h-5 text-filmeja-purple" />
-          FilmeJá AI Assistant
+          Filmin.AI te ajuda
         </h3>
       </div>
 

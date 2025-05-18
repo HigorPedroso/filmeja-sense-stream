@@ -90,14 +90,34 @@ const Signup = () => {
   const handleGoogleLogin = async () => {
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin + '/dashboard',
-        },
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+          redirectTo: `${window.location.origin}/dashboard`
+        }
       });
 
       if (error) throw error;
+
+      // Store additional user data if needed
+      if (data?.user) {
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .upsert({
+            id: data.user.id,
+            full_name: data.user.user_metadata.full_name,
+            avatar_url: data.user.user_metadata.avatar_url,
+            updated_at: new Date().toISOString(),
+          });
+
+        if (profileError) {
+          console.error('Error updating profile:', profileError);
+        }
+      }
     } catch (error) {
       toast({
         title: 'Erro!',
@@ -134,7 +154,7 @@ const Signup = () => {
               type="button"
               disabled={loading}
             >
-              <img src="/google.svg" alt="Google" className="w-5 h-5 mr-2" />
+              <img src="/google.png" alt="Google" className="w-5 h-5 mr-2" />
               Continuar com Google
             </Button>
 
