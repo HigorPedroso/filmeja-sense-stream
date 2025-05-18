@@ -22,31 +22,22 @@ const PremiumPaymentModal = ({ isOpen, onClose, onSuccess }: PremiumPaymentModal
     try {
       setIsLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session } } = await supabase.auth.getSession();
       
       if (!user) throw new Error("User not found");
 
-      // Create Checkout Session on the server
-      const response = await fetch('https://yynlzhfibeozrwrtrjbs.supabase.co/functions/v1/create-checkout-session', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
-        },
-        body: JSON.stringify({
+      const { data, error } = await supabase.functions.invoke('create-checkout-session', {
+        body: {
           priceId: import.meta.env.VITE_STRIPE_PRODUCT_ID,
           customerId: user.id,
           customerEmail: user.email,
-        }),
+        }
       });
 
-      const { url, error } = await response.json();
+      if (error) throw error;
+      if (!data?.url) throw new Error('No checkout URL received');
 
-      if (error) {
-        throw new Error(error);
-      }
-
-      // Redirect to Stripe Checkout
-      window.location.href = url;
+      window.location.href = data.url;
       
     } catch (error) {
       console.error("Payment error:", error);
@@ -89,7 +80,7 @@ const PremiumPaymentModal = ({ isOpen, onClose, onSuccess }: PremiumPaymentModal
                 <Crown className="w-8 h-8 text-filmeja-purple" />
               </motion.div>
               <h2 className="text-2xl font-bold mb-2">Upgrade para Premium</h2>
-              <p className="text-gray-400">Desbloqueie todos os recursos por apenas</p>
+              <p className="text-gray-400"> Você tem acesso a tudo isso, por apenas</p>
               <div className="text-3xl font-bold text-filmeja-purple mt-2">
                 R$9,99<span className="text-sm text-gray-400">/mês</span>
               </div>
@@ -97,10 +88,11 @@ const PremiumPaymentModal = ({ isOpen, onClose, onSuccess }: PremiumPaymentModal
 
             <div className="space-y-4 mb-8">
               {[
-                "Recomendações personalizadas ilimitadas",
-                "Acesso a todos os recursos premium",
-                "Suporte prioritário",
-                "Sem anúncios",
+                "Recomendações ultra-personalizadas com IA",
+                "Descubra filmes e séries perfeitos para você",
+                "Recursos premium liberados",
+                "Funcionalidades exclusivas para explorar",
+                "Suporte prioritário,atenção especial para você"
               ].map((feature, index) => (
                 <motion.div
                   key={index}
