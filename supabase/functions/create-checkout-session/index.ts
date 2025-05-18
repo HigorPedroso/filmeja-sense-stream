@@ -6,12 +6,15 @@ import Stripe from "https://esm.sh/stripe@14.21.0";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS"
 };
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, {
       headers: corsHeaders,
+      status: 204
     });
   }
 
@@ -54,10 +57,10 @@ serve(async (req) => {
       limit: 1,
     });
     
-    let customerId;
+    let stripeCustomerId;
     
     if (customers.data.length > 0) {
-      customerId = customers.data[0].id;
+      stripeCustomerId = customers.data[0].id;
     } else {
       // Create a new customer in Stripe
       const customer = await stripe.customers.create({
@@ -66,12 +69,12 @@ serve(async (req) => {
           supabaseUserId: user.id,
         },
       });
-      customerId = customer.id;
+      stripeCustomerId = customer.id;
     }
     
     // Create checkout session
     const session = await stripe.checkout.sessions.create({
-      customer: customerId,
+      customer: stripeCustomerId,
       line_items: [
         {
           price: Deno.env.get("STRIPE_PRODUCT_ID"),
@@ -93,7 +96,7 @@ serve(async (req) => {
       .upsert({
         user_id: user.id, 
         email: user.email,
-        stripe_customer_id: customerId,
+        stripe_customer_id: stripeCustomerId,
         updated_at: new Date().toISOString(),
       }, { onConflict: "user_id" });
     
