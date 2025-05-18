@@ -91,17 +91,36 @@ serve(async (req) => {
     });
     
     // Create or update subscriber record
-    const { error: dbError } = await supabaseClient
+    const { data: subscriberData, error: dbError } = await supabaseClient
       .from("subscribers")
       .upsert({
-        user_id: user.id, 
+        id: crypto.randomUUID(), // Add a unique ID
+        user_id: user.id,
         email: user.email,
         stripe_customer_id: stripeCustomerId,
+        status: 'active',
+        created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-      }, { onConflict: "user_id" });
+      }, { 
+        onConflict: "user_id",
+        returning: "minimal" 
+      });
     
     if (dbError) {
       console.error("Error updating subscriber record:", dbError);
+      // Log more details about the error
+      console.error("Error details:", {
+        user_id: user.id,
+        stripe_customer_id: stripeCustomerId,
+        error_code: dbError.code,
+        error_message: dbError.message,
+        error_details: dbError.details
+      });
+      
+      // Still continue with the checkout process even if subscriber record fails
+      console.log("Continuing with checkout despite subscriber record error");
+    } else {
+      console.log("Subscriber record created/updated successfully");
     }
 
     return new Response(JSON.stringify({ url: session.url }), {

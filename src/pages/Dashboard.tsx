@@ -40,6 +40,8 @@ import { RecommendedByAI } from "@/components/RecommendedByAI/RecommendedByAI";
 import HeaderDashboard from "@/components/HeaderDashboard";
 import PremiumPaymentModal from "@/components/PremiumPaymentModal";
 import TopTrendingList from "@/components/TopMovies/TopMovies";
+import { useSearchParams } from "react-router-dom";
+import PaymentSuccessModal from "@/components/PaymentSuccessModal";
 
 // Mock user data - in a real app, this would come from authentication
 const mockUser = {
@@ -141,7 +143,7 @@ const Dashboard = () => {
   const [moodRecommendation, setMoodRecommendation] = useState<any>(null);
   const [isLoadingRecommendation, setIsLoadingRecommendation] = useState(false);
   const [selectedMood, setSelectedMood] = useState<MoodType | null>(null);
-  const [isPremium, setIsPremium] = useState(mockUser.isPremium);
+  const [isPremium, setIsPremium] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isExpanded, setIsExpanded] = useState(false);
   const [showTrailerModal, setShowTrailerModal] = useState(false);
@@ -164,6 +166,8 @@ const Dashboard = () => {
   const [userWatchedSeries, setUserWatchedSeries] = useState<ContentItem[]>([]);
   const [userFavorites, setUserFavorites] = useState<FavoriteItem[]>([]);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [searchParams] = useSearchParams();
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [userContentPreference, setUserContentPreference] = useState<
     "movies" | "series" | null
   >(null);
@@ -272,6 +276,40 @@ const Dashboard = () => {
     fetchTrending();
   }, [toast]);
 
+  useEffect(() => {
+    if (searchParams.get("payment") === "success") {
+      setShowSuccessModal(true);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    const checkPremiumStatus = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data: subscriber, error } = await supabase
+          .from('subscribers')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
+
+        if (error) {
+          console.error('Error fetching subscriber status:', error);
+          return;
+        }
+
+        // User is premium if they exist in the subscribers table
+        setIsPremium(!!subscriber);
+
+      } catch (error) {
+        console.error('Error checking premium status:', error);
+      }
+    };
+
+    checkPremiumStatus();
+  }, []);
+
   const handleMoodSelect = (mood: string) => {
     setGenre(null);
     fetchMoodRecommendationService({
@@ -304,14 +342,14 @@ const Dashboard = () => {
   const handleLogout = async () => {
     try {
       const { error } = await supabase.auth.signOut();
-      
+
       if (error) throw error;
 
       toast({
         title: "Saindo...",
         description: "Você foi desconectado com sucesso",
       });
-      
+
       navigate("/");
     } catch (error) {
       toast({
@@ -1261,18 +1299,23 @@ const Dashboard = () => {
           </div>
         )}
 
-  <PremiumPaymentModal
-    isOpen={showPaymentModal}
-    onClose={() => setShowPaymentModal(false)}
-    onSuccess={() => {
-      setIsPremium(true);
-      setShowPaymentModal(false);
-      toast({
-        title: "Bem-vindo ao Premium!",
-        description: "Seu acesso premium foi ativado com sucesso.",
-      });
-    }}
-  />
+        <PremiumPaymentModal
+          isOpen={showPaymentModal}
+          onClose={() => setShowPaymentModal(false)}
+          onSuccess={() => {
+            setIsPremium(true);
+            setShowPaymentModal(false);
+            toast({
+              title: "Bem-vindo ao Premium!",
+              description: "Seu acesso premium foi ativado com sucesso.",
+            });
+          }}
+        />
+
+        <PaymentSuccessModal
+          isOpen={showSuccessModal}
+          onClose={() => setShowSuccessModal(false)}
+        />
       </ImageBackground>
 
       {/* Main content */}
