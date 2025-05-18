@@ -1,3 +1,4 @@
+
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
@@ -24,37 +25,31 @@ const PremiumPaymentModal = ({ isOpen, onClose, onSuccess }: PremiumPaymentModal
       
       if (!user) throw new Error("User not found");
 
-      const stripe = await loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
-      
-      // Create Stripe checkout session
-      const response = await fetch('/api/create-checkout-session', {
+      // Create Checkout Session on the server
+      const response = await fetch('https://yynlzhfibeozrwrtrjbs.supabase.co/functions/v1/create-checkout-session', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
         },
         body: JSON.stringify({
           priceId: import.meta.env.VITE_STRIPE_PRODUCT_ID,
-          userId: user.id,
-          userEmail: user.email,
+          customerId: user.id,
+          customerEmail: user.email,
         }),
       });
 
-      const session = await response.json();
+      const { url, error } = await response.json();
 
-      if (session.error) {
-        throw new Error(session.error);
+      if (error) {
+        throw new Error(error);
       }
 
       // Redirect to Stripe Checkout
-      const result = await stripe?.redirectToCheckout({
-        sessionId: session.id,
-      });
-
-      if (result?.error) {
-        throw new Error(result.error.message);
-      }
-
+      window.location.href = url;
+      
     } catch (error) {
+      console.error("Payment error:", error);
       toast({
         title: "Erro no pagamento",
         description: "Não foi possível processar o pagamento. Tente novamente.",
