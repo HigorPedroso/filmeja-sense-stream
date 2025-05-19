@@ -1,3 +1,4 @@
+
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -25,16 +26,16 @@ interface Database {
         Row: {
           id: string;
           user_id: string;
-          tmdb_id: string; // Changed from content_id to tmdb_id and type to string
-          media_type: string; // Changed from content_type to media_type
+          tmdb_id: number; // Changed to number type
+          media_type: string;
           title: string;
           watched_at: string;
         };
         Insert: {
           id?: string;
           user_id: string;
-          tmdb_id: string; // Changed type to string
-          media_type: string; // Changed from content_type
+          tmdb_id: number; // Changed to number type
+          media_type: string;
           title: string;
           watched_at?: string;
         };
@@ -232,7 +233,7 @@ const ContentModalContent = ({
 
   useEffect(() => {
     const handleScroll = () => {
-      setScrollPosition(window.scrollY);
+      setCurrentScrollPosition(window.scrollY);
     };
 
     window.addEventListener("scroll", handleScroll);
@@ -307,7 +308,7 @@ const ContentModalContent = ({
           .from("watched_content")
           .delete()
           .eq("user_id", user.id)
-          .eq("tmdb_id", String(content.id));
+          .eq("tmdb_id", Number(content.id));
 
         setIsWatched(false);
         toast({
@@ -317,7 +318,7 @@ const ContentModalContent = ({
       } else {
         await supabase.from("watched_content").insert({
           user_id: user.id,
-          tmdb_id: String(content.id),
+          tmdb_id: Number(content.id), // Convert to number
           media_type: content.mediaType,
           title: content.title || content.name,
           watched_at: new Date().toISOString(),
@@ -408,7 +409,7 @@ const ContentModalContent = ({
           .from("watched_content")
           .select()
           .eq("user_id", user.id)
-          .eq("tmdb_id", String(content.id)) // Convert to string
+          .eq("tmdb_id", Number(content.id)) // Convert to number
           .single();
 
         setIsWatched(!!data);

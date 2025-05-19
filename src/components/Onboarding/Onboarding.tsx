@@ -55,7 +55,7 @@ export const Onboarding = () => {
         { id: 'documentary', label: 'Documentário', icon: '📜' },
         { id: 'family', label: 'Família / Infantil', icon: '🧒' },
       ],
-      type: 'multiple'
+      type: 'multiple' as 'multiple' | 'single'
     },
     {
       key: 'contentType',
@@ -65,7 +65,7 @@ export const Onboarding = () => {
         { id: 'series', label: 'Séries', icon: '📺' },
         { id: 'both', label: 'Tanto faz', icon: '🤷' },
       ],
-      type: 'single'
+      type: 'single' as 'multiple' | 'single'
     },
     {
       key: 'watchDuration',
@@ -76,7 +76,7 @@ export const Onboarding = () => {
         { id: 'long', label: 'Mais de 1 hora', icon: '🕕' },
         { id: 'exploring', label: 'Estou só explorando', icon: '📆' },
       ],
-      type: 'single'
+      type: 'single' as 'multiple' | 'single'
     },
     {
       key: 'languages',
@@ -88,7 +88,7 @@ export const Onboarding = () => {
         { id: 'es', label: 'Espanhol', icon: '🇪🇸' },
         { id: 'any', label: 'Sem preferência', icon: '🌍' },
       ],
-      type: 'multiple'
+      type: 'multiple' as 'multiple' | 'single'
     },
     {
       key: 'watchTime',
@@ -99,7 +99,7 @@ export const Onboarding = () => {
         { id: 'evening', label: 'Noite (18h-24h)', icon: '🌙' },
         { id: 'dawn', label: 'Madrugada (0h-6h)', icon: '🌠' },
       ],
-      type: 'single'
+      type: 'single' as 'multiple' | 'single'
     },
   ];
 

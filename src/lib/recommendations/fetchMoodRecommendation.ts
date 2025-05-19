@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { MoodType } from "@/types/movie";
 import { extractJsonFromResponse } from "@/utils/jsonParser";
@@ -100,7 +101,7 @@ export async function fetchMoodRecommendation(params: MoodRecommendationParams):
 
     const prompt = `
       Você é um assistente que responde apenas em JSON válido. 
-      O usuário está se sentindo "${moodNames[mood]}" e gosta dos seguintes gêneros: ${genreNames.join(", ")}.
+      O usuário está se sentindo "${moodNames[mood as MoodType]}" e gosta dos seguintes gêneros: ${genreNames.join(", ")}.
       O usuário já assistiu os seguintes títulos:
       ${JSON.stringify(validWatchedContent)}
 
@@ -142,7 +143,17 @@ export async function fetchMoodRecommendation(params: MoodRecommendationParams):
 
     if (!raw) throw new Error("Resposta vazia do Gemini");
 
-    const suggestions = extractJsonFromResponse(raw) || [];
+    const parsedSuggestions = extractJsonFromResponse(raw) || [];
+    // Ensure we're working with a properly typed array of ContentSuggestion objects
+    const suggestions: ContentSuggestion[] = Array.isArray(parsedSuggestions) ? 
+      parsedSuggestions.map(suggestion => ({
+        title: String(suggestion.title || ""),
+        tmdbId: Number(suggestion.tmdbId || 0),
+        description: String(suggestion.description || ""),
+        imgUrl: suggestion.imgUrl ? String(suggestion.imgUrl) : undefined,
+        tipo: (suggestion.tipo === "tv" ? "tv" : "movie") as "movie" | "tv"
+      })) : [];
+      
     const shuffledSuggestions = shuffleArray(suggestions);
 
     const suggestionsWithCorrectIds = await Promise.all(
@@ -175,22 +186,22 @@ export async function fetchMoodRecommendation(params: MoodRecommendationParams):
       try {
         const [details, videos, similar, providers] = await Promise.all([
           fetch(
-            `https://api.themoviedb.org/3/${mediaType}/${suggestion.tmdbId}?api_key=${
+            `https://api.themoviedb.org/3/${suggestion.tipo}/${suggestion.tmdbId}?api_key=${
               import.meta.env.VITE_TMDB_API_KEY
             }&language=pt-BR`
           ).then(r => r.json()),
           fetch(
-            `https://api.themoviedb.org/3/${mediaType}/${suggestion.tmdbId}/videos?api_key=${
+            `https://api.themoviedb.org/3/${suggestion.tipo}/${suggestion.tmdbId}/videos?api_key=${
               import.meta.env.VITE_TMDB_API_KEY
             }&language=pt-BR`
           ).then(r => r.json()),
           fetch(
-            `https://api.themoviedb.org/3/${mediaType}/${suggestion.tmdbId}/similar?api_key=${
+            `https://api.themoviedb.org/3/${suggestion.tipo}/${suggestion.tmdbId}/similar?api_key=${
               import.meta.env.VITE_TMDB_API_KEY
             }&language=pt-BR`
           ).then(r => r.json()),
           fetch(
-            `https://api.themoviedb.org/3/${mediaType}/${suggestion.tmdbId}/watch/providers?api_key=${
+            `https://api.themoviedb.org/3/${suggestion.tipo}/${suggestion.tmdbId}/watch/providers?api_key=${
               import.meta.env.VITE_TMDB_API_KEY
             }`
           ).then(r => r.json()),
@@ -202,7 +213,7 @@ export async function fetchMoodRecommendation(params: MoodRecommendationParams):
             videos: videos.results,
             providers: providers.results?.BR,
             similar: similar.results,
-            mediaType,
+            mediaType: suggestion.tipo,
           });
           
           if (availableContent.length >= 3) {

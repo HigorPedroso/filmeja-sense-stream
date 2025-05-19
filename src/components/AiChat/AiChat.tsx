@@ -10,7 +10,7 @@ interface Message {
   timestamp: Date;
   recommendation?: {
     title: string;
-    type?: "movie" | "tv";
+    type?: "movie" | "tv"; // Ensure this is strictly typed as "movie" | "tv"
   };
 }
 
@@ -36,7 +36,7 @@ export function AiChat({ onShowContent }: AiChatProps) {
   const extractRecommendation = (text: string) => {
     const titleMatch = text.match(/["']([^"']+)["']/);
     const typeMatch = text.toLowerCase().includes("série") ? "tv" : "movie";
-    return titleMatch ? { title: titleMatch[1], type: typeMatch } : null;
+    return titleMatch ? { title: titleMatch[1], type: typeMatch as "movie" | "tv" } : null;
   };
 
   const handleSend = async () => {
@@ -91,6 +91,9 @@ export function AiChat({ onShowContent }: AiChatProps) {
           if (!jsonMatch) throw new Error("JSON not found in AI response.");
       
           const jsonResponse = JSON.parse(jsonMatch[0]);
+          
+          // Ensure type is strictly "movie" or "tv"
+          const validType = jsonResponse.type === "tv" ? "tv" : "movie";
       
           setTimeout(() => {
             setMessages((prev) => [
@@ -102,7 +105,7 @@ export function AiChat({ onShowContent }: AiChatProps) {
                 timestamp: new Date(),
                 recommendation: {
                   title: jsonResponse.title,
-                  type: jsonResponse.type,
+                  type: validType,
                 },
               },
             ]);
@@ -112,6 +115,7 @@ export function AiChat({ onShowContent }: AiChatProps) {
           console.error("Error parsing AI response:", error);
       
           // Fallback se o JSON falhar
+          const recommendation = extractRecommendation(aiResponse);
           setMessages((prev) => [
             ...prev,
             {
@@ -119,7 +123,7 @@ export function AiChat({ onShowContent }: AiChatProps) {
               text: aiResponse,
               sender: "ai",
               timestamp: new Date(),
-              recommendation: extractRecommendation(aiResponse),
+              recommendation: recommendation,
             },
           ]);
           setIsTyping(false);
