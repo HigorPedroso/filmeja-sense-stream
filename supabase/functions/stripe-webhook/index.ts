@@ -6,6 +6,13 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
+// Helper function to log steps for easier debugging
+const logStep = (step: string, details?: any) => {
+  const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
+  console.log(`[STRIPE-WEBHOOK] ${step}${detailsStr}`);
 };
 
 serve(async (req) => {
@@ -18,6 +25,8 @@ serve(async (req) => {
   }
   
   try {
+    logStep("Function started");
+    
     // Verify Stripe signature
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
       apiVersion: "2023-10-16",
@@ -26,7 +35,7 @@ serve(async (req) => {
     // Get Stripe webhook signing secret
     const signature = req.headers.get("stripe-signature");
     if (!signature) {
-      console.error("No stripe signature found");
+      logStep("Error: No stripe signature found");
       return new Response(JSON.stringify({ error: "No stripe signature" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 400,
@@ -34,12 +43,17 @@ serve(async (req) => {
     }
     
     const body = await req.text();
-    console.log("Received webhook with body:", body.substring(0, 200) + "...");
+    logStep("Received webhook body", { 
+      bodyPreview: body.substring(0, 200) + "...", 
+      contentType: req.headers.get("content-type"),
+      signature: signature.substring(0, 20) + "..." 
+    });
     
     // Create a Supabase client with the service role key for admin privileges
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      { auth: { persistSession: false } }
     );
 
     // Handle different event types
@@ -50,10 +64,11 @@ serve(async (req) => {
         signature,
         Deno.env.get("STRIPE_WEBHOOK_SIGNING_SECRET") || ""
       );
-      console.log("Webhook event constructed successfully:", event.type);
+      logStep("Webhook event constructed successfully", { type: event.type });
     } catch (err) {
-      console.error(`Webhook signature verification failed:`, err.message);
-      return new Response(JSON.stringify({ error: `Webhook signature verification failed: ${err.message}` }), {
+      const errorMsg = `Webhook signature verification failed: ${err.message}`;
+      logStep("ERROR", { message: errorMsg });
+      return new Response(JSON.stringify({ error: errorMsg }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 400,
       });
@@ -66,23 +81,47 @@ serve(async (req) => {
         const userId = session.metadata?.userId;
         const subscriptionId = session.subscription;
         
-        console.log("checkout.session.completed event:", { userId, customerId, subscriptionId });
+        logStep("checkout.session.completed event", { userId, customerId, subscriptionId });
         
-        if (userId && customerId) {
-          // Get subscription details if available
-          let subscriptionStatus = "active";
-          let currentPeriodEnd = null;
-          
-          if (subscriptionId) {
+        if (!userId) {
+          logStep("ERROR: Missing userId in checkout session metadata");
+          return new Response(JSON.stringify({ error: "Missing userId in session metadata" }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 400,
+          });
+        }
+
+        if (!customerId) {
+          logStep("ERROR: Missing customerId in checkout session");
+          return new Response(JSON.stringify({ error: "Missing customerId in session" }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 400,
+          });
+        }
+        
+        // Get subscription details if available
+        let subscriptionStatus = "active";
+        let currentPeriodEnd = null;
+        
+        if (subscriptionId) {
+          try {
             const subscription = await stripe.subscriptions.retrieve(
               subscriptionId as string
             );
             subscriptionStatus = subscription.status;
             currentPeriodEnd = new Date(subscription.current_period_end * 1000).toISOString();
+            logStep("Retrieved subscription details", { 
+              subscriptionStatus, 
+              currentPeriodEnd 
+            });
+          } catch (subError) {
+            logStep("Error retrieving subscription", { error: subError.message });
           }
+        }
 
-          // Update subscriber record
-          const { data, error } = await supabaseAdmin.from("subscribers").upsert({
+        // Update subscriber record
+        try {
+          const subscriberData = {
             user_id: userId,
             stripe_customer_id: customerId,
             is_premium: true,
@@ -90,22 +129,33 @@ serve(async (req) => {
             subscription_tier: "premium",
             current_period_end: currentPeriodEnd,
             updated_at: new Date().toISOString(),
-          }, { onConflict: "user_id" });
+          };
+          
+          logStep("Upserting subscriber data", subscriberData);
+          
+          const { data, error } = await supabaseAdmin
+            .from("subscribers")
+            .upsert(subscriberData, { onConflict: "user_id" });
           
           if (error) {
-            console.error("Error updating subscribers table:", error);
+            logStep("Error updating subscribers table", { error });
+            throw new Error(`Failed to update subscriber: ${error.message}`);
           } else {
-            console.log("Successfully updated subscriber data");
+            logStep("Successfully updated subscriber data");
           }
-        } else {
-          console.error("Missing userId or customerId in checkout session");
+        } catch (dbError) {
+          logStep("Database operation failed", { error: dbError.message });
+          return new Response(JSON.stringify({ error: `Database operation failed: ${dbError.message}` }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 500,
+          });
         }
         break;
       }
       case "customer.subscription.updated": {
         const subscription = event.data.object;
         const customerId = subscription.customer;
-        console.log("subscription.updated event for customer:", customerId);
+        logStep("subscription.updated event", { customerId });
 
         // Find the user associated with this Stripe customer
         const { data: subscribers, error: queryError } = await supabaseAdmin
@@ -115,34 +165,50 @@ serve(async (req) => {
           .limit(1);
 
         if (queryError) {
-          console.error("Error querying subscribers:", queryError);
+          logStep("Error querying subscribers", { error: queryError });
+          return new Response(JSON.stringify({ error: `Failed to query subscribers: ${queryError.message}` }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 500,
+          });
         }
 
         if (subscribers && subscribers.length > 0) {
           const subscriber = subscribers[0];
           
           // Update subscription information
-          const { error: updateError } = await supabaseAdmin.from("subscribers").upsert({
+          const updateData = {
             user_id: subscriber.user_id,
             stripe_customer_id: customerId,
             is_premium: subscription.status === "active",
             subscription_status: subscription.status,
             current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
             updated_at: new Date().toISOString(),
-          }, { onConflict: "user_id" });
+          };
+          
+          logStep("Updating subscription info", updateData);
+          
+          const { error: updateError } = await supabaseAdmin
+            .from("subscribers")
+            .upsert(updateData, { onConflict: "user_id" });
           
           if (updateError) {
-            console.error("Error updating subscription info:", updateError);
+            logStep("Error updating subscription info", { error: updateError });
+            return new Response(JSON.stringify({ error: `Failed to update subscription: ${updateError.message}` }), {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+              status: 500,
+            });
           }
+          
+          logStep("Subscription updated successfully");
         } else {
-          console.error("No subscriber found for customer:", customerId);
+          logStep("No subscriber found for customer", { customerId });
         }
         break;
       }
       case "customer.subscription.deleted": {
         const subscription = event.data.object;
         const customerId = subscription.customer;
-        console.log("subscription.deleted event for customer:", customerId);
+        logStep("subscription.deleted event", { customerId });
 
         // Find the user associated with this Stripe customer
         const { data: subscribers, error: queryError } = await supabaseAdmin
@@ -152,31 +218,47 @@ serve(async (req) => {
           .limit(1);
 
         if (queryError) {
-          console.error("Error querying subscribers:", queryError);
+          logStep("Error querying subscribers", { error: queryError });
+          return new Response(JSON.stringify({ error: `Failed to query subscribers: ${queryError.message}` }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 500,
+          });
         }
 
         if (subscribers && subscribers.length > 0) {
           const subscriber = subscribers[0];
           
           // Update subscription information to reflect cancellation
-          const { error: updateError } = await supabaseAdmin.from("subscribers").upsert({
+          const cancelData = {
             user_id: subscriber.user_id,
             stripe_customer_id: customerId,
             is_premium: false,
             subscription_status: "canceled",
             updated_at: new Date().toISOString(),
-          }, { onConflict: "user_id" });
+          };
+          
+          logStep("Updating cancellation info", cancelData);
+          
+          const { error: updateError } = await supabaseAdmin
+            .from("subscribers")
+            .upsert(cancelData, { onConflict: "user_id" });
           
           if (updateError) {
-            console.error("Error updating cancellation info:", updateError);
+            logStep("Error updating cancellation info", { error: updateError });
+            return new Response(JSON.stringify({ error: `Failed to update cancellation: ${updateError.message}` }), {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+              status: 500,
+            });
           }
+          
+          logStep("Subscription canceled successfully");
         } else {
-          console.error("No subscriber found for customer:", customerId);
+          logStep("No subscriber found for customer", { customerId });
         }
         break;
       }
       default:
-        console.log(`Unhandled event type ${event.type}`);
+        logStep(`Unhandled event type ${event.type}`);
     }
 
     return new Response(JSON.stringify({ received: true }), {
@@ -185,7 +267,7 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    console.error("Error processing webhook:", error);
+    logStep("Error processing webhook", { error: error.message });
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,

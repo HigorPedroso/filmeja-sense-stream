@@ -6,6 +6,7 @@ import { Crown } from "lucide-react";
 import { Badge } from "./ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import PremiumPaymentModal from "./PremiumPaymentModal";
+import PaymentSuccessModal from "./PaymentSuccessModal";
 import { useToast } from "@/components/ui/use-toast";
 import { useLocation } from "react-router-dom";
 
@@ -13,6 +14,7 @@ const HeaderDashboard = () => {
   const { user } = useAuth();
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
   const [isPremiumModalOpen, setIsPremiumModalOpen] = useState(false);
+  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
   const [isPremium, setIsPremium] = useState(false);
   const [isCheckingStatus, setIsCheckingStatus] = useState(false);
   const { toast } = useToast();
@@ -26,14 +28,13 @@ const HeaderDashboard = () => {
     const paymentStatus = queryParams.get('payment');
     
     if (paymentStatus === 'success') {
-      toast({
-        title: "Pagamento bem-sucedido!",
-        description: "Bem-vindo ao Premium! Agora você tem acesso a todos os recursos exclusivos.",
-        variant: "default",
-      });
-      // Remove query params after showing toast
+      // Show success modal instead of toast
+      setIsSuccessModalOpen(true);
+      
+      // Remove query params after showing modal
       const newUrl = window.location.pathname;
       window.history.replaceState({}, "", newUrl);
+      
       // Force refresh subscription status
       checkPremiumStatus();
     } else if (paymentStatus === 'canceled') {
@@ -42,6 +43,7 @@ const HeaderDashboard = () => {
         description: "O processo de pagamento foi cancelado. Você pode tentar novamente quando quiser.",
         variant: "destructive",
       });
+      
       // Remove query params after showing toast
       const newUrl = window.location.pathname;
       window.history.replaceState({}, "", newUrl);
@@ -52,6 +54,7 @@ const HeaderDashboard = () => {
     if (user && !isCheckingStatus) {
       setIsCheckingStatus(true);
       try {
+        console.log("Checking premium status for user:", user.id);
         const accessToken = (await supabase.auth.getSession()).data.session?.access_token;
         
         if (!accessToken) {
@@ -63,15 +66,18 @@ const HeaderDashboard = () => {
         const response = await fetch('https://yynlzhfibeozrwrtrjbs.supabase.co/functions/v1/check-subscription', {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${accessToken}`
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
           },
         });
         
         if (!response.ok) {
+          console.error("Error checking premium status:", response.statusText);
           throw new Error(`Error checking premium status: ${response.statusText}`);
         }
         
         const data = await response.json();
+        console.log("Premium status response:", data);
         setIsPremium(data.isPremium);
       } catch (error) {
         console.error("Error checking premium status:", error);
@@ -94,6 +100,12 @@ const HeaderDashboard = () => {
   const handlePremiumSuccess = () => {
     setIsPremium(true);
     setIsPremiumModalOpen(false);
+  };
+
+  const handleSuccessModalClose = () => {
+    setIsSuccessModalOpen(false);
+    // Force refresh subscription status after closing the success modal
+    checkPremiumStatus();
   };
 
   if (!user) return null;
@@ -151,6 +163,11 @@ const HeaderDashboard = () => {
         isOpen={isPremiumModalOpen}
         onClose={() => setIsPremiumModalOpen(false)}
         onSuccess={handlePremiumSuccess}
+      />
+      
+      <PaymentSuccessModal
+        isOpen={isSuccessModalOpen}
+        onClose={handleSuccessModalClose}
       />
     </>
   );

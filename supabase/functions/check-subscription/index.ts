@@ -8,6 +8,12 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "GET, OPTIONS"
 };
 
+// Helper function to log steps for easier debugging
+const logStep = (step: string, details?: any) => {
+  const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
+  console.log(`[CHECK-SUBSCRIPTION] ${step}${detailsStr}`);
+};
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -18,15 +24,18 @@ serve(async (req) => {
   }
 
   try {
-    // Create Supabase client
+    logStep("Function started");
+    
+    // Create Supabase client with the service role key to bypass RLS
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? ""
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
     // Verify user authentication
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
+      logStep("Error: No authorization header");
       return new Response(JSON.stringify({ error: "No authorization header" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 401,
@@ -37,13 +46,14 @@ serve(async (req) => {
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token);
 
     if (userError || !user) {
+      logStep("Error: Unauthorized", { error: userError?.message });
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 401,
       });
     }
 
-    console.log("Checking subscription for user:", user.id);
+    logStep("Checking subscription for user", { userId: user.id });
 
     // Get subscription status from database
     const { data: subscription, error: subscriptionError } = await supabaseClient
@@ -53,7 +63,7 @@ serve(async (req) => {
       .single();
 
     if (subscriptionError && subscriptionError.code !== "PGRST116") {
-      console.error("Error fetching subscription:", subscriptionError);
+      logStep("Error fetching subscription", { error: subscriptionError });
       return new Response(JSON.stringify({ error: subscriptionError.message }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 500,
@@ -61,16 +71,20 @@ serve(async (req) => {
     }
 
     // Return subscription information
-    return new Response(JSON.stringify({ 
+    const result = {
       isPremium: subscription?.is_premium || false,
       subscription: subscription || null 
-    }), {
+    };
+    
+    logStep("Returning subscription info", result);
+    
+    return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });
     
   } catch (error) {
-    console.error("Error checking subscription:", error);
+    logStep("Error checking subscription", { error: error.message });
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,
