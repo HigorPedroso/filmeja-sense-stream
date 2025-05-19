@@ -108,14 +108,79 @@ serve(async (req) => {
         },
       ],
       mode: "subscription",
-      success_url: `${origin}?payment=success`,
-      cancel_url: `${origin}?payment=canceled`,
+      success_url: `${origin}/dashboard?payment=success`,
+      cancel_url: `${origin}/dashboard?payment=canceled`,
       metadata: {
         userId: user.id,
       },
     });
     
+    // After creating the checkout session...
     logStep("Created checkout session", { sessionId: session.id, url: session.url });
+
+    // Create or update subscriber record
+    try {
+      logStep("Attempting to create/update subscriber record");
+      
+      // First, try to verify table access
+      const { data: testSelect, error: selectError } = await supabaseClient
+        .from("subscribers")
+        .select("*")
+        .limit(1);
+      
+      logStep("Test select result", { data: testSelect, error: selectError });
+
+      // Prepare subscriber data
+      const subscriberData = {
+        user_id: user.id,
+        email: user.email,
+        stripe_customer_id: customerId,
+        subscription_status: 'pending',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      
+      logStep("Attempting upsert with data", subscriberData);
+
+      // Try the upsert with more detailed error handling
+      const { data, error: dbError } = await supabaseClient
+        .from("subscribers")
+        .upsert(subscriberData)
+        .select();  // Add select() to get the result back
+
+      if (dbError) {
+        logStep("Upsert error", { 
+          code: dbError.code,
+          message: dbError.message,
+          details: dbError.details,
+          hint: dbError.hint
+        });
+        
+        // Try insert as fallback
+        logStep("Attempting insert as fallback");
+        const { data: insertData, error: insertError } = await supabaseClient
+          .from("subscribers")
+          .insert(subscriberData)
+          .select();
+          
+        if (insertError) {
+          logStep("Insert fallback failed", {
+            code: insertError.code,
+            message: insertError.message,
+            details: insertError.details
+          });
+        } else {
+          logStep("Insert fallback succeeded", insertData);
+        }
+      } else {
+        logStep("Upsert succeeded", data);
+      }
+    } catch (error) {
+      logStep("Exception in subscriber creation", { 
+        error: error.message,
+        stack: error.stack 
+      });
+    }
 
     // Return checkout session URL
     return new Response(

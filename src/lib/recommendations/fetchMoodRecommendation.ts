@@ -231,6 +231,34 @@ export async function fetchMoodRecommendation(params: MoodRecommendationParams):
     if (availableContent.length === 0) {
       throw new Error("Nenhum conteúdo disponível encontrado");
     }
+
+    // Select a random recommendation
+    const randomIndex = Math.floor(Math.random() * availableContent.length);
+    const selectedContent = availableContent[randomIndex];
+
+    // Save to watch history
+    try {
+      const { error: historyError } = await supabase
+        .from('watch_history')
+        .insert({
+          user_id: user?.id,
+          content_type: selectedContent.mediaType,
+          content_id: 0,
+          title: selectedContent.title || selectedContent.name,
+          poster_path: selectedContent.poster_path,
+          created_at: new Date().toISOString()
+        });
+
+      if (historyError) {
+        console.error('Error saving to watch history:', historyError);
+      }
+    } catch (error) {
+      console.error('Error saving to watch history:', error);
+    }
+
+    // Set the recommendation
+    setMoodRecommendation(selectedContent);
+
   } catch (error) {
     console.error("Error fetching recommendation:", error);
     throw error;

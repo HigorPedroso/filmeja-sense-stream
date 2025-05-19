@@ -17,6 +17,7 @@ import { FavoritesPage } from "./pages/FavoritesPage";
 import { getUserFavorites } from "@/lib/favorites";
 import { useState, useEffect } from "react";
 import SuperDashboard from "./pages/SuperDashboard";
+import { ProfilePage } from "./pages/Profile";
 
 const queryClient = new QueryClient();
 
@@ -54,7 +55,15 @@ const App = () => {
                 path="/favorites"
                 element={
                   <ProtectedRoute>
-                    <FavoritesPage title="Meus Favoritos" items={favoriteItems} />
+                    <FavoritesPage title="Minha lista" items={favoriteItems} />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/profile"
+                element={
+                  <ProtectedRoute>
+                    <ProfilePage />
                   </ProtectedRoute>
                 }
               />

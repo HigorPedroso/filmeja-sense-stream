@@ -42,6 +42,9 @@ import PremiumPaymentModal from "@/components/PremiumPaymentModal";
 import TopTrendingList from "@/components/TopMovies/TopMovies";
 import { useSearchParams } from "react-router-dom";
 import PaymentSuccessModal from "@/components/PaymentSuccessModal";
+import { Sidebar } from "@/components/Sidebar";
+import { MobileSidebar } from "@/components/MobileSidebar";
+import { fetchContentWithProviders } from "@/lib/utils/tmdb";
 
 // Mock user data - in a real app, this would come from authentication
 const mockUser = {
@@ -168,6 +171,8 @@ const Dashboard = () => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [searchParams] = useSearchParams();
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
   const [userContentPreference, setUserContentPreference] = useState<
     "movies" | "series" | null
   >(null);
@@ -283,27 +288,38 @@ const Dashboard = () => {
   }, [searchParams]);
 
   useEffect(() => {
+    const fetchUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      setCurrentUser(user);
+    };
+    fetchUser();
+  }, []);
+
+  useEffect(() => {
     const checkPremiumStatus = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
         if (!user) return;
 
         const { data: subscriber, error } = await supabase
-          .from('subscribers')
-          .select('*')
-          .eq('user_id', user.id)
+          .from("subscribers")
+          .select("*")
+          .eq("user_id", user.id)
           .single();
 
         if (error) {
-          console.error('Error fetching subscriber status:', error);
+          console.error("Error fetching subscriber status:", error);
           return;
         }
 
         // User is premium if they exist in the subscribers table
         setIsPremium(!!subscriber);
-
       } catch (error) {
-        console.error('Error checking premium status:', error);
+        console.error("Error checking premium status:", error);
       }
     };
 
@@ -699,6 +715,25 @@ const Dashboard = () => {
         throw new Error("Nenhum conteúdo encontrado");
       }
 
+      try {
+        const { error: historyError } = await supabase
+          .from('watch_history')
+          .insert({
+            user_id: user?.id,
+            content_id: content.tmdbId || content.id,
+            content_type: mediaType,
+            title: content.title || content.name,
+            poster_path: content.poster_path || content.backdrop_path,
+            created_at: new Date().toISOString()
+          });
+
+        if (historyError) {
+          console.error('Error saving to watch history:', historyError);
+        }
+      } catch (error) {
+        console.error('Error saving to watch history:', error);
+      }
+
       setMoodRecommendation({
         ...content,
         ...details,
@@ -981,141 +1016,14 @@ const Dashboard = () => {
           </div>
         </div>
       )}
-      <div
-        className={`fixed top-0 left-0 h-full transition-all duration-300 z-50 
-  bg-gradient-to-b from-black via-filmeja-dark/95 to-black/95
-  before:absolute before:inset-0 before:bg-[radial-gradient(circle_at_100%_0%,rgba(120,0,255,0.15),transparent_50%)]
-  after:absolute after:inset-0 after:bg-[radial-gradient(circle_at_0%_100%,rgba(0,70,255,0.15),transparent_50%)]
-  backdrop-blur-xl border-r border-white/[0.02]
-  hidden md:block
-  ${isExpanded ? "w-[280px]" : "w-[70px]"}`}
-      >
-        <div className="flex flex-col h-full px-4 relative z-10">
-          {/* Rest of the sidebar content remains the same */}
-          {/* Logo */}
-          <div className="flex flex-col h-full px-2 relative z-10">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="absolute -right-3 top-6 w-6 h-6 rounded-full bg-filmeja-purple/20 hover:bg-filmeja-purple/30 p-1"
-            >
-              {isExpanded ? "←" : "→"}
-            </Button>
-            {/* Logo */}
-            <div className="py-8 flex justify-center">
-              {isExpanded ? (
-                <h1 className="text-3xl font-bold text-white bg-gradient-to-r from-filmeja-purple to-filmeja-blue bg-clip-text text-transparent">
-                  FilmeJá
-                </h1>
-              ) : (
-                <Film className="w-6 h-6 text-filmeja-purple" />
-              )}
-            </div>
-          </div>
+      <Sidebar
+        isExpanded={isExpanded}
+        setIsExpanded={setIsExpanded}
+        onLogout={handleLogout}
+      />
 
-          {/* Navigation items */}
-          <div className="flex-1">
-            <nav className="space-y-1">
-              <div className="pb-4">
-                <Button
-                  variant="ghost"
-                  className="w-full justify-center py-3 text-gray-300 hover:bg-white/10 hover:text-white transition-colors"
-                  title="Início"
-                >
-                  <Home className="w-5 h-5" />
-                  {isExpanded && (
-                    <span className="ml-3 text-sm font-medium">Início</span>
-                  )}
-                </Button>
+      <MobileSidebar />
 
-                <Button
-                  variant="ghost"
-                  className="w-full justify-center py-3 text-gray-300 hover:bg-white/10 hover:text-white transition-colors"
-                  title="Novidades"
-                >
-                  <Clock className="w-5 h-5" />
-                  {isExpanded && (
-                    <span className="text-sm font-medium">Novidades</span>
-                  )}
-                </Button>
-              </div>
-
-              <div className="pb-4">
-                <Button
-                  variant="ghost"
-                  className="w-full justify-center py-3 text-gray-300 hover:bg-white/10 hover:text-white transition-colors"
-                  title="Minha Lista"
-                >
-                  <Heart className="w-5 h-5" />
-                  {isExpanded && (
-                    <span className="text-sm font-medium">Minha Lista</span>
-                  )}
-                </Button>
-
-                <Button
-                  variant="ghost"
-                  className="w-full justify-center py-3 text-gray-300 hover:bg-white/10 hover:text-white transition-colors"
-                  title="Recomendados"
-                >
-                  <Star className="w-5 h-5" />
-                  {isExpanded && (
-                    <span className="text-sm font-medium">Recomendados</span>
-                  )}
-                </Button>
-              </div>
-            </nav>
-          </div>
-
-          {/* User section */}
-          <div className="pb-8 pt-4 border-t border-white/10">
-            <Button
-              variant="ghost"
-              className="w-full justify-center py-3 text-gray-300 hover:bg-white/10 hover:text-white transition-colors"
-              title="Minha Conta"
-            >
-              <User className="w-5 h-5" />
-              {isExpanded && (
-                <span className="text-sm font-medium">Minha Conta</span>
-              )}
-            </Button>
-
-            <Button
-              variant="ghost"
-              className="w-full justify-center py-3 text-gray-300 hover:bg-white/10 hover:text-white transition-colors"
-              onClick={handleLogout}
-            >
-              <LogOut className="w-5 h-5 group-hover:text-filmeja-purple transition-colors" />
-              {isExpanded && (
-                <span className="text-sm font-medium group-hover:text-filmeja-purple transition-colors">
-                  Sair
-                </span>
-              )}
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      <div className="fixed bottom-0 left-0 right-0 bg-filmeja-dark/95 border-t border-white/[0.02] backdrop-blur-xl md:hidden z-50">
-        <nav className="flex justify-around items-center py-3 px-4">
-          <Button variant="ghost" className="text-gray-300" title="Início">
-            <Home className="w-5 h-5" />
-          </Button>
-          <Button variant="ghost" className="text-gray-300" title="Minha Lista">
-            <Heart className="w-5 h-5" />
-          </Button>
-          <Button
-            variant="ghost"
-            className="text-gray-300"
-            title="Recomendados"
-          >
-            <Star className="w-5 h-5" />
-          </Button>
-          <Button variant="ghost" className="text-gray-300" title="Minha Conta">
-            <User className="w-5 h-5" />
-          </Button>
-        </nav>
-      </div>
       <ImageBackground useSlideshow={true}>
         <HeaderDashboard user={mockUser} />
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4 py-8 md:py-0">
@@ -1258,9 +1166,11 @@ const Dashboard = () => {
               <AiChat
                 onShowContent={(title, type) => {
                   setShowAiChat(false);
-                  // Add logic to fetch and show content in ContentModal
                   fetchContentDetails(title, type);
                 }}
+                watchedContent={[...userWatchedMovies, ...userWatchedSeries]}
+                userAvatar={currentUser?.user_metadata?.avatar_url}
+                userId={currentUser?.id}
               />
             </motion.div>
           </div>
@@ -1361,18 +1271,40 @@ const Dashboard = () => {
           <TopTrendingList
             type="movie"
             title="Top 10 Filmes da Semana"
-            onItemClick={(item) => {
-              setMoodRecommendation(item);
+            content={trendingContent
+              ?.filter((item) => item.media_type === "movie")
+              ?.slice(0, 10)}
+            onItemClick={async (item) => {
               setShowRecommendationModal(true);
+
+              try {
+                await fetchContentWithProviders(item, {
+                  onLoadingChange: setIsLoadingRecommendation,
+                  onContentFetched: setMoodRecommendation,
+                });
+              } catch {
+                setShowRecommendationModal(false);
+              }
             }}
           />
 
           <TopTrendingList
             type="tv"
             title="Top 10 Séries da Semana"
-            onItemClick={(item) => {
-              setMoodRecommendation(item);
+            content={trendingContent
+              ?.filter((item) => item.media_type === "tv")
+              ?.slice(0, 10)}
+            onItemClick={async (item) => {
               setShowRecommendationModal(true);
+
+              try {
+                await fetchContentWithProviders(item, {
+                  onLoadingChange: setIsLoadingRecommendation,
+                  onContentFetched: setMoodRecommendation,
+                });
+              } catch {
+                setShowRecommendationModal(false);
+              }
             }}
           />
 
@@ -1386,12 +1318,20 @@ const Dashboard = () => {
 
           <TopTrendingList
             type="movie"
-            title="Meus Favoritos"
+            title="Minha lista"
             showFavorites={true}
             favoriteContent={userFavorites}
-            onItemClick={(item) => {
-              setMoodRecommendation(item);
+            onItemClick={async (item) => {
               setShowRecommendationModal(true);
+
+              try {
+                await fetchContentWithProviders(item, {
+                  onLoadingChange: setIsLoadingRecommendation,
+                  onContentFetched: setMoodRecommendation,
+                });
+              } catch {
+                setShowRecommendationModal(false);
+              }
             }}
             onFavoriteUpdate={handleFavoriteUpdate}
           />
@@ -1400,9 +1340,17 @@ const Dashboard = () => {
             title="Filmes Que Você Já Assistiu"
             showWatched={true}
             watchedContent={userWatchedMovies}
-            onItemClick={(item) => {
-              setMoodRecommendation(item);
+            onItemClick={async (item) => {
               setShowRecommendationModal(true);
+
+              try {
+                await fetchContentWithProviders(item, {
+                  onLoadingChange: setIsLoadingRecommendation,
+                  onContentFetched: setMoodRecommendation,
+                });
+              } catch {
+                setShowRecommendationModal(false);
+              }
             }}
           />
 
@@ -1411,9 +1359,17 @@ const Dashboard = () => {
             title="Séries Que Você Já Assistiu"
             showWatched={true}
             watchedContent={userWatchedSeries}
-            onItemClick={(item) => {
-              setMoodRecommendation(item);
+            onItemClick={async (item) => {
               setShowRecommendationModal(true);
+
+              try {
+                await fetchContentWithProviders(item, {
+                  onLoadingChange: setIsLoadingRecommendation,
+                  onContentFetched: setMoodRecommendation,
+                });
+              } catch {
+                setShowRecommendationModal(false);
+              }
             }}
           />
 
@@ -1443,6 +1399,3 @@ interface AiRecommendationWidgetProps {
     isPremium: boolean;
   };
 }
-
-// Then somewhere in your JSX, make sure to properly type the component:
-// <AiRecommendationWidget user={{ name, avatar, isPremium }} />

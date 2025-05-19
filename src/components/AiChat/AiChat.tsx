@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Send, Bot, User } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { addToWatchHistory } from "@/lib/utils/watch-history";
 
 interface Message {
   id: string;
@@ -17,10 +18,17 @@ interface Message {
 // Add these props to the component
 interface AiChatProps {
   onShowContent: (title: string, type?: "movie" | "tv") => void;
+  watchedContent?: Array<{ title?: string; name?: string; type?: "movie" | "tv" }>;
+  userAvatar?: string;
+  userId: string; // Add this line
 }
 
-export function AiChat({ onShowContent }: AiChatProps) {
-  const [messages, setMessages] = useState<Message[]>([]);
+// Update the component parameters
+export function AiChat({ onShowContent, watchedContent = [], userAvatar, userId }: AiChatProps) {
+  const [messages, setMessages] = useState<Message[]>(() => {
+    const savedMessages = localStorage.getItem('chat_messages');
+    return savedMessages ? JSON.parse(savedMessages) : [];
+  });
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -41,6 +49,11 @@ export function AiChat({ onShowContent }: AiChatProps) {
 
   const handleSend = async () => {
     if (!input.trim()) return;
+
+    // Format watched content for the prompt
+    const watchedTitles = watchedContent
+      .map(item => `${item.title || item.name} (${item.type})`)
+      .join(", ");
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -66,7 +79,9 @@ export function AiChat({ onShowContent }: AiChatProps) {
               {
                 parts: [
                   {
-                    text: `Você é um assistente amigável que recomenda filmes e séries. Com base nesta descrição: "${input}", recomende UM título específico.
+                    text: `Você é um assistente amigável que recomenda filmes e séries. 
+                    Histórico do usuário: ${watchedTitles || "Nenhum título assistido ainda"}.
+                    Com base nesta descrição: "${input}" e no histórico do usuário, recomende UM título específico que seja diferente dos já assistidos.
                     Retorne APENAS um JSON no seguinte formato, sem texto adicional:
                     {
                       "title": "Nome do Título",
@@ -91,9 +106,16 @@ export function AiChat({ onShowContent }: AiChatProps) {
           if (!jsonMatch) throw new Error("JSON not found in AI response.");
       
           const jsonResponse = JSON.parse(jsonMatch[0]);
-          
-          // Ensure type is strictly "movie" or "tv"
           const validType = jsonResponse.type === "tv" ? "tv" : "movie";
+
+          // Add this: Save to watch history
+          await addToWatchHistory({
+            id: Date.now(), // Temporary ID until we get the real one
+            media_type: validType,
+            title: jsonResponse.title,
+            name: jsonResponse.title, // For TV shows
+            poster_path: null // We'll update this when we get the real content details
+          }, userId);
       
           setTimeout(() => {
             setMessages((prev) => [
@@ -135,13 +157,33 @@ export function AiChat({ onShowContent }: AiChatProps) {
     }
   };
 
+  // Add effect to save messages
+  useEffect(() => {
+    localStorage.setItem('chat_messages', JSON.stringify(messages));
+  }, [messages]);
+
+  // Add function to clear chat history
+  const clearChatHistory = () => {
+    setMessages([]);
+    localStorage.removeItem('chat_messages');
+  };
+
   return (
     <div className="flex flex-col h-[90vh] md:h-[600px] max-h-[400px] bg-filmeja-dark/50 backdrop-blur-sm rounded-xl border border-white/10 mx-auto my-auto w-full max-w-[95vw] md:max-w-none">
-      <div className="p-3 md:p-4 border-b border-white/10">
+      <div className="p-3 md:p-4 border-b border-white/10 flex justify-between items-center">
         <h3 className="text-base md:text-lg font-semibold text-white flex items-center gap-2">
           <Bot className="w-5 h-5 text-filmeja-purple" />
           Filmin.AI te ajuda
         </h3>
+        {messages.length > 0 && (
+          <Button
+            variant="ghost"
+            onClick={clearChatHistory}
+            className="text-gray-400 hover:text-white text-sm"
+          >
+            Limpar conversa
+          </Button>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto p-3 md:p-4 space-y-3 md:space-y-4">
@@ -162,14 +204,22 @@ export function AiChat({ onShowContent }: AiChatProps) {
                 }`}
               >
                 <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                  className={`w-8 h-8 rounded-full flex items-center justify-center overflow-hidden ${
                     message.sender === "user"
                       ? "bg-filmeja-purple"
                       : "bg-filmeja-blue"
                   }`}
                 >
                   {message.sender === "user" ? (
-                    <User className="w-5 h-5 text-white" />
+                    userAvatar ? (
+                      <img 
+                        src={userAvatar} 
+                        alt="User" 
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <User className="w-5 h-5 text-white" />
+                    )
                   ) : (
                     <Bot className="w-5 h-5 text-white" />
                   )}

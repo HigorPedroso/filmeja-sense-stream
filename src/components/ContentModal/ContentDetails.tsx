@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Star, Heart, Check, Eye, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ContentType } from "./types";
+import { PromoCard } from "./PromoCard";
 
 interface ContentDetailsProps {
   content: ContentType;
@@ -279,8 +280,14 @@ export const ContentDetails = ({
               </Button>
             )}
           </div>
-        </div>
+          {/* Add PromoCard after similar content section */}
+      <div className="mt-8">
+        <PromoCard />
       </div>
+        </div>
+        
+      </div>
+      
     </div>
   );
 };
