@@ -103,21 +103,10 @@ const Signup = () => {
 
       if (error) throw error;
 
-      // Store additional user data if needed
-      if (data?.user) {
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .upsert({
-            id: data.user.id,
-            full_name: data.user.user_metadata.full_name,
-            avatar_url: data.user.user_metadata.avatar_url,
-            updated_at: new Date().toISOString(),
-          });
-
-        if (profileError) {
-          console.error('Error updating profile:', profileError);
-        }
-      }
+      // Fix: Don't try to access user data from OAuth response
+      // The OAuth flow redirects the user, so we don't get the user object here
+      // User data will be handled by onAuthStateChange after redirect
+      
     } catch (error) {
       toast({
         title: 'Erro!',

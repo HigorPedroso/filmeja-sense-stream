@@ -880,6 +880,38 @@ const Dashboard = () => {
     }
   };
 
+  const handleContentTypeChange = (newType: "movies" | "series") => {
+    setContentType(newType);
+  };
+
+  const renderContentCard = (movie: {
+    title: string;
+    tmdbId: number;
+    description: string;
+    urlImg: string;
+    tipo: string;
+    alreadyWatched?: boolean;
+  }) => {
+    return (
+      <div className="flex flex-col items-center justify-center">
+        <img
+          src={movie.urlImg}
+          alt={movie.title}
+          className="w-full h-48 object-cover rounded-lg"
+        />
+        <div className="mt-2">
+          <h3 className="text-lg font-semibold text-white">{movie.title}</h3>
+          <p className="text-gray-300 text-sm">{movie.description}</p>
+        </div>
+        {movie.alreadyWatched && (
+          <div className="mt-2">
+            <span className="text-green-500 text-sm">Assistido</span>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   useEffect(() => {
     const checkOnboardingStatus = async () => {
       try {
@@ -1403,3 +1435,14 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
+
+interface AiRecommendationWidgetProps {
+  user: {
+    name: string;
+    avatar: string;
+    isPremium: boolean;
+  };
+}
+
+// Then somewhere in your JSX, make sure to properly type the component:
+// <AiRecommendationWidget user={{ name, avatar, isPremium }} />

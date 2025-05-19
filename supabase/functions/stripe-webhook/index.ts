@@ -80,8 +80,17 @@ serve(async (req) => {
         const customerId = session.customer;
         const userId = session.metadata?.userId;
         const subscriptionId = session.subscription;
+        const paymentAmount = session.amount_total;
+        const paymentCurrency = session.currency;
+        const paymentMethod = session.payment_method_types?.[0];
         
-        logStep("checkout.session.completed event", { userId, customerId, subscriptionId });
+        logStep("checkout.session.completed event", { 
+          userId, 
+          customerId, 
+          subscriptionId, 
+          paymentAmount,
+          paymentCurrency 
+        });
         
         if (!userId) {
           logStep("ERROR: Missing userId in checkout session metadata");
@@ -117,6 +126,38 @@ serve(async (req) => {
           } catch (subError) {
             logStep("Error retrieving subscription", { error: subError.message });
           }
+        }
+
+        // Add record to payment_verifications table
+        try {
+          logStep("Adding payment verification record");
+          
+          const paymentVerificationData = {
+            user_id: userId,
+            payment_id: session.id,
+            payment_status: "success",
+            verification_date: new Date().toISOString(),
+            payment_amount: paymentAmount,
+            payment_method: paymentMethod,
+            currency: paymentCurrency,
+            metadata: {
+              checkout_session: session.id,
+              stripe_customer_id: customerId,
+              subscription_id: subscriptionId,
+            },
+          };
+          
+          const { error: paymentVerificationError } = await supabaseAdmin
+            .from("payment_verifications")
+            .insert(paymentVerificationData);
+            
+          if (paymentVerificationError) {
+            logStep("Error inserting payment verification", { error: paymentVerificationError });
+          } else {
+            logStep("Payment verification record created successfully");
+          }
+        } catch (paymentVerificationError) {
+          logStep("Failed to create payment verification", { error: paymentVerificationError.message });
         }
 
         // Update subscriber record
@@ -199,6 +240,29 @@ serve(async (req) => {
             });
           }
           
+          // Add a payment verification record for the update
+          try {
+            const paymentVerificationData = {
+              user_id: subscriber.user_id,
+              payment_id: subscription.id,
+              payment_status: subscription.status,
+              verification_date: new Date().toISOString(),
+              metadata: {
+                event_type: "subscription.updated",
+                stripe_customer_id: customerId,
+                subscription_id: subscription.id,
+              }
+            };
+            
+            await supabaseAdmin
+              .from("payment_verifications")
+              .insert(paymentVerificationData);
+              
+            logStep("Added subscription update verification record");
+          } catch (verificationError) {
+            logStep("Error adding subscription update verification", { error: verificationError.message });
+          }
+          
           logStep("Subscription updated successfully");
         } else {
           logStep("No subscriber found for customer", { customerId });
@@ -249,6 +313,29 @@ serve(async (req) => {
               headers: { ...corsHeaders, "Content-Type": "application/json" },
               status: 500,
             });
+          }
+          
+          // Add a cancellation record to payment_verifications
+          try {
+            const paymentVerificationData = {
+              user_id: subscriber.user_id,
+              payment_id: subscription.id,
+              payment_status: "canceled",
+              verification_date: new Date().toISOString(),
+              metadata: {
+                event_type: "subscription.deleted",
+                stripe_customer_id: customerId,
+                subscription_id: subscription.id,
+              }
+            };
+            
+            await supabaseAdmin
+              .from("payment_verifications")
+              .insert(paymentVerificationData);
+              
+            logStep("Added subscription cancellation record");
+          } catch (verificationError) {
+            logStep("Error adding cancellation verification", { error: verificationError.message });
           }
           
           logStep("Subscription canceled successfully");

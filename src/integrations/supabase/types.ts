@@ -63,6 +63,48 @@ export type Database = {
         }
         Relationships: []
       }
+      payment_verifications: {
+        Row: {
+          created_at: string
+          currency: string | null
+          id: string
+          metadata: Json | null
+          payment_amount: number | null
+          payment_id: string | null
+          payment_method: string | null
+          payment_status: string
+          updated_at: string
+          user_id: string
+          verification_date: string | null
+        }
+        Insert: {
+          created_at?: string
+          currency?: string | null
+          id?: string
+          metadata?: Json | null
+          payment_amount?: number | null
+          payment_id?: string | null
+          payment_method?: string | null
+          payment_status: string
+          updated_at?: string
+          user_id: string
+          verification_date?: string | null
+        }
+        Update: {
+          created_at?: string
+          currency?: string | null
+          id?: string
+          metadata?: Json | null
+          payment_amount?: number | null
+          payment_id?: string | null
+          payment_method?: string | null
+          payment_status?: string
+          updated_at?: string
+          user_id?: string
+          verification_date?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
