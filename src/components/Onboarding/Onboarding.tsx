@@ -3,11 +3,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+// Remove these lines
 import { createClient } from '@supabase/supabase-js';
 
 import { Progress } from '@/components/ui/progress';
 import { OnboardingStep } from './OnboardingStep';
+
+// Keep using the imported supabase client
 import { supabase } from '@/integrations/supabase/client';
+import { Dialog, DialogContent } from '../ui/dialog';
 
 interface UserPreferences {
   genres: string[];
@@ -19,11 +23,37 @@ interface UserPreferences {
 
 const STORAGE_KEY = 'filmeja_onboarding_progress';
 
-export const Onboarding = () => {
+interface OnboardingProps {
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  currentPreferences?: {
+    genres: string[];
+    moods: string[];
+  };
+  onComplete?: (preferences: { genres: string[]; moods: string[] }) => Promise<void>;
+  isEditing?: boolean;
+}
+
+export const Onboarding = ({
+  isOpen,
+  onOpenChange,
+  currentPreferences,
+  onComplete,
+  isEditing = false
+}: OnboardingProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState(0);
   const [preferences, setPreferences] = useState<UserPreferences>(() => {
+    if (currentPreferences) {
+      return {
+        genres: currentPreferences.genres || [],
+        contentType: '',
+        watchDuration: '',
+        languages: [],
+        watchTime: '',
+      };
+    }
     const saved = localStorage.getItem(STORAGE_KEY);
     return saved ? JSON.parse(saved) : {
       genres: [],
@@ -132,51 +162,52 @@ export const Onboarding = () => {
       };
     };
   };
-  
-  // Update the supabase client type
-  const supabase = createClient<Database>(
-    process.env.REACT_APP_SUPABASE_URL!,
-    process.env.REACT_APP_SUPABASE_ANON_KEY!
-  );
 
   const savePreferences = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast({
-          title: 'Erro de autenticação',
-          description: 'Por favor, faça login novamente.',
-          variant: 'destructive',
-        });
-        navigate('/login');
-        return;
-      }
-  
-      const { error } = await supabase
-        .from('user_preferences')
-        .upsert({
-          user_id: user.id,
+      if (onComplete) {
+        await onComplete({
           genres: preferences.genres,
-          content_type: preferences.contentType,
-          watch_duration: preferences.watchDuration,
-          languages: preferences.languages,
-          watch_time: preferences.watchTime,
-          updated_at: new Date().toISOString(),
-          created_at: new Date().toISOString(),
+          moods: preferences.languages // using languages as moods for now
         });
-  
-      if (error) throw error;
-  
-      localStorage.removeItem(STORAGE_KEY);
+        if (onOpenChange) {
+          onOpenChange(false);
+        }
+      } else {
+        // Original onboarding flow
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          toast({
+            title: 'Erro de autenticação',
+            description: 'Por favor, faça login novamente.',
+            variant: 'destructive',
+          });
+          navigate('/login');
+          return;
+        }
+    
+        const { error } = await supabase
+          .from('user_preferences')
+          .upsert({
+            user_id: user.id,
+            genres: preferences.genres,
+            content_type: preferences.contentType,
+            watch_duration: preferences.watchDuration,
+            languages: preferences.languages,
+            watch_time: preferences.watchTime,
+            updated_at: new Date().toISOString(),
+            created_at: new Date().toISOString(),
+          });
+    
+        if (error) throw error;
+        localStorage.removeItem(STORAGE_KEY);
+        window.location.href = '/dashboard';
+      }
       
-      // Show success message before navigation
       toast({
-        title: 'Preferências salvas!',
-        description: 'Seu perfil foi configurado com sucesso.',
+        title: isEditing ? 'Preferências atualizadas!' : 'Preferências salvas!',
+        description: isEditing ? 'Suas preferências foram atualizadas com sucesso.' : 'Seu perfil foi configurado com sucesso.',
       });
-  
-      // Force reload to update the app state
-      window.location.href = '/dashboard';
     } catch (error) {
       console.error('Error saving preferences:', error);
       toast({
@@ -187,14 +218,14 @@ export const Onboarding = () => {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-filmeja-dark flex items-center justify-center p-4">
+  const content = (
+    <div className="min-h-[80vh] sm:min-h-screen bg-filmeja-dark flex items-center justify-center p-2 sm:p-6">
       <motion.div 
-        className="max-w-4xl w-full bg-black/40 backdrop-blur-xl rounded-2xl p-8 border border-white/10"
+        className="w-full bg-black/40 backdrop-blur-xl rounded-xl sm:rounded-2xl p-3 sm:p-8 border border-white/10"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
       >
-        <Progress value={(currentStep / steps.length) * 100} className="mb-8" />
+        <Progress value={(currentStep / steps.length) * 100} className="mb-3 sm:mb-8" />
         
         <AnimatePresence mode="wait">
           <OnboardingStep
@@ -210,25 +241,26 @@ export const Onboarding = () => {
           />
         </AnimatePresence>
 
-        <div className="flex justify-between mt-8">
+        <div className="flex justify-between mt-3 sm:mt-8">
           <Button
             variant="ghost"
             onClick={() => setCurrentStep(prev => prev - 1)}
             disabled={currentStep === 0}
+            className="text-xs sm:text-base px-2 sm:px-4"
           >
             Voltar
           </Button>
           
           {currentStep === steps.length - 1 ? (
             <Button
-              className="bg-filmeja-purple hover:bg-filmeja-purple/90"
+              className="bg-filmeja-purple hover:bg-filmeja-purple/90 text-xs sm:text-base px-2 sm:px-4"
               onClick={savePreferences}
             >
               Concluir
             </Button>
           ) : (
             <Button
-              className="bg-filmeja-purple hover:bg-filmeja-purple/90"
+              className="bg-filmeja-purple hover:bg-filmeja-purple/90 text-xs sm:text-base px-2 sm:px-4"
               onClick={() => setCurrentStep(prev => prev + 1)}
             >
               Continuar
@@ -238,4 +270,12 @@ export const Onboarding = () => {
       </motion.div>
     </div>
   );
+
+  return isOpen !== undefined ? (
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-4xl bg-filmeja-dark/95 border-filmeja-purple/20 p-1 sm:p-6">
+        {content}
+      </DialogContent>
+    </Dialog>
+  ) : content;
 };

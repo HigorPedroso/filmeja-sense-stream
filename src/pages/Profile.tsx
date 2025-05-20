@@ -25,6 +25,7 @@ import { ptBR } from "date-fns/locale";
 import ImageBackground from "@/components/ImageBackground";
 import { fetchContentWithProviders } from "@/lib/utils/tmdb";
 import { ContentModal } from "@/components/ContentModal/ContentModal";
+import { Onboarding } from "@/components/Onboarding/Onboarding";
 
 interface WatchHistory {
   id: number;
@@ -36,6 +37,7 @@ interface WatchHistory {
   watchHistory?: WatchHistory[];
 }
 
+// First, update the UserProfile interface to include all preference fields
 interface UserProfile {
   id: string;
   email: string;
@@ -45,6 +47,10 @@ interface UserProfile {
   preferences?: {
     genres: string[];
     moods: string[];
+    content_type: string;
+    watch_duration: string;
+    languages: string[];
+    watch_time: string;
   };
 }
 
@@ -60,8 +66,8 @@ export function ProfilePage() {
   const [showContentModal, setShowContentModal] = useState(false);
   const [selectedContent, setSelectedContent] = useState(null);
   const [isLoadingContent, setIsLoadingContent] = useState(false);
+  const [showPreferencesModal, setShowPreferencesModal] = useState(false);
 
-  // Move the handler inside the component
   const handleContentSelect = async (item: WatchHistory) => {
     setShowContentModal(true);
     setIsLoadingContent(true);
@@ -109,35 +115,35 @@ export function ProfilePage() {
           return;
         }
 
-        // Fetch profile data
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single();
+        // Fetch all data in parallel
+        const [profileResponse, preferencesResponse, subscriptionResponse] = await Promise.all([
+          supabase.from('profiles').select('*').eq('id', user.id).single(),
+          supabase.from('user_preferences').select('*').eq('user_id', user.id).single(),
+          supabase.from('subscribers').select('*').eq('user_id', user.id).single()
+        ]);
+
+        const { data: profileData, error: profileError } = profileResponse;
+        const { data: preferencesData, error: preferencesError } = preferencesResponse;
+        const { data: subscriptionData, error: subscriptionError } = subscriptionResponse;
 
         if (profileError) throw profileError;
+        if (preferencesError && preferencesError.code !== 'PGRST116') throw preferencesError;
+        if (subscriptionError && subscriptionError.code !== 'PGRST116') throw subscriptionError;
 
-        // Check subscription status
-        const { data: subscriptionData, error: subscriptionError } = await supabase
-          .from('subscribers')
-          .select('*')
-          .eq('user_id', user.id)
-          .single();
-
-        if (subscriptionError && subscriptionError.code !== 'PGRST116') {
-          throw subscriptionError;
-        }
-
+        // Now set the profile with all data available
         setProfile({
           id: user.id,
           email: user.email!,
           full_name: profileData?.full_name || user.user_metadata?.full_name || 'Usuário',
           avatar_url: profileData?.avatar_url || user.user_metadata?.avatar_url,
-          isPremium: !!subscriptionData, // Check if subscription exists
+          isPremium: !!subscriptionData,
           preferences: {
-            genres: profileData?.preferred_genres || [],
-            moods: profileData?.preferred_moods || [],
+            genres: preferencesData?.genres || [],
+            moods: preferencesData?.languages || [],
+            content_type: preferencesData?.content_type || '',
+            watch_duration: preferencesData?.watch_duration || '',
+            languages: preferencesData?.languages || [],
+            watch_time: preferencesData?.watch_time || '',
           }
         });
 
@@ -188,6 +194,48 @@ export function ProfilePage() {
     fetchUserProfile();
   }, [navigate, toast]);
 
+  const handlePreferencesUpdate = async (newPreferences: { genres: string[]; moods: string[] }) => {
+    try {
+      const { error } = await supabase
+        .from('user_preferences')
+        .upsert({
+          user_id: profile?.id,
+          genres: newPreferences.genres,
+          languages: newPreferences.moods,
+          content_type: profile?.preferences?.content_type || '',
+          watch_duration: profile?.preferences?.watch_duration || '',
+          watch_time: profile?.preferences?.watch_time || '',
+          updated_at: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+        }, {
+          onConflict: 'user_id'
+        });
+  
+      if (error) throw error;
+  
+      setProfile(prev => prev ? {
+        ...prev,
+        preferences: {
+          ...prev.preferences,
+          genres: newPreferences.genres,
+          moods: newPreferences.moods
+        }
+      } : null);
+  
+      toast({
+        title: "Preferências atualizadas",
+        description: "Suas preferências foram salvas com sucesso.",
+      });
+    } catch (error) {
+      console.error('Error updating preferences:', error);
+      toast({
+        title: "Erro ao atualizar preferências",
+        description: "Por favor, tente novamente mais tarde.",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-filmeja-dark flex items-center justify-center">
@@ -207,18 +255,27 @@ export function ProfilePage() {
 
   const handleCancelSubscription = async () => {
     try {
-      // Add your subscription cancellation logic here
-      await supabase.from('profiles').update({ is_premium: false }).eq('id', profile?.id);
+      // First, delete from subscribers table
+      const { error: deleteError } = await supabase
+        .from('subscribers')
+        .delete()
+        .eq('user_id', profile?.id);
+  
+      if (deleteError) throw deleteError;
+  
+      // Then update the profile state
       setProfile(prev => prev ? { ...prev, isPremium: false } : null);
       setShowSubscriptionModal(false);
+      
       toast({
         title: "Assinatura cancelada",
         description: "Sua assinatura foi cancelada com sucesso.",
       });
     } catch (error) {
+      console.error('Error cancelling subscription:', error);
       toast({
         title: "Erro ao cancelar assinatura",
-        description: "Por favor, tente novamente mais tarde.",
+        description: "Ocorreu um erro ao processar sua solicitação. Tente novamente mais tarde.",
         variant: "destructive",
       });
     }
@@ -226,18 +283,31 @@ export function ProfilePage() {
   
   const handleUpgradeSubscription = async () => {
     try {
-      // Add your subscription upgrade logic here
-      await supabase.from('profiles').update({ is_premium: true }).eq('id', profile?.id);
+      // First, insert into subscribers table
+      const { error: insertError } = await supabase
+        .from('subscribers')
+        .upsert({
+          user_id: profile?.id,
+          status: 'active',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+  
+      if (insertError) throw insertError;
+  
+      // Then update the profile state
       setProfile(prev => prev ? { ...prev, isPremium: true } : null);
       setShowSubscriptionModal(false);
+      
       toast({
         title: "Assinatura ativada",
         description: "Bem-vindo ao plano Premium!",
       });
     } catch (error) {
+      console.error('Error upgrading subscription:', error);
       toast({
         title: "Erro ao ativar assinatura",
-        description: "Por favor, tente novamente mais tarde.",
+        description: "Ocorreu um erro ao processar sua solicitação. Tente novamente mais tarde.",
         variant: "destructive",
       });
     }
@@ -376,16 +446,13 @@ export function ProfilePage() {
             </div>
             
             <div>
-              <h3 className="text-gray-400 text-sm mb-2">Humores Preferidos</h3>
+              <h3 className="text-gray-400 text-sm mb-2">Tipo preferido</h3>
               <div className="flex flex-wrap gap-2">
-                {profile.preferences?.moods.map((mood) => (
                   <span
-                    key={mood}
                     className="px-3 py-1 bg-filmeja-blue/20 rounded-full text-sm text-white"
                   >
-                    {mood}
+                    {profile.preferences?.content_type}
                   </span>
-                ))}
               </div>
             </div>
           </div>
@@ -393,10 +460,23 @@ export function ProfilePage() {
           <Button
             variant="outline"
             className="mt-4 border-white/10 hover:bg-white/5"
+            onClick={() => setShowPreferencesModal(true)}
           >
             <Settings className="w-4 h-4 mr-2" />
             Editar Preferências
           </Button>
+          
+          {/* Add the Onboarding component at the end of the return statement */}
+          <Onboarding
+            isOpen={showPreferencesModal}
+            onOpenChange={setShowPreferencesModal}
+            currentPreferences={{
+              genres: profile?.preferences?.genres || [],
+              moods: profile?.preferences?.moods || []
+            }}
+            onComplete={handlePreferencesUpdate}
+            isEditing={true}
+          />
         </motion.div>
 
         {/* Watch History */}
@@ -469,14 +549,14 @@ export function ProfilePage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="mt-8 flex justify-center"
+          className="mt-8 mb-20 sm:mb-8 flex justify-center"
         >
           <Button
             variant="ghost"
             onClick={handleLogout}
-            className="text-gray-400 hover:text-white hover:bg-white/10"
+            className="text-gray-400 hover:text-white hover:bg-white/10 w-full sm:w-auto px-4 py-6 sm:py-2 text-base sm:text-sm"
           >
-            <LogOut className="w-4 h-4 mr-2" />
+            <LogOut className="w-5 h-5 sm:w-4 sm:h-4 mr-2" />
             Sair da Conta
           </Button>
         </motion.div>

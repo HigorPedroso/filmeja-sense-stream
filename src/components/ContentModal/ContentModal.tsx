@@ -8,6 +8,7 @@ import { TrailerModal } from "./TrailerModal";
 import { StreamingModal } from "./StreamingModal";
 import { useTrailerHandler } from "./useTrailerHandler";
 import { useContentActions } from "./useContentActions";
+import { X } from "lucide-react"; // Add this import
 
 export const ContentModal = ({
   isOpen,
@@ -89,6 +90,7 @@ export const ContentModal = ({
                 onTrailerClick={handleTrailerClick}
                 onWatchClick={handleWatchClick}
                 onNextSuggestion={onRequestNew ? handleNextSuggestion : undefined}
+                onClose={() => onOpenChange(false)}
               />
               
               <TrailerModal

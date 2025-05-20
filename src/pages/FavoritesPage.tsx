@@ -8,6 +8,7 @@ import { ContentModal } from "@/components/ContentModal/ContentModal";
 // First, make sure fetchContentWithProviders is imported
 import { fetchContentWithProviders } from "@/lib/utils/tmdb";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ContentItem {
   id: number;
@@ -18,6 +19,40 @@ interface ContentItem {
   vote_average?: number;
   poster_path?: string;
   type?: "movie" | "tv";
+  release_date?: string;
+  first_air_date?: string;
+  mediaType?: "movie" | "tv";
+  videos?: any[];
+  providers?: any;
+  similar?: any[];
+  backdrop_path?: string;
+}
+
+// Add this interface near the top of the file, next to ContentItem interface
+// Update the TMDBResponse interface to better type the providers
+interface TMDBResponse {
+  id: number;
+  title?: string;
+  name?: string;
+  overview?: string;
+  videos?: {
+    results: Array<{
+      key: string;
+      type: string;
+    }>;
+  };
+  providers?: {
+    results: Record<string, {
+      flatrate?: Array<{ provider_id: number; provider_name: string; logo_path: string }>;
+      rent?: Array<{ provider_id: number; provider_name: string; logo_path: string }>;
+      buy?: Array<{ provider_id: number; provider_name: string; logo_path: string }>;
+    }>;
+  };
+  similar?: {
+    results: Array<any>;
+  };
+  backdrop_path?: string;
+  vote_average?: number;
   release_date?: string;
   first_air_date?: string;
 }
@@ -167,16 +202,21 @@ export function FavoritesPage({ title, items }: FavoritesPageProps) {
                             const contentDetails = await fetchContentWithProviders(
                               item.id,
                               item.type || 'movie'
-                            );
-                            setSelectedContent({
+                            ) as TMDBResponse;
+
+                            const updatedContent: ContentItem = {
                               ...item,
                               ...contentDetails,
-                              mediaType: item.type || 'movie'
-                            });
+                              providers: contentDetails["watch/providers"],
+                              mediaType: item.type || 'movie',
+                              type: item.type || 'movie'
+                            };
+                            
+                            console.log('Content with providers:', updatedContent);
+                            setSelectedContent(updatedContent);
                             setIsModalOpen(true);
                           } catch (error) {
                             console.error('Error fetching content details:', error);
-                            // Still show modal with basic info if fetch fails
                             setSelectedContent(item);
                             setIsModalOpen(true);
                           }
@@ -192,12 +232,13 @@ export function FavoritesPage({ title, items }: FavoritesPageProps) {
                       {selectedContent && (
                         <ContentModal
                           isOpen={isModalOpen}
-                          onClose={() => {
-                            setIsModalOpen(false);
-                            setSelectedContent(null);
-                          }}
-                          content={selectedContent}
-                        />
+                          onOpenChange={(open) => {
+                            setIsModalOpen(open);
+                            if (!open) setSelectedContent(null);
+                          } }
+                          content={selectedContent} isLoading={false} onMarkAsWatched={function (content: any): Promise<void> {
+                            throw new Error("Function not implemented.");
+                          } }                        />
                       )}
                     </div>
                   </div>

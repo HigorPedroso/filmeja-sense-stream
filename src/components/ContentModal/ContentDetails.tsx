@@ -5,6 +5,7 @@ import { Star, Heart, Check, Eye, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ContentType } from "./types";
 import { PromoCard } from "./PromoCard";
+import { X } from "lucide-react"; // Add this import
 
 interface ContentDetailsProps {
   content: ContentType;
@@ -25,15 +26,28 @@ export const ContentDetails = ({
   onMarkAsWatched,
   onTrailerClick,
   onWatchClick,
-  onNextSuggestion
+  onNextSuggestion,
+  onClose // Add this prop
 }: ContentDetailsProps) => {
   return (
     <div className="relative z-10">
+      {/* Add close button at the top */}
+      <motion.button
+        onClick={onClose}
+        className="absolute -right-2 -top-2 p-2.5 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-sm border border-white/10 transition-all duration-200 z-50 group"
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.95 }}
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+      >
+        <X className="w-5 h-5 text-white/90 group-hover:text-white" />
+      </motion.button>
+
       <div className="flex flex-col md:flex-row gap-4 md:gap-6">
         {/* Poster Section */}
         <div className="md:w-1/3">
           <div className="relative max-w-[300px] mx-auto md:max-w-none">
-            <div className="absolute -top-2 -right-2 z-10">
+            <div className="absolute -top-2 -left-2 z-10">
               <motion.div
                 initial={{ scale: 0, rotate: -10 }}
                 animate={{ scale: 1, rotate: 0 }}

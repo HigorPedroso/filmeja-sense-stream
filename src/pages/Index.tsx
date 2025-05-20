@@ -38,11 +38,14 @@ import { useInView } from "@/hooks/useInView";
 import DesktopMockup from "@/components/DesktopMockup";
 import MobileMockup from "@/components/MobileMockup";
 import StreamingServices from '@/components/StreamingServices';
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
   // Get a reference to the how it works section
   const howItWorksRef = useRef<HTMLDivElement>(null);
   const plansRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
 
   // State for trending content
   const [trendingContent, setTrendingContent] = useState<ContentItem[]>([]);
@@ -57,6 +60,29 @@ const Index = () => {
   const scrollToPlans = () => {
     plansRef.current?.scrollIntoView({ behavior: "smooth" });
   };
+
+    useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        // Set session expiry to 30 days
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          await supabase.auth.setSession({
+            access_token: session?.access_token || '',
+            refresh_token: session?.refresh_token || '',
+            expires_in: 30 * 24 * 60 * 60 // 30 days in seconds
+          });
+          navigate('/dashboard');
+        }
+      } else {
+        navigate('/dashboard');
+      }
+    };
+    
+    checkAuth();
+  }, [navigate]);
 
   // Fetch trending content on component mount
   useEffect(() => {
