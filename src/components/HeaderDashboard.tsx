@@ -54,7 +54,6 @@ const HeaderDashboard = () => {
     if (user && !isCheckingStatus) {
       setIsCheckingStatus(true);
       try {
-        console.log("Checking premium status for user:", user.id);
         const accessToken = (await supabase.auth.getSession()).data.session?.access_token;
         
         if (!accessToken) {
@@ -77,7 +76,6 @@ const HeaderDashboard = () => {
         }
         
         const data = await response.json();
-        console.log("Premium status response:", data);
         setIsPremium(data.isPremium);
       } catch (error) {
         console.error("Error checking premium status:", error);
