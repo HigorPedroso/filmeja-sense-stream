@@ -255,21 +255,25 @@ export function ProfilePage() {
 
   const handleCancelSubscription = async () => {
     try {
-      // First, delete from subscribers table
-      // const { error: deleteError } = await supabase
-      //   .from('subscribers')
-      //   .delete()
-      //   .eq('user_id', profile?.id);
-  
-      // if (deleteError) throw deleteError;
-  
-      // Then update the profile state
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL}/cancel-subscription`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
+        },
+        body: JSON.stringify({ userId: profile?.id })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to cancel subscription');
+      }
+
       setProfile(prev => prev ? { ...prev, isPremium: false } : null);
       setShowSubscriptionModal(false);
       
       toast({
         title: "Assinatura cancelada",
-        description: "Sua assinatura foi cancelada com sucesso.",
+        description: "Sua assinatura será cancelada ao fim do período atual.",
       });
     } catch (error) {
       console.error('Error cancelling subscription:', error);
