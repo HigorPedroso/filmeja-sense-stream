@@ -10,7 +10,7 @@ const Footer: React.FC = () => {
           <div>
             <h3 className="text-xl font-bold text-white mb-4">FilmeJá</h3>
             <p className="text-gray-400 text-sm">
-              Recomendações personalizadas de filmes e séries baseadas no seu humor.
+              Recomendações personalizadas de filmes e séries baseadas no seu humor, utilizando inteligencia artificial.
             </p>
           </div>
           
@@ -22,16 +22,16 @@ const Footer: React.FC = () => {
                   Início
                 </Link>
               </li>
-              <li>
+              {/* <li>
                 <Link to="/explore" className="text-gray-400 hover:text-filmeja-purple transition-colors">
                   Explorar
                 </Link>
-              </li>
-              <li>
+              </li> */}
+              {/* <li>
                 <Link to="/mood" className="text-gray-400 hover:text-filmeja-purple transition-colors">
                   Por Humor
                 </Link>
-              </li>
+              </li> */}
               <li>
                 <Link to="/blog" className="text-gray-400 hover:text-filmeja-purple transition-colors">
                   Blog
