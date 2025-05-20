@@ -71,7 +71,7 @@ const Signup = () => {
 
         toast({
           title: 'Conta criada com sucesso!',
-          description: 'Redirecionando para a dashboard...',
+          description: 'Verifique seu email e confirme sua conta...',
         });
       }
 
