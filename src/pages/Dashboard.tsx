@@ -181,7 +181,7 @@ const Dashboard = () => {
     fetchGenreRecommendation(selectedGenre);
   };
 
-  // Fix TS error: use proper type for setUserContentPreference
+  // Define handleContentTypeChange only once with proper type annotation
   const handleContentTypeChange = (newType: "movies" | "series") => {
     setUserContentPreference(newType);
   };
@@ -919,18 +919,16 @@ const Dashboard = () => {
     }
   };
 
-  const handleContentTypeChange = (newType: "movies" | "series") => {
-    setUserContentPreference(newType);
-  };
-
-  const renderContentCard = (movie: {
+  interface SuggestionType {
     title: string;
     tmdbId: number;
     description: string;
     urlImg: string;
     tipo: string;
     alreadyWatched?: boolean;
-  }) => {
+  }
+
+  const renderContentCard = (movie: SuggestionType) => {
     return (
       <div className="flex flex-col items-center justify-center">
         <img
@@ -1029,8 +1027,8 @@ const Dashboard = () => {
       <MobileSidebar />
 
       <ImageBackground useSlideshow={true}>
-        {/* Fix TS error: pass user as a prop to HeaderDashboard */}
-        <HeaderDashboard user={mockUser} />
+        {/* Pass user prop to HeaderDashboard and fix TypeScript error */}
+        <HeaderDashboard user={currentUser || mockUser} />
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4 py-8 md:py-0">
           <h1 className="text-3xl md:text-5xl font-bold text-white mb-4 md:mb-6 drop-shadow-lg leading-tight">
             Como você quer descobrir seu próximo filme ou série?

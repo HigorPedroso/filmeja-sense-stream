@@ -1,24 +1,23 @@
 
-import { useState } from "react";
-import { motion } from "framer-motion";
-import { Star, Heart, Check, Eye, Play } from "lucide-react";
+import React from "react";
 import { Button } from "@/components/ui/button";
+import { Play, Heart, Check, X, Share2, ArrowRight } from "lucide-react";
+import StreamingModal from "./StreamingModal";
 import { ContentType } from "./types";
-import { PromoCard } from "./PromoCard";
-import { X } from "lucide-react"; // Add this import
 
-interface ContentDetailsProps {
+export interface ContentDetailsProps {
   content: ContentType;
   isFavorite: boolean;
   isWatched: boolean;
   onFavoriteToggle: () => Promise<void>;
   onMarkAsWatched: () => Promise<void>;
-  onTrailerClick: () => void;
+  onTrailerClick: () => Promise<void>;
   onWatchClick: () => void;
-  onNextSuggestion: (() => Promise<void>) | undefined;
+  onNextSuggestion: () => Promise<void>;
+  onClose: () => void; // Add onClose prop
 }
 
-export const ContentDetails = ({
+export function ContentDetails({
   content,
   isFavorite,
   isWatched,
@@ -27,281 +26,184 @@ export const ContentDetails = ({
   onTrailerClick,
   onWatchClick,
   onNextSuggestion,
-  onClose // Add this prop
-}: ContentDetailsProps) => {
+  onClose,
+}: ContentDetailsProps) {
+  const [showStreamingModal, setShowStreamingModal] = React.useState(false);
+  
   return (
-    <div className="relative z-10">
-      {/* Add close button at the top */}
-      <motion.button
-        onClick={onClose}
-        className="absolute -right-2 -top-2 p-2.5 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-sm border border-white/10 transition-all duration-200 z-50 group"
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.95 }}
-        initial={{ opacity: 0, scale: 0.8 }}
-        animate={{ opacity: 1, scale: 1 }}
-      >
-        <X className="w-5 h-5 text-white/90 group-hover:text-white" />
-      </motion.button>
+    <div className="text-white">
+      <div className="absolute top-4 right-4 z-10">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onClose}
+          className="rounded-full bg-black/20 backdrop-blur-sm hover:bg-black/40"
+        >
+          <X className="h-4 w-4" />
+          <span className="sr-only">Fechar</span>
+        </Button>
+      </div>
 
-      <div className="flex flex-col md:flex-row gap-4 md:gap-6">
-        {/* Poster Section */}
-        <div className="md:w-1/3">
-          <div className="relative max-w-[300px] mx-auto md:max-w-none">
-            <div className="absolute -top-2 -left-2 z-10">
-              <motion.div
-                initial={{ scale: 0, rotate: -10 }}
-                animate={{ scale: 1, rotate: 0 }}
-                transition={{ type: "spring", duration: 0.6 }}
-                className={`px-2 md:px-3 py-1 rounded-full text-xs md:text-sm font-medium ${
-                  content.mediaType === "movie"
-                    ? "bg-filmeja-purple text-white"
-                    : "bg-filmeja-blue text-white"
-                }`}
-              >
-                {content.mediaType === "movie" ? "Filme" : "Série"}
-              </motion.div>
-            </div>
+      <div className="relative mb-6">
+        <div className="aspect-video overflow-hidden rounded-lg">
+          {content.backdrop_path ? (
             <img
-              src={`https://image.tmdb.org/t/p/w500${content.poster_path}`}
+              src={`https://image.tmdb.org/t/p/w1280${content.backdrop_path}`}
               alt={content.title || content.name}
-              className="rounded-lg w-full object-cover shadow-xl"
+              className="w-full h-full object-cover"
             />
-          </div>
-
-          {/* Mobile-only quick action buttons */}
-          <div className="flex justify-center gap-3 mt-4 md:hidden">
-            <Button
-              variant="outline"
-              size="icon"
-              className="w-12 h-12 rounded-full border-white/20 hover:bg-white/10"
-              onClick={onTrailerClick}
-            >
-              <Play className="w-5 h-5" />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              className={`w-12 h-12 rounded-full border-white/20 hover:bg-white/10 ${
-                isFavorite ? "bg-filmeja-purple/20" : ""
-              }`}
-              onClick={onFavoriteToggle}
-            >
-              <Heart
-                className={`w-5 h-5 ${
-                  isFavorite ? "fill-filmeja-purple" : ""
-                }`}
-              />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              className={`w-12 h-12 rounded-full border-white/20 hover:bg-white/10 ${
-                isWatched ? "bg-filmeja-purple/20" : ""
-              }`}
-              onClick={onMarkAsWatched}
-            >
-              {isWatched ? (
-                <Check className="w-5 h-5" />
-              ) : (
-                <Eye className="w-5 h-5" />
-              )}
-            </Button>
-          </div>
-
-          <div className="mt-4 space-y-2 text-xs md:text-sm">
-            <div className="flex items-center justify-between text-sm text-gray-300">
-              <span>Lançamento:</span>
-              <span>{content.release_date ? new Date(content.release_date).getFullYear() : 'N/A'}</span>
-            </div>
-            <div className="flex items-center justify-between text-sm text-gray-300">
-              <span>Duração:</span>
-              <span>{content.runtime ? `${content.runtime} minutos` : 'N/A'}</span>
-            </div>
-            <div className="flex items-center justify-between text-sm text-gray-300">
-              <span>Idioma:</span>
-              <span>{content.original_language?.toUpperCase() || 'N/A'}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Content Section */}
-        <div className="md:w-2/3">
-          <div className="flex justify-between items-start">
-            <div>
-              <h2 className="text-xl md:text-2xl font-bold text-white mb-1">
-                {content.title || content.name}
-              </h2>
-              <p className="text-gray-400 text-xs md:text-sm">
-                {content.tagline}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 my-4">
-            <div className="flex gap-1">
-              {[...Array(5)].map((_, i) => (
-                <Star
-                  key={i}
-                  className={`w-4 h-4 ${
-                    i < Math.round((content.vote_average || 0) / 2)
-                      ? "text-yellow-400 fill-yellow-400"
-                      : "text-gray-600"
-                  }`}
-                />
-              ))}
-            </div>
-            <span className="text-gray-400 text-sm">
-              ({content.vote_average?.toFixed(1) || 'N/A'}/10)
-            </span>
-          </div>
-
-          <div className="flex flex-wrap gap-2 mb-4">
-            {content.genres?.map((genre) => (
-              <span
-                key={genre.id}
-                className="px-3 py-1 rounded-full text-sm bg-white/10 text-white"
-              >
-                {genre.name}
-              </span>
-            ))}
-          </div>
-
-          <p className="text-gray-300 mb-6">{content.overview}</p>
-
-          {content.providers?.flatrate && content.providers.flatrate.length > 0 && (
-            <div className="mb-6">
-              <h3 className="text-white font-semibold mb-2">
-                Disponível em:
-              </h3>
-              <div className="flex flex-wrap gap-3">
-                {content.providers.flatrate.map((provider) => (
-                  <div
-                    key={provider.provider_id}
-                    className="flex items-center bg-white/10 rounded-full px-3 py-1"
-                  >
-                    <img
-                      src={`https://image.tmdb.org/t/p/original${provider.logo_path}`}
-                      alt={provider.provider_name}
-                      className="w-6 h-6 rounded-full mr-2"
-                    />
-                    <span className="text-sm text-white">
-                      {provider.provider_name}
-                    </span>
-                  </div>
-                ))}
-              </div>
+          ) : (
+            <div className="w-full h-full bg-filmeja-dark/40 flex items-center justify-center">
+              <span className="text-gray-400">Imagem não disponível</span>
             </div>
           )}
-
-          <div className="flex flex-wrap gap-3">
-            <Button
-              className="bg-filmeja-purple hover:bg-filmeja-purple/90"
-              onClick={onWatchClick}
-              disabled={!content.providers?.flatrate?.length}
-            >
-              <Play className="w-4 h-4 mr-2" />
-              Assistir Agora
-            </Button>
-            <motion.div whileTap={{ scale: 0.95 }} className="relative">
-              <motion.div
-                className="absolute -inset-1 bg-gradient-to-r from-filmeja-purple to-filmeja-blue rounded-lg blur-sm"
-                animate={{
-                  opacity: [0.5, 0.8, 0.5],
-                  scale: [1, 1.05, 1],
-                }}
-                transition={{
-                  duration: 2,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                }}
-              />
-              <Button
-                variant="outline"
-                className="relative border-2 border-white/20 hover:bg-white/10 group overflow-hidden"
-                onClick={onTrailerClick}
-              >
-                <motion.div
-                  className="absolute inset-0 bg-gradient-to-r from-filmeja-purple to-filmeja-blue opacity-0 group-hover:opacity-30 transition-opacity"
-                  initial={{ x: "-100%" }}
-                  whileHover={{ x: "100%" }}
-                  transition={{ duration: 0.5, ease: "easeInOut" }}
-                />
-                <motion.div
-                  className="relative z-10 flex items-center"
-                  whileHover={{ scale: 1.05 }}
-                  transition={{ type: "spring", stiffness: 400, damping: 10 }}
-                >
-                  <Play className="w-4 h-4 mr-2" />
-                  Ver Trailer
-                </motion.div>
-              </Button>
-            </motion.div>
-            <Button
-              variant="outline"
-              className={`border-white/20 hover:bg-white/10 ${
-                isFavorite ? "bg-filmeja-purple/20" : ""
-              }`}
-              onClick={onFavoriteToggle}
-            >
-              <motion.div
-                className="relative z-10 flex items-center"
-                whileHover={{ scale: 1.05 }}
-                transition={{ type: "spring", stiffness: 400, damping: 10 }}
-              >
-                <Heart
-                  className={`w-4 h-4 mr-2 ${
-                    isFavorite ? "fill-filmeja-purple" : ""
-                  }`}
-                />
-                {isFavorite ? "Remover dos Favoritos" : "Adicionar à Lista"}
-              </motion.div>
-            </Button>
-            <Button
-              variant="outline"
-              className={`border-white/20 hover:bg-white/10 ${
-                isWatched ? "bg-filmeja-purple/20" : ""
-              }`}
-              onClick={onMarkAsWatched}
-            >
-              <motion.div
-                className="relative z-10 flex items-center"
-                whileHover={{ scale: 1.05 }}
-                transition={{ type: "spring", stiffness: 400, damping: 10 }}
-              >
-                {isWatched ? (
-                  <Check className="w-4 h-4" />
-                ) : (
-                  <Eye className="w-4 h-4" />
-                )}
-                <span className="ml-2">
-                  {isWatched
-                    ? content?.mediaType === "tv"
-                      ? "Já assisti todas as temporadas"
-                      : "Já assisti este filme"
-                    : content?.mediaType === "tv"
-                    ? "Marcar todas temporadas como vistas"
-                    : "Marcar filme como visto"}
-                </span>
-              </motion.div>
-            </Button>
-            {onNextSuggestion && (
-              <Button
-                variant="outline"
-                className="border-white/20 hover:bg-white/10"
-                onClick={onNextSuggestion}
-              >
-                Próxima Sugestão
-              </Button>
-            )}
-          </div>
-          {/* Add PromoCard after similar content section */}
-      <div className="mt-8">
-        <PromoCard />
-      </div>
         </div>
-        
+
+        <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/90 to-transparent">
+          <h2 className="text-2xl font-bold">
+            {content.title || content.name}
+          </h2>
+        </div>
       </div>
-      
+
+      <div className="flex flex-wrap gap-2 mb-4">
+        {content.genres?.map((genre) => (
+          <span
+            key={genre.id}
+            className="text-xs px-2 py-1 bg-filmeja-purple/20 rounded-full border border-filmeja-purple/30"
+          >
+            {genre.name}
+          </span>
+        ))}
+      </div>
+
+      <div className="flex gap-2 flex-wrap mb-6">
+        <Button
+          size="sm"
+          className="bg-filmeja-purple hover:bg-filmeja-purple/90"
+          onClick={onTrailerClick}
+        >
+          <Play className="mr-1 h-4 w-4" /> Trailer
+        </Button>
+
+        <Button
+          size="sm"
+          variant="outline"
+          className="border-filmeja-purple text-filmeja-purple hover:bg-filmeja-purple/10"
+          onClick={onWatchClick}
+        >
+          Onde Assistir
+        </Button>
+
+        <Button
+          size="sm"
+          variant={isFavorite ? "default" : "outline"}
+          className={
+            isFavorite
+              ? "bg-pink-600 hover:bg-pink-700 border-pink-600"
+              : "border-pink-600 text-pink-600 hover:bg-pink-600/10"
+          }
+          onClick={onFavoriteToggle}
+        >
+          <Heart className="mr-1 h-4 w-4" />
+          {isFavorite ? "Favorito" : "Favoritar"}
+        </Button>
+
+        <Button
+          size="sm"
+          variant={isWatched ? "default" : "outline"}
+          className={
+            isWatched
+              ? "bg-green-600 hover:bg-green-700 border-green-600"
+              : "border-green-600 text-green-600 hover:bg-green-600/10"
+          }
+          onClick={onMarkAsWatched}
+        >
+          <Check className="mr-1 h-4 w-4" />
+          {isWatched ? "Assistido" : "Marcar como assistido"}
+        </Button>
+
+        <Button
+          size="sm"
+          variant="outline"
+          className="border-blue-400 text-blue-400 hover:bg-blue-400/10"
+          onClick={() => setShowStreamingModal(true)}
+        >
+          <Share2 className="mr-1 h-4 w-4" /> Compartilhar
+        </Button>
+
+        <Button
+          size="sm"
+          variant="outline"
+          className="border-amber-400 text-amber-400 hover:bg-amber-400/10"
+          onClick={onNextSuggestion}
+        >
+          <ArrowRight className="mr-1 h-4 w-4" /> Próxima Sugestão
+        </Button>
+      </div>
+
+      <div className="mb-6">
+        <h3 className="text-lg font-semibold mb-2">Sinopse</h3>
+        <p className="text-gray-300">{content.overview || "Sinopse indisponível."}</p>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4 mb-6 text-sm">
+        <div>
+          <span className="text-gray-400">Lançamento:</span>
+          <div className="font-medium">
+            {content.release_date
+              ? new Date(content.release_date).getFullYear()
+              : content.first_air_date
+              ? new Date(content.first_air_date).getFullYear()
+              : "N/A"}
+          </div>
+        </div>
+        <div>
+          <span className="text-gray-400">Avaliação:</span>
+          <div className="font-medium flex items-center">
+            <span>
+              {content.vote_average
+                ? `${(content.vote_average / 2).toFixed(1)}/5`
+                : "N/A"}
+            </span>
+          </div>
+        </div>
+        <div>
+          <span className="text-gray-400">
+            {content.mediaType === "movie" ? "Duração:" : "Episódios:"}
+          </span>
+          <div className="font-medium">
+            {content.mediaType === "movie"
+              ? content.runtime
+                ? `${content.runtime} min`
+                : "N/A"
+              : content.number_of_episodes || "N/A"}
+          </div>
+        </div>
+        <div>
+          <span className="text-gray-400">
+            {content.mediaType === "movie" ? "Receita:" : "Temporadas:"}
+          </span>
+          <div className="font-medium">
+            {content.mediaType === "movie"
+              ? content.revenue
+                ? `$${(content.revenue / 1000000).toFixed(1)}M`
+                : "N/A"
+              : content.number_of_seasons || "N/A"}
+          </div>
+        </div>
+      </div>
+
+      {showStreamingModal && (
+        <StreamingModal
+          isOpen={showStreamingModal}
+          onClose={() => setShowStreamingModal(false)}
+          providers={content.providers}
+          title={content.title || content.name || ""}
+        />
+      )}
     </div>
   );
-};
+}
+
+export default ContentDetails;
