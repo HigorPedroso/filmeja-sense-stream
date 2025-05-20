@@ -19,6 +19,7 @@ import { useState, useEffect } from "react";
 import SuperDashboard from "./pages/SuperDashboard";
 import { ProfilePage } from "./pages/Profile";
 import FAQ from "./pages/FAQ";
+import Terms from "./pages/Terms";
 
 const queryClient = new QueryClient();
 
@@ -48,6 +49,7 @@ const App = () => {
               <Route path="/details/:type/:id" element={<ContentDetails />} />
               <Route path="/signup" element={<Signup />} />
               <Route path="/faq" element={<FAQ />} />
+              <Route path="/termos" element={<Terms />} />
               <Route path="/dashboard" element={
                 <ProtectedRoute>
                   <Dashboard />
