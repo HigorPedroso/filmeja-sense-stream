@@ -1,27 +1,14 @@
 
-import React, { useEffect, useState } from "react";
-import {
-  Dialog,
-  DialogContent,
-} from "@/components/ui/dialog";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { ContentType } from "./types";
-import ContentDetails from "./ContentDetails";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { useState, useEffect } from "react";
+import { ContentModalProps, ContentType } from "./types";
 import { ContentModalSkeleton } from "./ContentModalSkeleton";
+import { ContentDetails } from "./ContentDetails";
 import { TrailerModal } from "./TrailerModal";
+import { StreamingModal } from "./StreamingModal";
 import { useTrailerHandler } from "./useTrailerHandler";
 import { useContentActions } from "./useContentActions";
-
-export interface ContentModalProps {
-  isOpen: boolean;
-  onOpenChange: (open: boolean) => void;
-  content: ContentType | null;
-  isLoading: boolean;
-  onRequestNew?: () => Promise<void>;
-  selectedMood?: string | null;
-  onMarkAsWatched?: (content: ContentType) => Promise<void>;
-}
+import { X } from "lucide-react"; // Add this import
 
 export const ContentModal = ({
   isOpen,
@@ -32,116 +19,97 @@ export const ContentModal = ({
   selectedMood,
   onMarkAsWatched,
 }: ContentModalProps) => {
-  const { toast } = useToast();
-  const [isFavorite, setIsFavorite] = useState(false);
-  const [isWatched, setIsWatched] = useState(false);
-  const [showingTrailer, setShowingTrailer] = useState(false);
+  const [contentData, setContentData] = useState<ContentType>({
+    id: 0,
+    title: "",
+    mediaType: "movie",
+  });
   
-  const { handleTrailerClick, trailerKey } = useTrailerHandler(content);
-  const { toggleFavorite, markAsWatched } = useContentActions(content, toast);
-
   useEffect(() => {
-    const checkFavoriteStatus = async () => {
-      if (!content) return;
-
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-
-        // Check if this content is in favorites
-        const { data: favorite } = await supabase
-          .from("favorite_content")
-          .select("*")
-          .eq("user_id", user.id)
-          .eq("tmdb_id", content.id)
-          .eq("media_type", content.mediaType)
-          .maybeSingle();
-
-        setIsFavorite(!!favorite);
-
-        // Check if this content is marked as watched
-        const { data: watched } = await supabase
-          .from("watched_content")
-          .select("*")
-          .eq("user_id", user.id)
-          .eq("tmdb_id", content.id)
-          .eq("media_type", content.mediaType)
-          .maybeSingle();
-
-        setIsWatched(!!watched);
-      } catch (error) {
-        console.error("Error checking favorite/watched status:", error);
-      }
-    };
-
-    if (isOpen && content) {
-      checkFavoriteStatus();
+    if (content) {
+      setContentData({
+        ...content,
+        title: content.title || content.name,
+        mediaType: content.mediaType,
+      });
     }
-  }, [isOpen, content]);
-
-  const handleFavoriteToggle = async () => {
-    const newStatus = await toggleFavorite(isFavorite);
-    setIsFavorite(newStatus);
-  };
-
-  const handleMarkAsWatched = async () => {
-    if (onMarkAsWatched && content) {
-      await onMarkAsWatched(content);
-      setIsWatched(true);
-      return;
-    }
-
-    const newStatus = await markAsWatched(isWatched);
-    setIsWatched(newStatus);
-  };
-
-  const handleWatchClick = () => {
-    // Logic for showing streaming options
-    toast({
-      title: "Plataformas de streaming",
-      description: "Veja onde assistir este conteúdo",
-    });
-  };
-
+  }, [content]);
+  
+  const {
+    showTrailerModal,
+    trailerUrl,
+    isTransitioning,
+    handleTrailerClick,
+    closeTrailerModal
+  } = useTrailerHandler({
+    title: contentData.title,
+    videos: contentData.videos,
+    mediaType: contentData.mediaType
+  });
+  
+  const {
+    isWatched,
+    isFavorite,
+    showStreamingModal,
+    setShowStreamingModal,
+    handleFavoriteToggle,
+    markAsWatched,
+    handleWatchClick
+  } = useContentActions(contentData);
+  
   const handleNextSuggestion = async () => {
+    closeTrailerModal();
     if (onRequestNew) {
       await onRequestNew();
     }
   };
 
   return (
-    <>
-      <Dialog open={isOpen} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          {isLoading ? (
-            <ContentModalSkeleton />
-          ) : (
-            content && (
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-5xl bg-filmeja-dark/95 border-filmeja-purple/20 h-[90vh] md:h-auto overflow-y-auto">
+        {isLoading ? (
+          <ContentModalSkeleton />
+        ) : (
+          content && (
+            <div className="relative">
+              <div
+                className="absolute inset-0 opacity-20 blur-md"
+                style={{
+                  backgroundImage: `url(https://image.tmdb.org/t/p/original${content.backdrop_path})`,
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                }}
+              />
+              
               <ContentDetails 
-                content={content}
+                content={contentData}
                 isFavorite={isFavorite}
                 isWatched={isWatched}
                 onFavoriteToggle={handleFavoriteToggle}
-                onMarkAsWatched={handleMarkAsWatched}
-                onTrailerClick={async () => {
-                  await handleTrailerClick();
-                  setShowingTrailer(true);
-                }}
+                onMarkAsWatched={markAsWatched}
+                onTrailerClick={handleTrailerClick}
                 onWatchClick={handleWatchClick}
-                onNextSuggestion={handleNextSuggestion}
+                onNextSuggestion={onRequestNew ? handleNextSuggestion : undefined}
                 onClose={() => onOpenChange(false)}
               />
-            )
-          )}
-        </DialogContent>
-      </Dialog>
-
-      <TrailerModal
-        isOpen={showingTrailer}
-        onClose={() => setShowingTrailer(false)}
-        trailerKey={trailerKey}
-        title={content?.title || content?.name || ""}
-      />
-    </>
+              
+              <TrailerModal
+                isOpen={showTrailerModal}
+                onClose={closeTrailerModal}
+                content={contentData}
+                trailerUrl={trailerUrl}
+                isTransitioning={isTransitioning}
+              />
+              
+              <StreamingModal
+                isOpen={showStreamingModal}
+                onClose={() => setShowStreamingModal(false)}
+                content={contentData}
+              />
+            </div>
+          )
+        )}
+      </DialogContent>
+    </Dialog>
   );
 };

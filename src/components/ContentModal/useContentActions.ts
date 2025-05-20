@@ -1,127 +1,168 @@
 
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/components/ui/use-toast";
 import { ContentType } from "./types";
 
-export const useContentActions = (content: ContentType | null, toast: any) => {
-  const toggleFavorite = async (isFavorite: boolean) => {
-    if (!content) return false;
+export const useContentActions = (content: ContentType) => {
+  const [isWatched, setIsWatched] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [showStreamingModal, setShowStreamingModal] = useState(false);
+  const { toast } = useToast();
 
+  useEffect(() => {
+    const checkIfFavorite = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data } = await supabase
+          .from("favorite_content")
+          .select()
+          .eq("user_id", user.id)
+          .eq("tmdb_id", String(content.id))
+          .single();
+
+        setIsFavorite(!!data);
+      }
+    };
+
+    checkIfFavorite();
+  }, [content.id]);
+
+  useEffect(() => {
+    const checkIfWatched = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data } = await supabase
+          .from("watched_content")
+          .select()
+          .eq("user_id", user.id)
+          .eq("tmdb_id", Number(content.id))
+          .single();
+
+        setIsWatched(!!data);
+      }
+    };
+
+    checkIfWatched();
+  }, [content.id]);
+
+  const handleFavoriteToggle = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         toast({
-          title: "Faça login",
-          description: "Você precisa estar logado para favoritar conteúdo.",
+          title: "Erro",
+          description: "Você precisa estar logado para favoritar",
           variant: "destructive",
         });
-        return false;
+        return;
       }
 
       if (isFavorite) {
-        // Remove from favorites
-        const { error } = await supabase
+        await supabase
           .from("favorite_content")
           .delete()
           .eq("user_id", user.id)
-          .eq("tmdb_id", content.id)
-          .eq("media_type", content.mediaType);
+          .eq("tmdb_id", String(content.id));
 
-        if (error) throw error;
-
+        setIsFavorite(false);
         toast({
-          title: "Removido dos favoritos",
-          description: `${content.title || content.name} foi removido dos seus favoritos.`,
+          title: "Removido",
+          description: "Conteúdo removido dos favoritos",
         });
-
-        return false;
       } else {
-        // Add to favorites
-        const { error } = await supabase.from("favorite_content").insert({
+        await supabase.from("favorite_content").insert({
           user_id: user.id,
-          tmdb_id: content.id,
+          tmdb_id: String(content.id),
           media_type: content.mediaType,
-          title: content.title || content.name || "Título desconhecido",
+          title: content.title || content.name,
         });
 
-        if (error) throw error;
-
+        setIsFavorite(true);
         toast({
-          title: "Adicionado aos favoritos",
-          description: `${content.title || content.name} foi adicionado aos seus favoritos.`,
+          title: "Adicionado",
+          description: "Conteúdo adicionado aos favoritos",
         });
-
-        return true;
       }
     } catch (error) {
       console.error("Error toggling favorite:", error);
       toast({
         title: "Erro",
-        description: "Não foi possível atualizar seus favoritos.",
+        description: "Não foi possível atualizar os favoritos",
         variant: "destructive",
       });
-      return isFavorite;
     }
   };
 
-  const markAsWatched = async (isWatched: boolean) => {
-    if (!content) return false;
-
+  const markAsWatched = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         toast({
-          title: "Faça login",
-          description: "Você precisa estar logado para marcar como assistido.",
+          title: "Erro",
+          description: "Você precisa estar logado para marcar como assistido",
           variant: "destructive",
         });
-        return false;
+        return;
       }
 
       if (isWatched) {
-        // Remove from watched
-        const { error } = await supabase
+        await supabase
           .from("watched_content")
           .delete()
           .eq("user_id", user.id)
-          .eq("tmdb_id", content.id)
-          .eq("media_type", content.mediaType);
+          .eq("tmdb_id", Number(content.id));
 
-        if (error) throw error;
-
+        setIsWatched(false);
         toast({
-          title: "Removido dos assistidos",
-          description: `${content.title || content.name} foi removido da sua lista de assistidos.`,
+          title: "Removido",
+          description: "Conteúdo removido da sua lista de assistidos",
         });
-
-        return false;
       } else {
-        // Add to watched
-        const { error } = await supabase.from("watched_content").insert({
+        await supabase.from("watched_content").insert({
           user_id: user.id,
-          tmdb_id: content.id,
+          tmdb_id: Number(content.id),
           media_type: content.mediaType,
-          title: content.title || content.name || "Título desconhecido",
+          title: content.title || content.name || "",
+          watched_at: new Date().toISOString(),
         });
 
-        if (error) throw error;
-
+        setIsWatched(true);
         toast({
           title: "Marcado como assistido",
-          description: `${content.title || content.name} foi adicionado à sua lista de assistidos.`,
+          description: "Conteúdo adicionado à sua lista de assistidos",
         });
-
-        return true;
       }
     } catch (error) {
-      console.error("Error marking as watched:", error);
+      console.error("Error marking content as watched:", error);
       toast({
         title: "Erro",
-        description: "Não foi possível atualizar sua lista de assistidos.",
+        description: "Não foi possível atualizar o status do conteúdo",
         variant: "destructive",
       });
-      return isWatched;
     }
   };
 
-  return { toggleFavorite, markAsWatched };
+  const handleWatchClick = () => {
+    if (content.providers?.flatrate?.length > 0) {
+      setShowStreamingModal(true);
+    } else {
+      toast({
+        title: "Indisponível",
+        description:
+          "Este conteúdo não está disponível em nenhum serviço de streaming no momento.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  return {
+    isWatched,
+    isFavorite,
+    showStreamingModal,
+    setShowStreamingModal,
+    handleFavoriteToggle,
+    markAsWatched,
+    handleWatchClick
+  };
 };

@@ -273,36 +273,6 @@ export type Database = {
         }
         Relationships: []
       }
-      watch_history: {
-        Row: {
-          content_id: number
-          content_type: string
-          created_at: string
-          id: number
-          poster_path: string | null
-          title: string
-          user_id: string
-        }
-        Insert: {
-          content_id: number
-          content_type: string
-          created_at?: string
-          id?: number
-          poster_path?: string | null
-          title: string
-          user_id: string
-        }
-        Update: {
-          content_id?: number
-          content_type?: string
-          created_at?: string
-          id?: number
-          poster_path?: string | null
-          title?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       watched_content: {
         Row: {
           created_at: string | null

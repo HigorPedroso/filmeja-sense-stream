@@ -1,305 +1,268 @@
-
-import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { Heart, ArrowLeft, Search, Filter } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { supabase } from "@/integrations/supabase/client";
-import { FavoriteItem } from "@/lib/favorites";
-import { ContentItem } from "@/types/movie";
+import { motion } from "framer-motion";
+import { Star, Film, Tv } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { useState, useEffect } from "react";
+import { Sidebar } from "@/components/Sidebar";
+import { MobileSidebar } from "@/components/MobileSidebar";
 import { ContentModal } from "@/components/ContentModal/ContentModal";
+// First, make sure fetchContentWithProviders is imported
 import { fetchContentWithProviders } from "@/lib/utils/tmdb";
+import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
-interface FavoritesPageProps {
+interface ContentItem {
+  id: number;
   title?: string;
-  items?: FavoriteItem[];
+  name?: string;
+  year?: string;
+  rating?: number;
+  vote_average?: number;
+  poster_path?: string;
+  type?: "movie" | "tv";
+  release_date?: string;
+  first_air_date?: string;
+  mediaType?: "movie" | "tv";
+  videos?: any[];
+  providers?: any;
+  similar?: any[];
+  backdrop_path?: string;
 }
 
-export function FavoritesPage({ title = "Meus Favoritos", items = [] }: FavoritesPageProps) {
-  const navigate = useNavigate();
-  const [favorites, setFavorites] = useState<FavoriteItem[]>(items);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [filterType, setFilterType] = useState<"all" | "movie" | "tv">("all");
-  const [filteredFavorites, setFilteredFavorites] = useState<FavoriteItem[]>(favorites);
+// Add this interface near the top of the file, next to ContentItem interface
+// Update the TMDBResponse interface to better type the providers
+interface TMDBResponse {
+  id: number;
+  title?: string;
+  name?: string;
+  overview?: string;
+  videos?: {
+    results: Array<{
+      key: string;
+      type: string;
+    }>;
+  };
+  providers?: {
+    results: Record<string, {
+      flatrate?: Array<{ provider_id: number; provider_name: string; logo_path: string }>;
+      rent?: Array<{ provider_id: number; provider_name: string; logo_path: string }>;
+      buy?: Array<{ provider_id: number; provider_name: string; logo_path: string }>;
+    }>;
+  };
+  similar?: {
+    results: Array<any>;
+  };
+  backdrop_path?: string;
+  vote_average?: number;
+  release_date?: string;
+  first_air_date?: string;
+}
+
+interface FavoritesPageProps {
+  title: string;
+  items: ContentItem[];
+}
+
+export function FavoritesPage({ title, items }: FavoritesPageProps) {
+    const [currentBgIndex, setCurrentBgIndex] = useState(0);
+    const [isExpanded, setIsExpanded] = useState(false);
   const [selectedContent, setSelectedContent] = useState<ContentItem | null>(null);
-  const [showContentModal, setShowContentModal] = useState(false);
-  const [isLoadingContent, setIsLoadingContent] = useState(false);
-
-  useEffect(() => {
-    const fetchFavorites = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        
-        if (!user) {
-          navigate("/signup");
-          return;
-        }
-
-        const { data, error } = await supabase
-          .from('favorite_content')
-          .select('*')
-          .eq('user_id', user.id);
-
-        if (error) {
-          console.error('Error fetching favorites:', error);
-          return;
-        }
-
-        setFavorites(data || []);
-        setFilteredFavorites(data || []);
-      } catch (error) {
-        console.error('Error fetching favorites:', error);
-      }
-    };
-
-    if (items.length === 0) {
-      fetchFavorites();
-    } else {
-      setFavorites(items);
-      setFilteredFavorites(items);
-    }
-  }, [items, navigate]);
-
-  useEffect(() => {
-    // Filter favorites based on search query and type filter
-    let filtered = [...favorites];
-    
-    if (searchQuery) {
-      filtered = filtered.filter(item => 
-        item.title.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
-    
-    if (filterType !== 'all') {
-      filtered = filtered.filter(item => item.media_type === filterType);
-    }
-    
-    setFilteredFavorites(filtered);
-  }, [searchQuery, filterType, favorites]);
-
-  const handleOpenDetails = async (item: FavoriteItem) => {
-    setIsLoadingContent(true);
-    setShowContentModal(true);
-    
-    try {
-      const type = item.media_type;
-      const id = Number(item.tmdb_id);
-      
-      // Fetch content details with providers
-      const response = await fetch(
-        `https://api.themoviedb.org/3/${type}/${id}?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=pt-BR`
-      );
-      const details = await response.json();
-      
-      // Fetch videos
-      const videosRes = await fetch(
-        `https://api.themoviedb.org/3/${type}/${id}/videos?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=pt-BR`
-      );
-      const videos = await videosRes.json();
-      
-      // Fetch providers
-      const providersRes = await fetch(
-        `https://api.themoviedb.org/3/${type}/${id}/watch/providers?api_key=${import.meta.env.VITE_TMDB_API_KEY}`
-      );
-      const providers = await providersRes.json();
-      
-      // Set content with all details
-      const contentWithDetails = {
-        ...details,
-        videos: videos.results,
-        providers: providers.results?.BR,
-        mediaType: type,
-        type
-      };
-      
-      setSelectedContent(contentWithDetails);
-    } catch (error) {
-      console.error('Error fetching content details:', error);
-    } finally {
-      setIsLoadingContent(false);
-    }
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const getTitle = (item: ContentItem) => item.title || item.name || "Sem título";
+  const getYear = (item: ContentItem) => {
+    const date = item.release_date || item.first_air_date;
+    return date ? new Date(date).getFullYear() : "";
+  };
+  const getRating = (item: ContentItem) => {
+    const rating = item.rating || item.vote_average;
+    return rating ? rating.toFixed(1) : "N/A";
   };
 
-  const handleRemoveFavorite = async (itemId: string) => {
+  useEffect(() => {
+    if (items.length === 0) return;
+
+    const interval = setInterval(() => {
+      setCurrentBgIndex((prev) => (prev + 1) % items.length);
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [items]);
+
+  const handleLogout = async () => {
     try {
-      const { error } = await supabase
-        .from('favorite_content')
-        .delete()
-        .eq('id', itemId);
-        
+      const { error } = await supabase.auth.signOut();
+
       if (error) throw error;
-      
-      // Update local state after removal
-      const updatedFavorites = favorites.filter(item => item.id !== itemId);
-      setFavorites(updatedFavorites);
-      setFilteredFavorites(updatedFavorites.filter(item => {
-        if (searchQuery && !item.title.toLowerCase().includes(searchQuery.toLowerCase())) {
-          return false;
-        }
-        if (filterType !== 'all' && item.media_type !== filterType) {
-          return false;
-        }
-        return true;
-      }));
+
+      toast({
+        title: "Saindo...",
+        description: "Você foi desconectado com sucesso",
+      });
+
+      Navigate("/");
     } catch (error) {
-      console.error('Error removing favorite:', error);
+      toast({
+        title: "Erro ao sair",
+        description: "Não foi possível fazer logout. Tente novamente.",
+        variant: "destructive",
+      });
     }
   };
 
-  const getItemTypeName = (type: string): string => {
-    return type === 'movie' ? 'Filme' : 'Série';
-  };
-
+  // Add this near other content rendering
   return (
-    <div className="min-h-screen bg-filmeja-dark text-white p-6">
-      {/* Header */}
-      <div className="container mx-auto max-w-5xl">
-        <div className="flex items-center mb-8">
-          <Button 
-            onClick={() => navigate('/dashboard')}
-            variant="ghost"
-            className="text-white mr-4"
+    <div className="min-h-screen relative">
+
+<Sidebar 
+        isExpanded={isExpanded} 
+        setIsExpanded={setIsExpanded} 
+        onLogout={handleLogout} 
+      />
+
+    <MobileSidebar />
+      {/* Dynamic Background Layer */}
+      {items.length > 0 && (
+        <div className="fixed inset-0 w-full h-full overflow-hidden">
+          <motion.div
+            key={currentBgIndex}
+            className="absolute inset-0 w-full h-full"
+            initial={{ opacity: 0, scale: 1.1 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 2 }}
           >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <h1 className="text-3xl font-bold flex items-center">
-            {title} <Heart className="ml-3 text-pink-500 h-6 w-6" />
-          </h1>
-        </div>
-        
-        {/* Search and Filters */}
-        <div className="mb-8 flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-grow">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input 
-              type="text"
-              placeholder="Buscar nos favoritos..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 bg-filmeja-dark border-white/10 text-white"
+            <img
+              src={`https://image.tmdb.org/t/p/original${items[currentBgIndex]?.poster_path}`}
+              alt=""
+              className="absolute inset-0 w-full h-full object-cover blur-2xl"
             />
-          </div>
-          
-          <div className="flex gap-2 sm:gap-3">
-            <Button
-              variant={filterType === 'all' ? 'default' : 'outline'} 
-              onClick={() => setFilterType('all')}
-              className={filterType === 'all' ? 'bg-filmeja-purple' : 'text-white border-white/10'}
-            >
-              Todos
-            </Button>
-            <Button
-              variant={filterType === 'movie' ? 'default' : 'outline'} 
-              onClick={() => setFilterType('movie')}
-              className={filterType === 'movie' ? 'bg-filmeja-purple' : 'text-white border-white/10'}
-            >
-              Filmes
-            </Button>
-            <Button
-              variant={filterType === 'tv' ? 'default' : 'outline'} 
-              onClick={() => setFilterType('tv')}
-              className={filterType === 'tv' ? 'bg-filmeja-purple' : 'text-white border-white/10'}
-            >
-              Séries
-            </Button>
-          </div>
+            <div className="absolute inset-0 bg-gradient-to-b from-filmeja-dark/80 via-filmeja-dark to-black" />
+          </motion.div>
         </div>
-        
-        {/* Favorites Grid */}
-        {filteredFavorites.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {filteredFavorites.map((item) => (
-              <div key={item.id} className="bg-filmeja-dark border border-white/10 rounded-lg overflow-hidden group hover:border-filmeja-purple transition-all">
-                <div className="relative">
-                  <div 
-                    className="aspect-[2/3] bg-filmeja-dark/60 cursor-pointer overflow-hidden"
-                    onClick={() => handleOpenDetails(item)}
-                  >
-                    {item.poster_path ? (
-                      <img 
-                        src={`https://image.tmdb.org/t/p/w500${item.poster_path}`} 
-                        alt={item.title} 
-                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+      )}
+
+      {/* Content Layer */}
+      <div className="relative z-10 px-4 py-6 md:p-8 min-h-screen">
+        <div className="max-w-7xl mx-auto">
+          <motion.h1 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-2xl md:text-4xl font-bold text-white mb-6 md:mb-8 px-2"
+          >
+            {title}
+          </motion.h1>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+            {items.map((item, index) => (
+              <motion.div
+                key={item.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: index * 0.1 }}
+                whileHover={{ scale: 1.02, y: -5 }}
+                className="h-full"
+              >
+                <Card className="overflow-hidden bg-filmeja-dark/50 backdrop-blur-sm border-white/10 
+                  hover:border-filmeja-purple/50 transition-all duration-300 h-full">
+                  <div className="flex flex-row h-[160px] sm:h-[180px] md:h-[220px]">
+                    <div className="w-[120px] sm:w-[140px] md:w-[160px] relative flex-shrink-0">
+                      <img
+                        src={`https://image.tmdb.org/t/p/w500${item.poster_path}`}
+                        alt={getTitle(item)}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
                       />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-filmeja-dark/40 text-white/40">
-                        Sem imagem
+                      <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-sm rounded-full p-2">
+                        {item.type === "movie" ? (
+                          <Film className="w-3 h-3 md:w-4 md:h-4 text-white" />
+                        ) : (
+                          <Tv className="w-3 h-3 md:w-4 md:h-4 text-white" />
+                        )}
                       </div>
-                    )}
+                    </div>
+
+                    <div className="flex-1 p-3 md:p-4 flex flex-col justify-between">
+                      <div>
+                        <h2 className="text-lg md:text-xl font-semibold text-white mb-1 md:mb-2 line-clamp-2">
+                          {getTitle(item)}
+                        </h2>
+                        <p className="text-gray-400 text-xs md:text-sm mb-2">{getYear(item)}</p>
+                        <div className="flex items-center">
+                          <Star className="w-3 h-3 md:w-4 md:h-4 text-yellow-500 fill-yellow-500" />
+                          <span className="ml-1 text-white text-xs md:text-sm">
+                            {getRating(item)}
+                          </span>
+                        </div>
+                      </div>
+
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={async () => {
+                          try {
+                            const contentDetails = await fetchContentWithProviders(
+                              item.id,
+                              item.type || 'movie'
+                            ) as TMDBResponse;
+
+                            const updatedContent: ContentItem = {
+                              ...item,
+                              ...contentDetails,
+                              providers: contentDetails["watch/providers"],
+                              mediaType: item.type || 'movie',
+                              type: item.type || 'movie'
+                            };
+                            
+                            console.log('Content with providers:', updatedContent);
+                            setSelectedContent(updatedContent);
+                            setIsModalOpen(true);
+                          } catch (error) {
+                            console.error('Error fetching content details:', error);
+                            setSelectedContent(item);
+                            setIsModalOpen(true);
+                          }
+                        }}
+                        className="px-3 py-1.5 md:px-4 md:py-2 bg-filmeja-purple/20 hover:bg-filmeja-purple/30 
+                        rounded-xl text-white text-xs md:text-sm font-medium transition-colors
+                        hover:shadow-lg hover:shadow-filmeja-purple/20"
+                      >
+                        Ver Detalhes
+                      </motion.button>
+
+                      {/* Add the modal at the end of the component, before the closing div */}
+                      {selectedContent && (
+                        <ContentModal
+                          isOpen={isModalOpen}
+                          onOpenChange={(open) => {
+                            setIsModalOpen(open);
+                            if (!open) setSelectedContent(null);
+                          } }
+                          content={selectedContent} isLoading={false} onMarkAsWatched={function (content: any): Promise<void> {
+                            throw new Error("Function not implemented.");
+                          } }                        />
+                      )}
+                    </div>
                   </div>
-                  
-                  <div className="absolute top-2 right-2">
-                    <Button
-                      variant="destructive"
-                      size="icon"
-                      className="h-7 w-7 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={() => handleRemoveFavorite(item.id)}
-                    >
-                      <Heart className="h-3 w-3 fill-white" />
-                    </Button>
-                  </div>
-                  
-                  <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/90 to-transparent">
-                    <span className="inline-block px-2 py-1 text-xs bg-filmeja-purple/80 rounded-md">
-                      {getItemTypeName(item.media_type)}
-                    </span>
-                  </div>
-                </div>
-                
-                <div className="p-3">
-                  <h3 className="font-medium text-sm truncate" title={item.title}>{item.title}</h3>
-                </div>
-              </div>
+                </Card>
+              </motion.div>
             ))}
           </div>
-        ) : (
-          <div className="text-center py-16">
-            <Heart className="h-16 w-16 text-gray-600 mx-auto mb-4" />
-            <h3 className="text-xl font-medium text-gray-400">Nenhum favorito encontrado</h3>
-            <p className="mt-2 text-gray-500">
-              {favorites.length === 0 
-                ? "Adicione filmes e séries aos seus favoritos para vê-los aqui."
-                : "Não há resultados para os filtros selecionados."}
-            </p>
-            {favorites.length > 0 && searchQuery && (
-              <Button 
-                variant="link" 
-                className="text-filmeja-purple mt-2"
-                onClick={() => {
-                  setSearchQuery('');
-                  setFilterType('all');
-                }}
-              >
-                Limpar filtros
-              </Button>
-            )}
-          </div>
-        )}
+
+          {items.length === 0 && (
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex flex-col items-center justify-center py-12 md:py-20"
+            >
+              <div className="text-gray-400 text-base md:text-lg mb-3 md:mb-4">
+                Nenhum conteúdo encontrado
+              </div>
+              <p className="text-gray-500 text-center text-sm md:text-base max-w-md px-4">
+                Adicione alguns itens à sua lista para vê-los aqui.
+              </p>
+            </motion.div>
+          )}
+        </div>
       </div>
-      
-      {/* Content Details Modal */}
-      <ContentModal
-        isOpen={showContentModal}
-        onOpenChange={setShowContentModal}
-        content={selectedContent}
-        isLoading={isLoadingContent}
-        onMarkAsWatched={async (content) => {
-          try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
-            
-            await supabase.from("watched_content").insert({
-              user_id: user.id,
-              tmdb_id: content.id || content.tmdbId,
-              media_type: content.mediaType || content.media_type || "movie",
-              title: content.title || content.name || "",
-              watched_at: new Date().toISOString(),
-            });
-          } catch (error) {
-            console.error("Error marking as watched:", error);
-          }
-        }}
-      />
     </div>
   );
 }
