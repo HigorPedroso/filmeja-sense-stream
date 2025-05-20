@@ -307,21 +307,21 @@ const Dashboard = () => {
           .from('subscribers')
           .select('*')
           .eq('user_id', user.id)
-          .eq('subscription_status', 'active')
+          .in('subscription_status', ['active', 'canceling'])
           .single();
 
-        if (error) {
-          console.error('Error fetching subscriber status:', error);
-          setIsPremium(false);
-          return;
-        }
+          if (error) {
+            console.error('Error fetching subscriber status:', error);
+            setIsPremium(false);
+            return;
+          }
 
         // Check if subscription exists and is active
         const isActive = subscriber && 
-          (!subscriber.cancel_at_period_end || 
-           new Date(subscriber.current_period_end) > new Date());
+        (!subscriber.current_period_end || 
+         new Date(subscriber.current_period_end) > new Date());
 
-        setIsPremium(isActive);
+      setIsPremium(isActive);
       } catch (error) {
         console.error('Error checking premium status:', error);
         setIsPremium(false);

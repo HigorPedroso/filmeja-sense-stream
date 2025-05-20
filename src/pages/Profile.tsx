@@ -255,20 +255,12 @@ export function ProfilePage() {
 
   const handleCancelSubscription = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL}/cancel-subscription`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
-        },
-        body: JSON.stringify({ userId: profile?.id })
+      const { data, error } = await supabase.functions.invoke('cancel-subscription', {
+        body: { userId: profile?.id }
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to cancel subscription');
-      }
+      if (error) throw error;
 
-      setProfile(prev => prev ? { ...prev, isPremium: false } : null);
       setShowSubscriptionModal(false);
       
       toast({
