@@ -1335,62 +1335,66 @@ const Dashboard = () => {
             }}
           /> */}
 
-          <TopTrendingList
-            type="movie"
-            title="Minha lista"
-            showFavorites={true}
-            favoriteContent={userFavorites}
-            onItemClick={async (item) => {
-              setShowRecommendationModal(true);
+{userFavorites.length > 0 && (
+            <TopTrendingList
+              type="movie"
+              title="Minha lista"
+              showFavorites={true}
+              favoriteContent={userFavorites}
+              onItemClick={async (item) => {
+                setShowRecommendationModal(true);
+                try {
+                  await fetchContentWithProviders(item, {
+                    onLoadingChange: setIsLoadingRecommendation,
+                    onContentFetched: setMoodRecommendation,
+                  });
+                } catch {
+                  setShowRecommendationModal(false);
+                }
+              }}
+              onFavoriteUpdate={handleFavoriteUpdate}
+            />
+          )}
 
-              try {
-                await fetchContentWithProviders(item, {
-                  onLoadingChange: setIsLoadingRecommendation,
-                  onContentFetched: setMoodRecommendation,
-                });
-              } catch {
-                setShowRecommendationModal(false);
-              }
-            }}
-            onFavoriteUpdate={handleFavoriteUpdate}
-          />
-          <TopTrendingList
-            type="movie"
-            title="Filmes Que Você Já Assistiu"
-            showWatched={true}
-            watchedContent={userWatchedMovies}
-            onItemClick={async (item) => {
-              setShowRecommendationModal(true);
+          {userWatchedMovies.length > 0 && (
+            <TopTrendingList
+              type="movie"
+              title="Filmes Que Você Já Assistiu"
+              showWatched={true}
+              watchedContent={userWatchedMovies}
+              onItemClick={async (item) => {
+                setShowRecommendationModal(true);
+                try {
+                  await fetchContentWithProviders(item, {
+                    onLoadingChange: setIsLoadingRecommendation,
+                    onContentFetched: setMoodRecommendation,
+                  });
+                } catch {
+                  setShowRecommendationModal(false);
+                }
+              }}
+            />
+          )}
 
-              try {
-                await fetchContentWithProviders(item, {
-                  onLoadingChange: setIsLoadingRecommendation,
-                  onContentFetched: setMoodRecommendation,
-                });
-              } catch {
-                setShowRecommendationModal(false);
-              }
-            }}
-          />
-
-          <TopTrendingList
-            type="tv"
-            title="Séries Que Você Já Assistiu"
-            showWatched={true}
-            watchedContent={userWatchedSeries}
-            onItemClick={async (item) => {
-              setShowRecommendationModal(true);
-
-              try {
-                await fetchContentWithProviders(item, {
-                  onLoadingChange: setIsLoadingRecommendation,
-                  onContentFetched: setMoodRecommendation,
-                });
-              } catch {
-                setShowRecommendationModal(false);
-              }
-            }}
-          />
+          {userWatchedSeries.length > 0 && (
+            <TopTrendingList
+              type="tv"
+              title="Séries Que Você Já Assistiu"
+              showWatched={true}
+              watchedContent={userWatchedSeries}
+              onItemClick={async (item) => {
+                setShowRecommendationModal(true);
+                try {
+                  await fetchContentWithProviders(item, {
+                    onLoadingChange: setIsLoadingRecommendation,
+                    onContentFetched: setMoodRecommendation,
+                  });
+                } catch {
+                  setShowRecommendationModal(false);
+                }
+              }}
+            />
+          )}
 
           <StreamingServices />
 
