@@ -12,7 +12,7 @@ import {
   Heart,
   Sparkles,
   X,
-  Play, // Add this
+  Play,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ContentCarousel from "@/components/ContentCarousel";
@@ -27,7 +27,7 @@ import ImageBackground from "@/components/ImageBackground";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion, AnimatePresence } from "framer-motion";
-import trailerSound from "@/assets/sounds/trailer-whoosh.mp3"; // You'll need to add this sound file
+import trailerSound from "@/assets/sounds/trailer-whoosh.mp3";
 import { Onboarding } from "@/components/Onboarding/Onboarding";
 import { supabase } from "@/integrations/supabase/client";
 import { ContentModal } from "@/components/ContentModal/ContentModal";
@@ -154,9 +154,6 @@ const Dashboard = () => {
   const [isTrailerAnimating, setIsTrailerAnimating] = useState(false);
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
   const [isCheckingOnboarding, setIsCheckingOnboarding] = useState(true);
-  const getMoodName = (mood: MoodType): string => {
-    return moodNames[mood] || mood;
-  };
   const [showGenreModal, setShowGenreModal] = useState(false);
   const [genre, setGenre] = useState<{ id: number; name: string } | null>(null);
   const [showAiChat, setShowAiChat] = useState(false);
@@ -172,14 +169,21 @@ const Dashboard = () => {
   const [searchParams] = useSearchParams();
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
-
-  const [userContentPreference, setUserContentPreference] = useState<
-    "movies" | "series" | null
-  >(null);
+  // Fix TS error: add proper type and initialization
+  const [userContentPreference, setUserContentPreference] = useState<"movies" | "series" | null>(null);
+  
+  const getMoodName = (mood: MoodType): string => {
+    return moodNames[mood] || mood;
+  };
 
   const handleGenreSelect = (selectedGenre: { id: number; name: string }) => {
     setGenre(selectedGenre);
     fetchGenreRecommendation(selectedGenre);
+  };
+
+  // Fix TS error: use proper type for setUserContentPreference
+  const handleContentTypeChange = (newType: "movies" | "series") => {
+    setUserContentPreference(newType);
   };
 
   useEffect(() => {
@@ -916,7 +920,7 @@ const Dashboard = () => {
   };
 
   const handleContentTypeChange = (newType: "movies" | "series") => {
-    setContentType(newType);
+    setUserContentPreference(newType);
   };
 
   const renderContentCard = (movie: {
@@ -1025,6 +1029,7 @@ const Dashboard = () => {
       <MobileSidebar />
 
       <ImageBackground useSlideshow={true}>
+        {/* Fix TS error: pass user as a prop to HeaderDashboard */}
         <HeaderDashboard user={mockUser} />
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4 py-8 md:py-0">
           <h1 className="text-3xl md:text-5xl font-bold text-white mb-4 md:mb-6 drop-shadow-lg leading-tight">
@@ -1287,7 +1292,7 @@ const Dashboard = () => {
               }
             }}
           />
-
+          
           <TopTrendingList
             type="tv"
             title="Top 10 Séries da Semana"

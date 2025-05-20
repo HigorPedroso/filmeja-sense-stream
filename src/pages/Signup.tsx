@@ -3,11 +3,12 @@ import React, { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Mail, Lock, User } from 'lucide-react';
 import VideoBackground from '@/components/VideoBackground';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
 const Signup = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -15,29 +16,23 @@ const Signup = () => {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [session, setSession] = useState(null);
   
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
+  const { session } = useAuth();
+
+  // Obter o URL para onde redirecionar após o login
+  const from = location.state?.from?.pathname || '/dashboard';
 
   // Check if user is already logged in
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      if (session) navigate('/dashboard');
-    });
+    if (session) {
+      navigate(from, { replace: true });
+    }
+  }, [session, navigate, from]);
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setSession(session);
-        if (session) navigate('/dashboard');
-      }
-    );
-
-    return () => subscription.unsubscribe();
-  }, [navigate]);
-
-  const handleAuthentication = async (e) => {
+  const handleAuthentication = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
@@ -76,7 +71,7 @@ const Signup = () => {
       }
 
       // The redirect will happen automatically via onAuthStateChange
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: 'Erro!',
         description: error.message || 'Ocorreu um erro durante a autenticação.',
@@ -107,7 +102,7 @@ const Signup = () => {
       // The OAuth flow redirects the user, so we don't get the user object here
       // User data will be handled by onAuthStateChange after redirect
       
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: 'Erro!',
         description: error.message || 'Ocorreu um erro ao conectar com Google.',
