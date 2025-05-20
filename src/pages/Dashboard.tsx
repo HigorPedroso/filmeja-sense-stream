@@ -307,7 +307,7 @@ const Dashboard = () => {
           .from('subscribers')
           .select('*')
           .eq('user_id', user.id)
-          .eq('status', 'active')
+          .eq('subscription_status', 'active')
           .single();
 
         if (error) {
