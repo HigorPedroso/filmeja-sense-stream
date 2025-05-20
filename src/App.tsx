@@ -18,17 +18,20 @@ import { getUserFavorites } from "@/lib/favorites";
 import { useState, useEffect } from "react";
 import SuperDashboard from "./pages/SuperDashboard";
 import { ProfilePage } from "./pages/Profile";
-import { useQuery } from "@tanstack/react-query";
 
 const queryClient = new QueryClient();
 
 const App = () => {
-  const { data: favoriteItems = [] } = useQuery({
-    queryKey: ['favorites'],
-    queryFn: getUserFavorites,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    retry: 2
-  });
+  const [favoriteItems, setFavoriteItems] = useState([]);
+
+  useEffect(() => {
+    const fetchFavorites = async () => {
+      const favorites = await getUserFavorites();
+      setFavoriteItems(favorites);
+    };
+
+    fetchFavorites();
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
