@@ -5,18 +5,21 @@ import Stripe from 'https://esm.sh/stripe@12.0.0'
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS'
 }
 
 serve(async (req) => {
+  // Handle OPTIONS request
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response('ok', { 
+      headers: corsHeaders,
+      status: 200
+    })
   }
 
   try {
     const { userId } = await req.json()
-    console.log('Received request for userId:', userId)
-
+    
     if (!userId) {
       return new Response(
         JSON.stringify({ 
@@ -35,11 +38,6 @@ serve(async (req) => {
     const stripeKey = Deno.env.get('STRIPE_SECRET_KEY')
 
     if (!supabaseUrl || !supabaseKey || !stripeKey) {
-      console.error('Missing environment variables:', {
-        hasUrl: !!supabaseUrl,
-        hasKey: !!supabaseKey,
-        hasStripe: !!stripeKey
-      })
       return new Response(
         JSON.stringify({ 
           error: 'Server configuration error',
@@ -55,14 +53,12 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey)
     const stripe = new Stripe(stripeKey, { apiVersion: '2023-10-16' })
 
-    // Get subscription ID from subscribers table
+    // Single query for subscription details
     const { data: subscriber, error: dbError } = await supabase
       .from('subscribers')
-      .select('stripe_subscription_id, stripe_customer_id')
+      .select('stripe_customer_id')
       .eq('user_id', userId)
       .single()
-
-    console.log('Subscriber query result:', { subscriber, dbError })
 
     if (dbError) {
       return new Response(
@@ -73,31 +69,31 @@ serve(async (req) => {
         }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400,
+          status: 500,
         }
       )
     }
 
     if (!subscriber?.stripe_subscription_id) {
+      // No subscription found - consider it a success
       return new Response(
         JSON.stringify({ 
-          error: 'No active subscription found',
-          code: 'NO_SUBSCRIPTION'
+          message: 'No active subscription found',
+          code: 'SUCCESS'
         }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 404,
+          status: 200,
         }
       )
     }
 
+    // Cancel Stripe subscription at period end
     try {
-      const cancelledSubscription = await stripe.subscriptions.cancel(
-        subscriber.stripe_subscription_id
-      )
-      console.log('Stripe cancellation result:', cancelledSubscription)
+      await stripe.subscriptions.update(subscriber.stripe_subscription_id, {
+        cancel_at_period_end: true
+      });
     } catch (stripeError) {
-      console.error('Stripe cancellation error:', stripeError)
       return new Response(
         JSON.stringify({ 
           error: 'Failed to cancel Stripe subscription',
@@ -106,27 +102,47 @@ serve(async (req) => {
         }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400,
+          status: 500,
         }
       )
     }
 
+    // Update subscription status instead of deleting
+    const { error: updateError } = await supabase
+      .from('subscribers')
+      .update({ status: 'canceling' })
+      .eq('user_id', userId)
+
+    if (updateError) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'Failed to update subscription record',
+          details: updateError.message,
+          code: 'UPDATE_ERROR'
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500,
+        }
+      )
+    }
+
+    // Direct deletion after successful cancellation
     const { error: deleteError } = await supabase
       .from('subscribers')
       .delete()
       .eq('user_id', userId)
 
     if (deleteError) {
-      console.error('Delete record error:', deleteError)
       return new Response(
         JSON.stringify({ 
-          error: 'Failed to update subscription record',
+          error: 'Failed to delete subscription record',
           details: deleteError.message,
           code: 'DELETE_ERROR'
         }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400,
+          status: 500,
         }
       )
     }
@@ -141,13 +157,12 @@ serve(async (req) => {
         status: 200,
       }
     )
+
   } catch (error) {
-    console.error('Unhandled error:', error)
     return new Response(
       JSON.stringify({ 
-        error: 'Internal server error',
-        details: error.message,
-        code: 'INTERNAL_ERROR'
+        error: error.message || 'Internal server error',
+        code: 'ERROR'
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

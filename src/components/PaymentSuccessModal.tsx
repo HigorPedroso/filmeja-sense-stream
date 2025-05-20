@@ -127,7 +127,12 @@ const PaymentSuccessModal = ({ isOpen, onClose }: PaymentSuccessModalProps) => {
                 ))}
               </div>
 
-              <motion.div
+      
+            </motion.div>
+
+            
+          </motion.div>
+          <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 1 }}
@@ -136,15 +141,15 @@ const PaymentSuccessModal = ({ isOpen, onClose }: PaymentSuccessModalProps) => {
                 <Button
                   onClick={() => {
                     onClose();
-                    window.location.href = '/dashboard';
+                    setTimeout(() => {
+                      navigate('/dashboard');
+                    }, 300);
                   }}
                   className="w-full bg-gradient-to-r from-filmeja-purple to-filmeja-blue hover:opacity-90 transition-all"
                 >
                   Começar a Explorar
                 </Button>
               </motion.div>
-            </motion.div>
-          </motion.div>
         </AnimatePresence>
       </DialogContent>
     </Dialog>
