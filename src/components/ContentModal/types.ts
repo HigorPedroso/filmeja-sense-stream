@@ -2,11 +2,11 @@
 export interface ContentModalProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  content: any;
+  content: ContentType | null;
   isLoading: boolean;
-  onRequestNew?: () => void;
-  selectedMood?: string;
-  onMarkAsWatched: (content: any) => Promise<void>;
+  onRequestNew?: () => Promise<void>;
+  selectedMood?: string | null;
+  onMarkAsWatched?: (content: ContentType) => Promise<void>;
 }
 
 export interface ContentType {
@@ -19,6 +19,10 @@ export interface ContentType {
   vote_average?: number;
   release_date?: string;
   runtime?: number;
+  first_air_date?: string;
+  number_of_episodes?: number;
+  number_of_seasons?: number;
+  revenue?: number;
   original_language?: string;
   genres?: { id: number; name: string }[];
   videos?: { key: string }[];
@@ -41,4 +45,15 @@ export interface WatchedContent {
   media_type: string;
   title: string;
   watched_at?: string;
+}
+
+export interface FavoriteItem {
+  id: string;
+  title: string;
+  tmdb_id: string | number;
+  media_type: string;
+  poster_path?: string;
+  vote_average?: number;
+  added_at: string;
+  user_id: string;
 }

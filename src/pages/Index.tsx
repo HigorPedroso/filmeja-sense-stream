@@ -66,14 +66,10 @@ const Index = () => {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
-        // Set session expiry to 30 days
+        // Check if user exists even without session
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
-          await supabase.auth.setSession({
-            access_token: session?.access_token || '',
-            refresh_token: session?.refresh_token || '',
-            expires_in: 30 * 24 * 60 * 60 // 30 days in seconds
-          });
+          // If user exists but no session, refresh the page to get a new session
           navigate('/dashboard');
         }
       } else {

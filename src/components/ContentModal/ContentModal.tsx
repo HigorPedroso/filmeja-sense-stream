@@ -3,20 +3,15 @@ import React, { useEffect, useState } from "react";
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
 } from "@/components/ui/dialog";
-import { X } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { MoodType } from "@/types/movie";
-import ContentDetails from "./ContentDetails";
-import ContentModalSkeleton from "./ContentModalSkeleton";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import TrailerModal from "./TrailerModal";
+import { supabase } from "@/integrations/supabase/client";
 import { ContentType } from "./types";
-import useTrailerHandler from "./useTrailerHandler";
-import useContentActions from "./useContentActions";
+import ContentDetails from "./ContentDetails";
+import { ContentModalSkeleton } from "./ContentModalSkeleton";
+import { TrailerModal } from "./TrailerModal";
+import { useTrailerHandler } from "./useTrailerHandler";
+import { useContentActions } from "./useContentActions";
 
 export interface ContentModalProps {
   isOpen: boolean;
@@ -24,7 +19,7 @@ export interface ContentModalProps {
   content: ContentType | null;
   isLoading: boolean;
   onRequestNew?: () => Promise<void>;
-  selectedMood?: MoodType | string | null;
+  selectedMood?: string | null;
   onMarkAsWatched?: (content: ContentType) => Promise<void>;
 }
 
@@ -58,8 +53,8 @@ export const ContentModal = ({
           .from("favorite_content")
           .select("*")
           .eq("user_id", user.id)
-          .eq("tmdb_id", content.id || content.tmdbId)
-          .eq("media_type", content.mediaType || content.media_type || "movie")
+          .eq("tmdb_id", content.id)
+          .eq("media_type", content.mediaType)
           .maybeSingle();
 
         setIsFavorite(!!favorite);
@@ -69,8 +64,8 @@ export const ContentModal = ({
           .from("watched_content")
           .select("*")
           .eq("user_id", user.id)
-          .eq("tmdb_id", content.id || content.tmdbId)
-          .eq("media_type", content.mediaType || content.media_type || "movie")
+          .eq("tmdb_id", content.id)
+          .eq("media_type", content.mediaType)
           .maybeSingle();
 
         setIsWatched(!!watched);
