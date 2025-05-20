@@ -21,6 +21,7 @@ import { ProfilePage } from "./pages/Profile";
 import FAQ from "./pages/FAQ";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
+import Contact from "./pages/Contact";
 
 const queryClient = new QueryClient();
 
@@ -52,6 +53,7 @@ const App = () => {
               <Route path="/faq" element={<FAQ />} />
               <Route path="/termos" element={<Terms />} />
               <Route path="/privacidade" element={<Privacy />} />
+              <Route path="/contato" element={<Contact />} />
               <Route path="/dashboard" element={
                 <ProtectedRoute>
                   <Dashboard />
