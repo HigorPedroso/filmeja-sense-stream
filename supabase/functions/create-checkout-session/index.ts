@@ -138,6 +138,9 @@ serve(async (req) => {
         subscription_status: 'pending',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
+        stripe_subscription_id: null, // This will be updated by the webhook
+        cancel_at_period_end: false,
+        current_period_end: null
       };
       
       logStep("Attempting upsert with data", subscriberData);

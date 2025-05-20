@@ -56,7 +56,7 @@ serve(async (req) => {
     // Single query for subscription details
     const { data: subscriber, error: dbError } = await supabase
       .from('subscribers')
-      .select('stripe_customer_id')
+      .select('stripe_subscription_id')
       .eq('user_id', userId)
       .single()
 
@@ -110,7 +110,11 @@ serve(async (req) => {
     // Update subscription status instead of deleting
     const { error: updateError } = await supabase
       .from('subscribers')
-      .update({ status: 'canceling' })
+      .update({ 
+        subscription_status: 'canceling',
+        cancel_at_period_end: true,
+        updated_at: new Date().toISOString()
+      })
       .eq('user_id', userId)
 
     if (updateError) {
@@ -119,26 +123,6 @@ serve(async (req) => {
           error: 'Failed to update subscription record',
           details: updateError.message,
           code: 'UPDATE_ERROR'
-        }),
-        {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 500,
-        }
-      )
-    }
-
-    // Direct deletion after successful cancellation
-    const { error: deleteError } = await supabase
-      .from('subscribers')
-      .delete()
-      .eq('user_id', userId)
-
-    if (deleteError) {
-      return new Response(
-        JSON.stringify({ 
-          error: 'Failed to delete subscription record',
-          details: deleteError.message,
-          code: 'DELETE_ERROR'
         }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },

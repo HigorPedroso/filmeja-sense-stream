@@ -256,12 +256,12 @@ export function ProfilePage() {
   const handleCancelSubscription = async () => {
     try {
       // First, delete from subscribers table
-      const { error: deleteError } = await supabase
-        .from('subscribers')
-        .delete()
-        .eq('user_id', profile?.id);
+      // const { error: deleteError } = await supabase
+      //   .from('subscribers')
+      //   .delete()
+      //   .eq('user_id', profile?.id);
   
-      if (deleteError) throw deleteError;
+      // if (deleteError) throw deleteError;
   
       // Then update the profile state
       setProfile(prev => prev ? { ...prev, isPremium: false } : null);

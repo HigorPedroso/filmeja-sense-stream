@@ -32,17 +32,24 @@ serve(async (req) => {
         const customerId = session.customer;
         const userId = session.metadata.userId;
 
+        // Get subscription details from the session
+        const subscription = await stripe.subscriptions.retrieve(session.subscription);
+
         console.log("Processing completed checkout:", {
           customerId,
           userId,
-          sessionId: session.id
+          sessionId: session.id,
+          subscriptionId: subscription.id
         });
 
-        // Update subscriber status
+        // Update subscriber with subscription details
         const { data, error } = await supabaseClient
           .from("subscribers")
           .update({ 
             subscription_status: "active",
+            stripe_subscription_id: subscription.id,
+            current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+            cancel_at_period_end: subscription.cancel_at_period_end,
             is_premium: true,
             updated_at: new Date().toISOString()
           })
