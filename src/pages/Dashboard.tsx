@@ -300,30 +300,49 @@ const Dashboard = () => {
   useEffect(() => {
     const checkPremiumStatus = async () => {
       try {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
+        const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
         const { data: subscriber, error } = await supabase
-          .from("subscribers")
-          .select("*")
-          .eq("user_id", user.id)
+          .from('subscribers')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('status', 'active')
           .single();
 
         if (error) {
-          console.error("Error fetching subscriber status:", error);
+          console.error('Error fetching subscriber status:', error);
+          setIsPremium(false);
           return;
         }
 
-        // User is premium if they exist in the subscribers table
-        setIsPremium(!!subscriber);
+        // Check if subscription exists and is active
+        const isActive = subscriber && 
+          (!subscriber.cancel_at_period_end || 
+           new Date(subscriber.current_period_end) > new Date());
+
+        setIsPremium(isActive);
       } catch (error) {
-        console.error("Error checking premium status:", error);
+        console.error('Error checking premium status:', error);
+        setIsPremium(false);
       }
     };
 
     checkPremiumStatus();
+    
+    // Set up real-time subscription for status changes
+    const subscription = supabase
+      .channel('subscription-status')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'subscribers'
+      }, checkPremiumStatus)
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const handleMoodSelect = (mood: string) => {
