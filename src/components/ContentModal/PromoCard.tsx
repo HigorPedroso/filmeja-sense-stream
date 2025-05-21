@@ -69,13 +69,13 @@ export const PromoCard = () => {
         <div className="flex flex-col sm:flex-row items-center p-3 gap-3">
           <motion.div 
             className="relative w-full sm:w-32 h-32 sm:h-20 shrink-0 group"
-            whileHover={{ scale: 1.02 }}
           >
             {/* Glowing background effect */}
             <motion.div
-              className="absolute -inset-0.5 bg-gradient-to-r from-filmeja-purple via-red-500/30 to-filmeja-purple/50 rounded-xl blur-md opacity-0 group-hover:opacity-100"
+              className="absolute -inset-0.5 bg-gradient-to-r from-filmeja-purple via-red-500/30 to-filmeja-purple/50 rounded-xl blur-md opacity-75"
               animate={{
                 backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"],
+                opacity: [0.4, 0.6, 0.4]
               }}
               transition={{
                 duration: 5,
@@ -87,8 +87,16 @@ export const PromoCard = () => {
             
             <motion.img
               initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.3 }}
+              animate={{ 
+                opacity: 1,
+                rotateY: [0, 5, 0, -5, 0],
+                rotateX: [0, -3, 0, 3, 0]
+              }}
+              transition={{ 
+                duration: 8,
+                repeat: Infinity,
+                ease: "linear"
+              }}
               src={selectedProduct.image}
               alt="Produto Cinema em Casa"
               className="relative w-full h-full object-contain rounded-xl shadow-[0_0_15px_rgba(0,0,0,0.2)] transition-all duration-300 backdrop-blur-sm bg-black/20 p-2 z-10"
@@ -98,46 +106,31 @@ export const PromoCard = () => {
                 filter: "contrast(1.05) brightness(1.05)",
                 boxShadow: "inset 0 0 20px rgba(255,255,255,0.1)"
               }}
-              onMouseMove={(e) => {
-                const rect = e.currentTarget.getBoundingClientRect();
-                const x = (e.clientX - rect.left - rect.width / 2) / 15;
-                const y = (e.clientY - rect.top - rect.height / 2) / 15;
-                
-                e.currentTarget.style.transform = `
-                  perspective(1000px)
-                  rotateY(${x}deg)
-                  rotateX(${-y}deg)
-                  translateZ(10px)
-                `;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = "none";
-              }}
             />
 
             {/* Shine effect overlay */}
             <motion.div
-              className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/30 to-white/0 rounded-xl opacity-0 group-hover:opacity-100 z-20"
+              className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/30 to-white/0 rounded-xl opacity-30 z-20"
               animate={{
                 x: ["-100%", "100%"],
               }}
               transition={{
-                duration: 1.5,
+                duration: 3,
                 repeat: Infinity,
-                repeatDelay: 3
+                repeatDelay: 2
               }}
               style={{ mixBlendMode: "soft-light" }}
             />
 
             {/* Bottom highlight */}
             <motion.div
-              className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-4/5 h-[2px] bg-gradient-to-r from-transparent via-filmeja-purple/70 to-transparent opacity-0 group-hover:opacity-100"
+              className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-4/5 h-[2px] bg-gradient-to-r from-transparent via-filmeja-purple/70 to-transparent"
               animate={{
                 scaleX: [0.3, 1, 0.3],
-                opacity: [0, 1, 0],
+                opacity: [0.2, 0.5, 0.2],
               }}
               transition={{
-                duration: 2,
+                duration: 3,
                 repeat: Infinity,
                 ease: "easeInOut"
               }}
