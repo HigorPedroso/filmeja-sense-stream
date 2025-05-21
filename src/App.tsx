@@ -22,6 +22,9 @@ import FAQ from "./pages/FAQ";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import Contact from "./pages/Contact";
+import { BlogPost } from "./pages/BlogPost";
+import { BlogPostView } from "./pages/BlogPostView";
+import { AdminRoute } from "./components/AdminRoute";
 
 const queryClient = new QueryClient();
 
@@ -76,15 +79,57 @@ const App = () => {
                 }
               />
               {/* SuperDashboard admin routes */}
-              <Route path="/super" element={<SuperDashboard />} />
-              <Route path="/super/users" element={<SuperDashboard />} />
-              <Route path="/super/analytics" element={<SuperDashboard />} />
-              <Route path="/super/recommendations" element={<SuperDashboard />} />
-              <Route path="/super/calendar" element={<SuperDashboard />} />
-              <Route path="/super/messages" element={<SuperDashboard />} />
-              <Route path="/super/finances" element={<SuperDashboard />} />
-              <Route path="/super/settings" element={<SuperDashboard />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                            <Route path="/super" element={
+                              <AdminRoute>
+                                <SuperDashboard />
+                              </AdminRoute>
+                            } />
+                            <Route path="/super/users" element={
+                              <AdminRoute>
+                                <SuperDashboard />
+                              </AdminRoute>
+                            } />
+                            <Route path="/super/analytics" element={
+                              <AdminRoute>
+                                <SuperDashboard />
+                              </AdminRoute>
+                            } />
+                            <Route path="/super/recommendations" element={
+                              <AdminRoute>
+                                <SuperDashboard />
+                              </AdminRoute>
+                            } />
+                            <Route path="/super/calendar" element={
+                              <AdminRoute>
+                                <SuperDashboard />
+                              </AdminRoute>
+                            } />
+                            <Route path="/super/messages" element={
+                              <AdminRoute>
+                                <SuperDashboard />
+                              </AdminRoute>
+                            } />
+                            <Route path="/super/finances" element={
+                              <AdminRoute>
+                                <SuperDashboard />
+                              </AdminRoute>
+                            } />
+                            <Route path="/super/settings" element={
+                              <AdminRoute>
+                                <SuperDashboard />
+                              </AdminRoute>
+                            } />
+                            <Route path="/super/blog/new" element={
+                              <AdminRoute>
+                                <BlogPost />
+                              </AdminRoute>
+                            } />
+                            <Route path="/super/blog/edit/:id" element={
+                              <AdminRoute>
+                                <BlogPost />
+                              </AdminRoute>
+                            } />
+                            <Route path="/blog/:slug" element={<BlogPostView />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

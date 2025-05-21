@@ -13,6 +13,7 @@ import RecommendationPanel from '@/components/AdminDashboard/RecommendationPanel
 import RecentActivitiesPanel from '@/components/AdminDashboard/RecentActivitiesPanel';
 import FinancialPanel from '@/components/AdminDashboard/FinancialPanel';
 import { DateRangePicker } from '@/components/AdminDashboard/DateRangePicker';
+import { BlogPostsPanel } from '@/components/AdminDashboard/BlogPostsPanel';
 
 const SuperDashboard = () => {
   const [dateRange, setDateRange] = useState<{
@@ -60,14 +61,15 @@ const SuperDashboard = () => {
   });
 
   const { data: dashboardData, isLoading } = useQuery({
-      queryKey: ['dashboard-metrics', dateRange],
-      queryFn: async () => {
-        const [
-          usersData,
-          recommendationsData,
-          watchedData,
-          subscriptionsData,
-          revenueData
+    queryKey: ['dashboard-metrics', dateRange],
+    queryFn: async () => {
+      const [
+        usersData,
+        recommendationsData,
+        watchedData,
+        subscriptionsData,
+        revenueData,
+        blogPostsData 
         ] = await Promise.all([
           // Users metrics
           supabase
@@ -102,7 +104,14 @@ const SuperDashboard = () => {
             .from('transactions')
             .select('id, created_at, amount, status, user_id')
             .gte('created_at', dateRange.from?.toISOString())
-            .lte('created_at', dateRange.to?.toISOString())
+            .lte('created_at', dateRange.to?.toISOString()),
+
+        // Fix the blog posts query
+        // In the Promise.all array, update the blog posts query
+        supabase
+          .from('blog_posts')
+          .select('*')
+          .order('created_at', { ascending: false })
         ]);
   
         // Process and return the metrics
@@ -144,6 +153,12 @@ const SuperDashboard = () => {
               tx.status === 'completed' ? acc + (tx.amount || 0) : acc, 0
             ) || 0,
             transactions: revenueData.data?.length || 0
+          },
+          blogPosts: {
+            total: blogPostsData.data?.length || 0,
+            posts: blogPostsData.data || [],
+            published: blogPostsData.data?.filter(post => post.status === 'published').length || 0,
+            draft: blogPostsData.data?.filter(post => post.status === 'draft').length || 0
           }
         };
       }
@@ -165,12 +180,13 @@ const SuperDashboard = () => {
           </div>
           
           <Tabs defaultValue="overview" className="w-full">
-            <TabsList className="grid grid-cols-5 w-full max-w-4xl mb-6">
+            <TabsList className="grid grid-cols-6 w-full max-w-4xl mb-6">
               <TabsTrigger value="overview">Visão Geral</TabsTrigger>
               <TabsTrigger value="users">Usuários</TabsTrigger>
               <TabsTrigger value="recommendations">Recomendações</TabsTrigger>
               <TabsTrigger value="activities">Atividades</TabsTrigger>
               <TabsTrigger value="financial">Financeiro</TabsTrigger>
+              <TabsTrigger value="blog">Blog</TabsTrigger>
             </TabsList>
             
             <TabsContent value="overview" className="space-y-6">
@@ -212,6 +228,13 @@ const SuperDashboard = () => {
                 }}
                 isLoading={isLoading}
                 dateRange={dateRange}
+              />
+            </TabsContent>
+            
+            <TabsContent value="blog" className="space-y-6">
+              <BlogPostsPanel 
+                data={dashboardData?.blogPosts}
+                isLoading={isLoading}
               />
             </TabsContent>
           </Tabs>
