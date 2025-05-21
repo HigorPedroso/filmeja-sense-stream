@@ -67,16 +67,66 @@ export const PromoCard = () => {
         className="mt-4 bg-gradient-to-r from-black/80 to-black/60 rounded-lg overflow-hidden border border-white/10 shadow-xl hover:border-red-500/20 transition-all duration-300"
       >
         <div className="flex flex-col sm:flex-row items-center p-3 gap-3">
-          <div className="relative w-full sm:w-32 h-32 sm:h-20 shrink-0">
+          <motion.div 
+            className="relative w-full sm:w-32 h-32 sm:h-20 shrink-0 group"
+            whileHover={{ scale: 1.02 }}
+          >
+            <motion.div
+              className="absolute inset-0 bg-gradient-to-br from-filmeja-purple/20 to-transparent rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+            />
+            <motion.div
+              className="absolute -inset-0.5 bg-gradient-to-r from-filmeja-purple/30 to-red-500/30 rounded-lg blur opacity-0 group-hover:opacity-75 transition duration-300"
+              style={{ zIndex: -1 }}
+            />
+            
             <motion.img
-              whileHover={{ scale: 1.05 }}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.3 }}
+              whileHover={{ scale: 1.08 }}
               src={selectedProduct.image}
               alt="Produto Cinema em Casa"
-              className="w-full h-full object-contain rounded-md"
+              className="w-full h-full object-contain rounded-lg shadow-lg transition-transform duration-300 backdrop-blur-sm bg-black/20 p-2"
+              style={{ 
+                transformStyle: "preserve-3d",
+                perspective: "1000px"
+              }}
+              onMouseMove={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                const rotateX = (y - rect.height / 2) / 10;
+                const rotateY = (x - rect.width / 2) / 10;
+                
+                e.currentTarget.style.transform = `
+                  perspective(1000px)
+                  rotateX(${-rotateX}deg)
+                  rotateY(${rotateY}deg)
+                  scale3d(1.08, 1.08, 1.08)
+                `;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = `
+                  perspective(1000px)
+                  rotateX(0deg)
+                  rotateY(0deg)
+                  scale3d(1, 1, 1)
+                `;
+              }}
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent sm:hidden" />
-          </div>
-          
+            
+            <motion.div
+              className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent sm:hidden"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.2 }}
+            />
+
+            <motion.div
+              className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-3/4 h-[1px] bg-gradient-to-r from-transparent via-filmeja-purple/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+            />
+          </motion.div>
+
           <div className="flex-1 text-center sm:text-left w-full">
             <motion.h3 
               className="text-lg sm:text-base font-bold text-white"
