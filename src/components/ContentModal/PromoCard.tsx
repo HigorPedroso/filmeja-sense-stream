@@ -71,83 +71,75 @@ export const PromoCard = () => {
             className="relative w-full sm:w-32 h-32 sm:h-20 shrink-0 group"
             whileHover={{ scale: 1.02 }}
           >
-            {/* Glowing effect background */}
+            {/* Glowing background effect */}
             <motion.div
-              className="absolute -inset-1 bg-gradient-to-r from-filmeja-purple via-red-500/50 to-filmeja-purple rounded-xl blur-lg group-hover:opacity-75 transition duration-300 opacity-0"
+              className="absolute -inset-0.5 bg-gradient-to-r from-filmeja-purple via-red-500/30 to-filmeja-purple/50 rounded-xl blur-md opacity-0 group-hover:opacity-100"
               animate={{
-                scale: [1, 1.1, 1],
-                opacity: [0, 0.3, 0]
+                backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"],
               }}
               transition={{
-                duration: 3,
+                duration: 5,
                 repeat: Infinity,
-                repeatType: "reverse"
+                ease: "linear"
+              }}
+              style={{ backgroundSize: "200% 200%" }}
+            />
+            
+            <motion.img
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.3 }}
+              src={selectedProduct.image}
+              alt="Produto Cinema em Casa"
+              className="relative w-full h-full object-contain rounded-xl shadow-[0_0_15px_rgba(0,0,0,0.2)] transition-all duration-300 backdrop-blur-sm bg-black/20 p-2 z-10"
+              style={{ 
+                transformStyle: "preserve-3d",
+                perspective: "1000px",
+                filter: "contrast(1.05) brightness(1.05)",
+                boxShadow: "inset 0 0 20px rgba(255,255,255,0.1)"
+              }}
+              onMouseMove={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const x = (e.clientX - rect.left - rect.width / 2) / 15;
+                const y = (e.clientY - rect.top - rect.height / 2) / 15;
+                
+                e.currentTarget.style.transform = `
+                  perspective(1000px)
+                  rotateY(${x}deg)
+                  rotateX(${-y}deg)
+                  translateZ(10px)
+                `;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "none";
               }}
             />
 
-            {/* Image container with glass effect */}
+            {/* Shine effect overlay */}
             <motion.div
-              className="relative bg-gradient-to-br from-white/10 to-white/5 rounded-xl p-2 backdrop-blur-sm border border-white/20 overflow-hidden"
-              whileHover={{ scale: 1.05 }}
-              transition={{ type: "spring", stiffness: 300 }}
-            >
-              <motion.img
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.3 }}
-                src={selectedProduct.image}
-                alt="Produto Cinema em Casa"
-                className="w-full h-full object-contain rounded-lg shadow-[0_0_15px_rgba(0,0,0,0.2)] transition-all duration-300"
-                style={{ 
-                  transformStyle: "preserve-3d",
-                  perspective: "1000px",
-                  filter: "contrast(1.1) brightness(1.1)"
-                }}
-                onMouseMove={(e) => {
-                  const rect = e.currentTarget.getBoundingClientRect();
-                  const x = (e.clientX - rect.left - rect.width / 2) / 10;
-                  const y = (e.clientY - rect.top - rect.height / 2) / 10;
-                  
-                  e.currentTarget.style.transform = `
-                    perspective(1000px)
-                    rotateY(${x}deg)
-                    rotateX(${-y}deg)
-                    translateZ(20px)
-                    scale3d(1.1, 1.1, 1.1)
-                  `;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = "translateZ(0) rotateY(0) rotateX(0) scale3d(1, 1, 1)";
-                }}
-              />
-
-              {/* Shine effect */}
-              <motion.div
-                className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/30 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                style={{
-                  mixBlendMode: "soft-light",
-                  transform: "translateX(-100%) skewX(-20deg)",
-                }}
-                animate={{
-                  x: ["0%", "200%"],
-                }}
-                transition={{
-                  duration: 1.5,
-                  repeat: Infinity,
-                  repeatDelay: 3
-                }}
-              />
-            </motion.div>
+              className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/30 to-white/0 rounded-xl opacity-0 group-hover:opacity-100 z-20"
+              animate={{
+                x: ["-100%", "100%"],
+              }}
+              transition={{
+                duration: 1.5,
+                repeat: Infinity,
+                repeatDelay: 3
+              }}
+              style={{ mixBlendMode: "soft-light" }}
+            />
 
             {/* Bottom highlight */}
             <motion.div
-              className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-4/5 h-[2px] bg-gradient-to-r from-transparent via-filmeja-purple to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300"
+              className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-4/5 h-[2px] bg-gradient-to-r from-transparent via-filmeja-purple/70 to-transparent opacity-0 group-hover:opacity-100"
               animate={{
-                scaleX: [0.5, 1, 0.5],
+                scaleX: [0.3, 1, 0.3],
+                opacity: [0, 1, 0],
               }}
               transition={{
                 duration: 2,
                 repeat: Infinity,
+                ease: "easeInOut"
               }}
             />
           </motion.div>
