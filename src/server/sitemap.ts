@@ -7,7 +7,7 @@ export async function generateSitemap() {
       .select('slug, updated_at')
       .eq('status', 'published');
 
-    const baseUrl = 'https://filmeja.com';
+    const baseUrl = window.location.origin;
 
     const staticUrls = [
       { url: '/', priority: '1.0', changefreq: 'daily' },
@@ -20,7 +20,7 @@ export async function generateSitemap() {
       { url: '/contato', priority: '0.5', changefreq: 'monthly' }
     ];
 
-    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+    const xmlString = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${staticUrls.map(page => `
   <url>
@@ -38,7 +38,8 @@ ${posts?.map(post => `
   </url>`).join('')}
 </urlset>`;
 
-    return new Response(xml, {
+    const blob = new Blob([xmlString], { type: 'application/xml' });
+    return new Response(blob, {
       headers: {
         'Content-Type': 'application/xml',
         'Cache-Control': 'public, max-age=3600'
@@ -46,6 +47,11 @@ ${posts?.map(post => `
     });
   } catch (error) {
     console.error('Error generating sitemap:', error);
-    return new Response('Error generating sitemap', { status: 500 });
+    return new Response('Error generating sitemap', { 
+      status: 500,
+      headers: {
+        'Content-Type': 'text/plain'
+      }
+    });
   }
 }
