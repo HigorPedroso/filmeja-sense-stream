@@ -6,7 +6,7 @@ const supabase = createClient(
   Deno.env.get('SUPABASE_ANON_KEY') ?? ''
 );
 
-serve(async () => {
+const handler = async () => {
   try {
     const { data: posts } = await supabase
       .from('blog_posts')
@@ -56,4 +56,10 @@ ${staticUrls.map(page => `
       headers: { 'Content-Type': 'text/plain' }
     });
   }
+};
+
+// @ts-ignore
+Deno.serve({
+  fetch: handler,
+  hostname: "0.0.0.0"
 });

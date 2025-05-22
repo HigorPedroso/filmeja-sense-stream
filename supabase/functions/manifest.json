@@ -1,0 +1,10 @@
+{
+  "functions": [
+    {
+      "name": "sitemap",
+      "endpoint": "/sitemap",
+      "methods": ["GET"],
+      "public": true
+    }
+  ]
+}
