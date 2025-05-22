@@ -1,9 +1,18 @@
 
 {
     "rewrites": [
-      { "source": "/sitemap.xml", "destination": "https://yynlzhfibeozrwrtrjbs.supabase.co/functions/v1/sitemap" },
-      { "source": "/robots.txt", "destination": "https://yynlzhfibeozrwrtrjbs.supabase.co/functions/v1/robots" },
-      { "source": "/(.*)", "destination": "/index.html" }
-    ]
+    {
+      "source": "/sitemap.xml",
+      "destination": "https://yynlzhfibeozrwrtrjbs.supabase.co/functions/v1/sitemap"
+    },
+    {
+      "source": "/robots.txt",
+      "destination": "https://yynlzhfibeozrwrtrjbs.supabase.co/functions/v1/robots"
+    },
+    {
+      "source": "/((?!sitemap.xml|robots.txt).*)",
+      "destination": "/index.html"
+    }
+  ]
   }
   
