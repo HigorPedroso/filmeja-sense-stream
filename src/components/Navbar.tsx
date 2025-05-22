@@ -45,10 +45,10 @@ const Navbar: React.FC<NavbarProps> = ({ transparent = false }) => {
           </Link>
           {/* <Link to="/mood" className="text-white hover:text-filmeja-purple transition-colors">
             Por Humor
-          </Link>
+          </Link> */}
           <Link to="/blog" className="text-white hover:text-filmeja-purple transition-colors">
             Blog
-          </Link> */}
+          </Link> 
           {/* {isAdmin && (
             <Link to="/super" className="text-white hover:text-filmeja-purple transition-colors flex items-center">
               <BarChart className="h-4 w-4 mr-1" />
