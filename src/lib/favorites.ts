@@ -1,6 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
 
-
 export interface FavoriteItem {
   id: number;
   title?: string;

@@ -1,6 +1,6 @@
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { Toaster } from "./components/ui/toaster";
+import { Toaster as Sonner } from "./components/ui/sonner";
+import { TooltipProvider } from "./components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
@@ -13,7 +13,6 @@ import Dashboard from "./pages/Dashboard";
 import { AuthProvider } from "./hooks/useAuth";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { FavoritesPage } from "./pages/FavoritesPage";
-import { getUserFavorites } from "@/lib/favorites";
 import { useState, useEffect } from "react";
 import SuperDashboard from "./pages/SuperDashboard";
 import { ProfilePage } from "./pages/Profile";
@@ -27,6 +26,7 @@ import { AdminRoute } from "./components/AdminRoute";
 import BlogPage from "./pages/BlogPage";
 import { HelmetProvider } from "react-helmet-async";
 import { Sitemap } from "./pages/Sitemap";
+import { getUserFavorites } from "./lib/favorites";
 
 
 const queryClient = new QueryClient();
