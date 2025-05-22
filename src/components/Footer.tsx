@@ -2,7 +2,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 
-export const Footer = () => {
+const Footer: React.FC = () => {
   return (
     <footer className="bg-filmeja-dark/50 border-t border-white/10 py-8">
       <div className="max-w-4xl mx-auto px-4">
@@ -52,3 +52,5 @@ export const Footer = () => {
     </footer>
   );
 };
+
+export default Footer;
