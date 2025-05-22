@@ -25,13 +25,14 @@ import { BlogPostView } from "./pages/BlogPostView";
 import { AdminRoute } from "./components/AdminRoute";
 import BlogPage from "./pages/BlogPage";
 import { HelmetProvider } from "react-helmet-async";
-import { Sitemap } from "./pages/Sitemap";
 import { getUserFavorites } from "./lib/favorites";
+import { useGoogleAds } from './hooks/useGoogleAds';
 
 
 const queryClient = new QueryClient();
 
 const App = () => {
+  useGoogleAds();
   const [favoriteItems, setFavoriteItems] = useState([]);
 
   useEffect(() => {
