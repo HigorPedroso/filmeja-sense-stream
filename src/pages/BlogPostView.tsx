@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
+import { Helmet } from 'react-helmet-async';
 
 export const BlogPostView = () => {
   const { slug } = useParams();
@@ -38,7 +39,7 @@ export const BlogPostView = () => {
     try {
       const { data, error } = await supabase
         .from("blog_posts")
-        .select("*")
+        .select("*, meta_decription")
         .eq("slug", slug)
         .single();
 
@@ -127,6 +128,30 @@ export const BlogPostView = () => {
   // Update references to post data to handle optional chaining
   return (
     <div className="min-h-screen bg-filmeja-dark text-white">
+      <Helmet>
+      <title>{post.title} | FilmeJá Blog</title>
+      <meta name="description" content={post.meta_description || post.summary} />
+      
+      {/* Open Graph / Facebook */}
+      <meta property="og:type" content="article" />
+      <meta property="og:title" content={post.title} />
+      <meta property="og:description" content={post.meta_description || post.summary} />
+      <meta property="og:image" content={post.featured_image} />
+      <meta property="og:url" content={window.location.href} />
+      
+      {/* Twitter */}
+      <meta name="twitter:card" content="summary_large_image" />
+      <meta name="twitter:title" content={post.title} />
+      <meta name="twitter:description" content={post.meta_description || post.summary} />
+      <meta name="twitter:image" content={post.featured_image} />
+      
+      {/* Article specific */}
+      <meta property="article:published_time" content={post.created_at} />
+      <meta property="article:author" content={post.author.name} />
+      {post.tags?.map(tag => (
+        <meta key={tag} property="article:tag" content={tag} />
+      ))}
+    </Helmet>
       {/* Navigation Bar */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-filmeja-dark/80 backdrop-blur-sm border-b border-white/10">
         <div className="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">

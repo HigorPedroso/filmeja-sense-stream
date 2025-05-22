@@ -171,10 +171,6 @@ const App = () => {
                   }
                 />
 
-                {/* Update sitemap routes */}
-                <Route path="/sitemap.xml" element={<Sitemap />} />
-                <Route path="/sitemap" element={<Navigate to="/sitemap.xml" replace />} />
-
                 <Route path="/blog/:slug" element={<BlogPostView />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
