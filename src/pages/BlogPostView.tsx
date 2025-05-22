@@ -39,7 +39,7 @@ export const BlogPostView = () => {
     try {
       const { data, error } = await supabase
         .from("blog_posts")
-        .select("*, meta_decription")
+        .select("*, meta_description")
         .eq("slug", slug)
         .single();
 
