@@ -7,14 +7,6 @@ export async function generateSitemap() {
       .select('slug, updated_at')
       .eq('status', 'published');
 
-    const { data: movies } = await supabase
-      .from('movies')
-      .select('id, updated_at');
-
-    const { data: series } = await supabase
-      .from('series')
-      .select('id, updated_at');
-
     const baseUrl = 'https://filmeja.com';
 
     const staticUrls = [
@@ -43,20 +35,6 @@ ${posts?.map(post => `
     <lastmod>${new Date(post.updated_at).toISOString()}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>`).join('')}
-${movies?.map(movie => `
-  <url>
-    <loc>${baseUrl}/details/movie/${movie.id}</loc>
-    <lastmod>${new Date(movie.updated_at).toISOString()}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>`).join('')}
-${series?.map(serie => `
-  <url>
-    <loc>${baseUrl}/details/serie/${serie.id}</loc>
-    <lastmod>${new Date(serie.updated_at).toISOString()}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
   </url>`).join('')}
 </urlset>`;
 
