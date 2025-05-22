@@ -131,7 +131,7 @@ export const BlogPostView = () => {
       <nav className="fixed top-0 left-0 right-0 z-50 bg-filmeja-dark/80 backdrop-blur-sm border-b border-white/10">
         <div className="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
           <Link
-            to="/"
+            to="/blog"
             className="flex items-center gap-2 text-filmeja-purple hover:text-filmeja-purple/80"
           >
             <ArrowLeft className="w-5 h-5" />

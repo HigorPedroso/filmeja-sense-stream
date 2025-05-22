@@ -14,6 +14,7 @@ import {
 import { ChevronDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Link } from "react-router-dom";
 
 interface BlogPost {
   id: string;
@@ -256,86 +257,93 @@ export default function BlogPage() {
         {/* Posts Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <AnimatePresence>
-            {isLoading
-              ?  ( Array.from({ length: 6 }).map((_, i) => (
-                  <motion.div
-                    key={`skeleton-${i}`}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ delay: i * 0.1 }}
-                  >
-                    <Skeleton className="h-64 w-full rounded-lg" />
-                  </motion.div>
-                ))
-              ) : ( filteredPosts?.length === 0 ? (
-                <motion.div 
+            {isLoading ? (
+              Array.from({ length: 6 }).map((_, i) => (
+                <motion.div
+                  key={`skeleton-${i}`}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="col-span-full flex flex-col items-center justify-center py-16 text-center"
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ delay: i * 0.1 }}
                 >
-                  <div className="w-24 h-24 mb-6 text-filmeja-purple/50">
-                    <Search className="w-full h-full" />
-                  </div>
-                  <h3 className="text-2xl font-bold mb-2">Nenhum post encontrado</h3>
-                  <p className="text-gray-400 mb-6 max-w-md">
-                    {searchQuery || selectedTags.length || selectedCategories.length
-                      ? "Não encontramos posts com os filtros selecionados. Tente ajustar sua busca."
-                      : "Ainda não há posts publicados. Volte em breve para novidades!"}
-                  </p>
-                  {(searchQuery || selectedTags.length || selectedCategories.length) && (
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setSearchQuery('');
-                        setSelectedTags([]);
-                        setSelectedCategories([]);
-                      }}
-                      className="border-filmeja-purple text-filmeja-purple hover:bg-filmeja-purple/10"
-                    >
-                      Limpar filtros
-                    </Button>
-                  )}
+                  <Skeleton className="h-64 w-full rounded-lg" />
                 </motion.div>
-              ) : (
-                filteredPosts?.map((post, index) => (
-                  <motion.article
-                    key={post.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ delay: index * 0.1 }}
-                    className="group relative overflow-hidden rounded-lg bg-white/5 hover:bg-white/10 transition-all duration-300"
+              ))
+            ) : filteredPosts?.length === 0 ? (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="col-span-full flex flex-col items-center justify-center py-16 text-center"
+              >
+                <div className="w-24 h-24 mb-6 text-filmeja-purple/50">
+                  <Search className="w-full h-full" />
+                </div>
+                <h3 className="text-2xl font-bold mb-2">
+                  Nenhum post encontrado
+                </h3>
+                <p className="text-gray-400 mb-6 max-w-md">
+                  {searchQuery ||
+                  selectedTags.length ||
+                  selectedCategories.length
+                    ? "Não encontramos posts com os filtros selecionados. Tente ajustar sua busca."
+                    : "Ainda não há posts publicados. Volte em breve para novidades!"}
+                </p>
+                {(searchQuery ||
+                  selectedTags.length ||
+                  selectedCategories.length) && (
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setSearchQuery("");
+                      setSelectedTags([]);
+                      setSelectedCategories([]);
+                    }}
+                    className="border-filmeja-purple text-filmeja-purple hover:bg-filmeja-purple/10"
                   >
-                    <div className="aspect-video overflow-hidden">
-                      <img
-                        src={post.featured_image}
-                        alt={post.title}
-                        className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-300"
-                      />
-                    </div>
-                    <div className="p-6">
-                      <div className="flex items-center gap-2 mb-4">
-                        {post.tags?.map((tag) => (
-                          <Badge key={tag} variant="secondary">
-                            {tag}
-                          </Badge>
-                        ))}
-                      </div>
-                      <h2 className="text-xl font-bold mb-2 group-hover:text-filmeja-purple transition-colors">
-                        {post.title}
-                      </h2>
-                      <p className="text-gray-400 mb-4 line-clamp-2">
-                        {post.summary}
-                      </p>
-                      <div className="flex items-center justify-end">
-                        <Button variant="ghost" size="sm">
-                          Ler mais <ArrowRight className="ml-2 w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </motion.article>
-                ))))}
+                    Limpar filtros
+                  </Button>
+                )}
+              </motion.div>
+            ) : (
+              filteredPosts?.map((post, index) => (
+                <motion.article
+  key={post.id}
+  initial={{ opacity: 0, y: 20 }}
+  animate={{ opacity: 1, y: 0 }}
+  exit={{ opacity: 0, y: -20 }}
+  transition={{ delay: index * 0.1 }}
+  className="group relative overflow-hidden rounded-lg bg-white/5 hover:bg-white/10 transition-all duration-300"
+>
+  <Link to={`/blog/${post.slug}`} className="block">
+    <div className="aspect-video overflow-hidden">
+      <img
+        src={post.featured_image}
+        alt={post.title}
+        className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-300"
+      />
+    </div>
+    <div className="p-6">
+      <div className="flex items-center gap-2 mb-4">
+        {post.tags?.map(tag => (
+          <Badge key={tag} variant="secondary">{tag}</Badge>
+        ))}
+      </div>
+      <h2 className="text-xl font-bold mb-2 group-hover:text-filmeja-purple transition-colors">
+        {post.title}
+      </h2>
+      <p className="text-gray-400 mb-4 line-clamp-2">
+        {post.summary}
+      </p>
+      <div className="flex items-center justify-end">
+        <Button variant="ghost" size="sm">
+          Ler mais <ArrowRight className="ml-2 w-4 h-4" />
+        </Button>
+      </div>
+    </div>
+  </Link>
+</motion.article>
+              ))
+            )}
           </AnimatePresence>
         </div>
       </div>
