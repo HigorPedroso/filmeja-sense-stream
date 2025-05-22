@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -26,6 +25,8 @@ import { BlogPost } from "./pages/BlogPost";
 import { BlogPostView } from "./pages/BlogPostView";
 import { AdminRoute } from "./components/AdminRoute";
 import BlogPage from "./pages/BlogPage";
+import { HelmetProvider } from "react-helmet-async";
+import { Sitemap } from "./pages/Sitemap";
 
 const queryClient = new QueryClient();
 
@@ -42,102 +43,141 @@ const App = () => {
   }, []);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/explore" element={<Explore />} />
-              <Route path="/mood" element={<MoodSelection />} />
-              <Route path="/details/:type/:id" element={<ContentDetails />} />
-              <Route path="/signup" element={<Signup />} />
-              <Route path="/faq" element={<FAQ />} />
-              <Route path="/termos" element={<Terms />} />
-              <Route path="/privacidade" element={<Privacy />} />
-              <Route path="/contato" element={<Contact />} />
-              <Route path="/blog" element={<BlogPage />} />
-              <Route path="/dashboard" element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              } />
-              <Route
-                path="/favorites"
-                element={
-                  <ProtectedRoute>
-                    <FavoritesPage title="Minha lista" items={favoriteItems} />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/profile"
-                element={
-                  <ProtectedRoute>
-                    <ProfilePage />
-                  </ProtectedRoute>
-                }
-              />
-              {/* SuperDashboard admin routes */}
-                            <Route path="/super" element={
-                              <AdminRoute>
-                                <SuperDashboard />
-                              </AdminRoute>
-                            } />
-                            <Route path="/super/users" element={
-                              <AdminRoute>
-                                <SuperDashboard />
-                              </AdminRoute>
-                            } />
-                            <Route path="/super/analytics" element={
-                              <AdminRoute>
-                                <SuperDashboard />
-                              </AdminRoute>
-                            } />
-                            <Route path="/super/recommendations" element={
-                              <AdminRoute>
-                                <SuperDashboard />
-                              </AdminRoute>
-                            } />
-                            <Route path="/super/calendar" element={
-                              <AdminRoute>
-                                <SuperDashboard />
-                              </AdminRoute>
-                            } />
-                            <Route path="/super/messages" element={
-                              <AdminRoute>
-                                <SuperDashboard />
-                              </AdminRoute>
-                            } />
-                            <Route path="/super/finances" element={
-                              <AdminRoute>
-                                <SuperDashboard />
-                              </AdminRoute>
-                            } />
-                            <Route path="/super/settings" element={
-                              <AdminRoute>
-                                <SuperDashboard />
-                              </AdminRoute>
-                            } />
-                            <Route path="/super/blog/new" element={
-                              <AdminRoute>
-                                <BlogPost />
-                              </AdminRoute>
-                            } />
-                            <Route path="/super/blog/edit/:id" element={
-                              <AdminRoute>
-                                <BlogPost />
-                              </AdminRoute>
-                            } />
-                            <Route path="/blog/:slug" element={<BlogPostView />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
-      </AuthProvider>
-    </QueryClientProvider>
+    <HelmetProvider>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/explore" element={<Explore />} />
+                <Route path="/mood" element={<MoodSelection />} />
+                <Route path="/details/:type/:id" element={<ContentDetails />} />
+                <Route path="/signup" element={<Signup />} />
+                <Route path="/faq" element={<FAQ />} />
+                <Route path="/termos" element={<Terms />} />
+                <Route path="/privacidade" element={<Privacy />} />
+                <Route path="/contato" element={<Contact />} />
+                <Route path="/blog" element={<BlogPage />} />
+                <Route
+                  path="/dashboard"
+                  element={
+                    <ProtectedRoute>
+                      <Dashboard />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/favorites"
+                  element={
+                    <ProtectedRoute>
+                      <FavoritesPage
+                        title="Minha lista"
+                        items={favoriteItems}
+                      />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/profile"
+                  element={
+                    <ProtectedRoute>
+                      <ProfilePage />
+                    </ProtectedRoute>
+                  }
+                />
+                {/* SuperDashboard admin routes */}
+                <Route
+                  path="/super"
+                  element={
+                    <AdminRoute>
+                      <SuperDashboard />
+                    </AdminRoute>
+                  }
+                />
+                <Route
+                  path="/super/users"
+                  element={
+                    <AdminRoute>
+                      <SuperDashboard />
+                    </AdminRoute>
+                  }
+                />
+                <Route
+                  path="/super/analytics"
+                  element={
+                    <AdminRoute>
+                      <SuperDashboard />
+                    </AdminRoute>
+                  }
+                />
+                <Route
+                  path="/super/recommendations"
+                  element={
+                    <AdminRoute>
+                      <SuperDashboard />
+                    </AdminRoute>
+                  }
+                />
+                <Route
+                  path="/super/calendar"
+                  element={
+                    <AdminRoute>
+                      <SuperDashboard />
+                    </AdminRoute>
+                  }
+                />
+                <Route
+                  path="/super/messages"
+                  element={
+                    <AdminRoute>
+                      <SuperDashboard />
+                    </AdminRoute>
+                  }
+                />
+                <Route
+                  path="/super/finances"
+                  element={
+                    <AdminRoute>
+                      <SuperDashboard />
+                    </AdminRoute>
+                  }
+                />
+                <Route
+                  path="/super/settings"
+                  element={
+                    <AdminRoute>
+                      <SuperDashboard />
+                    </AdminRoute>
+                  }
+                />
+                <Route
+                  path="/super/blog/new"
+                  element={
+                    <AdminRoute>
+                      <BlogPost />
+                    </AdminRoute>
+                  }
+                />
+                <Route
+                  path="/super/blog/edit/:id"
+                  element={
+                    <AdminRoute>
+                      <BlogPost />
+                    </AdminRoute>
+                  }
+                />
+                <Route path="/sitemap.xml" element={<Sitemap />} />
+                <Route path="/blog/:slug" element={<BlogPostView />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </TooltipProvider>
+        </AuthProvider>
+      </QueryClientProvider>
+    </HelmetProvider>
   );
 };
 
