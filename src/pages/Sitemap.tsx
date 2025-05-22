@@ -1,7 +1,9 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 export const Sitemap = () => {
+  const [xmlContent, setXmlContent] = useState('');
+
   useEffect(() => {
     const generateSitemap = async () => {
       try {
@@ -10,8 +12,9 @@ export const Sitemap = () => {
           .select('slug, updated_at')
           .eq('status', 'published');
 
-        const baseUrl = window.location.origin;
-        const xmlContent = `<?xml version="1.0" encoding="UTF-8"?>
+        const baseUrl = 'https://filmeja.com';
+        
+        const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>${baseUrl}</loc>
@@ -27,9 +30,9 @@ export const Sitemap = () => {
   </url>`).join('')}
 </urlset>`;
 
-        const blob = new Blob([xmlContent], { type: 'application/xml' });
-        const url = URL.createObjectURL(blob);
-        window.location.href = url;
+        setXmlContent(xml);
+        document.title = 'Sitemap';
+        document.contentType = 'application/xml';
       } catch (error) {
         console.error('Error generating sitemap:', error);
       }
@@ -38,5 +41,5 @@ export const Sitemap = () => {
     generateSitemap();
   }, []);
 
-  return null;
+  return <pre>{xmlContent}</pre>;
 };
