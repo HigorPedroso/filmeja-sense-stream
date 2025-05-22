@@ -14,53 +14,15 @@ import RecentActivitiesPanel from '@/components/AdminDashboard/RecentActivitiesP
 import FinancialPanel from '@/components/AdminDashboard/FinancialPanel';
 import { DateRangePicker } from '@/components/AdminDashboard/DateRangePicker';
 import { BlogPostsPanel } from '@/components/AdminDashboard/BlogPostsPanel';
+import { DashboardData, DateRangeType } from '@/types/dashboard';
 
 const SuperDashboard = () => {
-  const [dateRange, setDateRange] = useState<{
-    from: Date | undefined;
-    to: Date | undefined;
-  }>({
+  const [dateRange, setDateRange] = useState<DateRangeType>({
     from: new Date(new Date().setDate(new Date().getDate() - 30)),
     to: new Date()
   });
 
-  const { data: totalUsers, isLoading: loadingUsers } = useQuery({
-    queryKey: ['dashboard-users'],
-    queryFn: async () => {
-      const { count, error } = await supabase
-        .from('profiles')
-        .select('*', { count: 'exact', head: true });
-      
-      if (error) throw error;
-      return count || 0;
-    }
-  });
-
-  const { data: recommendations, isLoading: loadingRecommendations } = useQuery({
-    queryKey: ['dashboard-recommendations'],
-    queryFn: async () => {
-      const { count, error } = await supabase
-        .from('recommendations')
-        .select('*', { count: 'exact', head: true });
-      
-      if (error) throw error;
-      return count || 0;
-    }
-  });
-
-  const { data: watchedContent, isLoading: loadingWatched } = useQuery({
-    queryKey: ['dashboard-watched'],
-    queryFn: async () => {
-      const { count, error } = await supabase
-        .from('watched_content')
-        .select('*', { count: 'exact', head: true });
-      
-      if (error) throw error;
-      return count || 0;
-    }
-  });
-
-  const { data: dashboardData, isLoading } = useQuery({
+  const { data: dashboardData, isLoading } = useQuery<DashboardData>({
     queryKey: ['dashboard-metrics', dateRange],
     queryFn: async () => {
       const [
@@ -71,10 +33,16 @@ const SuperDashboard = () => {
         revenueData,
         blogPostsData 
         ] = await Promise.all([
-          // Users metrics
+          // Users metrics with subscribers join
           supabase
             .from('profiles')
-            .select('id, created_at, last_sign_in_at, subscription_status')
+            .select(`
+              id, 
+              created_at, 
+              subscribers!inner (
+                subscription_status
+              )
+            `)
             .gte('created_at', dateRange.from?.toISOString())
             .lte('created_at', dateRange.to?.toISOString()),
   
@@ -114,12 +82,12 @@ const SuperDashboard = () => {
           .order('created_at', { ascending: false })
         ]);
   
-        // Process and return the metrics
+        // Update the users metrics processing
         return {
           users: {
             total: usersData.data?.length || 0,
             active: usersData.data?.filter(u => u.last_sign_in_at)?.length || 0,
-            withSubscription: usersData.data?.filter(u => u.subscription_status === 'active')?.length || 0
+            withSubscription: usersData.data?.filter(u => u.subscribers?.status === 'active')?.length || 0
           },
           recommendations: {
             total: recommendationsData.data?.length || 0,

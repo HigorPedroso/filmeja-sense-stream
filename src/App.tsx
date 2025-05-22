@@ -25,6 +25,7 @@ import Contact from "./pages/Contact";
 import { BlogPost } from "./pages/BlogPost";
 import { BlogPostView } from "./pages/BlogPostView";
 import { AdminRoute } from "./components/AdminRoute";
+import BlogPage from "./pages/BlogPage";
 
 const queryClient = new QueryClient();
 
@@ -57,6 +58,7 @@ const App = () => {
               <Route path="/termos" element={<Terms />} />
               <Route path="/privacidade" element={<Privacy />} />
               <Route path="/contato" element={<Contact />} />
+              <Route path="/blog" element={<BlogPage />} />
               <Route path="/dashboard" element={
                 <ProtectedRoute>
                   <Dashboard />

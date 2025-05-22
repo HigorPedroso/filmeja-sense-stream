@@ -226,7 +226,7 @@ export const BlogPostView = () => {
 
           {/* Main Content */}
           <div className="flex gap-8">
-            <div className="hidden md:block">
+            {/* <div className="hidden md:block">
               <div className="sticky top-4 space-y-4">
                 {post.tags?.length > 0 &&
                   post.tags.map((tag) => (
@@ -239,7 +239,7 @@ export const BlogPostView = () => {
                     </Button>
                   ))}
               </div>
-            </div>
+            </div> */}
 
             <article className="flex-1">
               <div
