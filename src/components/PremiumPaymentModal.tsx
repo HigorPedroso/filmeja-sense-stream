@@ -6,6 +6,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "./ui/button";
 import { Check, Crown, X } from "lucide-react";
+import { trackConversion } from "@/utils/analytics";
 
 interface PremiumPaymentModalProps {
   isOpen: boolean;
@@ -20,6 +21,10 @@ const PremiumPaymentModal = ({ isOpen, onClose, onSuccess }: PremiumPaymentModal
   const handlePayment = async () => {
     try {
       setIsLoading(true);
+      
+      // Track conversion before payment
+      trackConversion();
+
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session?.user) {
