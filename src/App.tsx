@@ -169,7 +169,8 @@ const App = () => {
                     </AdminRoute>
                   }
                 />
-                <Route path="/sitemap.xml" element={<Sitemap />} />
+
+                <Route path="/sitemap" element={<Sitemap />} />
                 <Route path="/blog/:slug" element={<BlogPostView />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
