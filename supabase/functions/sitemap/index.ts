@@ -13,7 +13,7 @@ serve(async () => {
       .select('slug, updated_at')
       .eq('status', 'published');
 
-    const baseUrl = 'https://filmeja.com';
+    const baseUrl = 'https://filmesja.com';
 
     const staticUrls = [
       { url: '/', priority: '1.0', changefreq: 'daily' },

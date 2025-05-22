@@ -5,7 +5,7 @@ serve(async () => {
 Allow: /
 
 # Sitemaps
-Sitemap: https://filmeja.com/sitemap.xml`;
+Sitemap: https://filmesja.com/sitemap.xml`;
 
   return new Response(robotsTxt, {
     headers: {
