@@ -28,6 +28,7 @@ import BlogPage from "./pages/BlogPage";
 import { HelmetProvider } from "react-helmet-async";
 import { Sitemap } from "./pages/Sitemap";
 
+
 const queryClient = new QueryClient();
 
 const App = () => {
