@@ -12,8 +12,12 @@ export const Sitemap = () => {
 
         const baseUrl = window.location.origin;
         
-        const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+        // Set XML content type
+        document.contentType = 'application/xml';
+        
+        // Write XML directly to document
+        document.write(`<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
   <url>
     <loc>${baseUrl}</loc>
     <changefreq>daily</changefreq>
@@ -30,28 +34,10 @@ export const Sitemap = () => {
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>`).join('')}
-</urlset>`;
+</urlset>`);
 
-        // Create response with proper headers
-        const response = new Response(xml, {
-          headers: {
-            'Content-Type': 'application/xml',
-            'Content-Length': xml.length.toString(),
-            'Cache-Control': 'public, max-age=3600',
-          },
-        });
-
-        // Convert response to blob and download
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.style.display = 'none';
-        a.href = url;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-
+        // Prevent any additional HTML from being added
+        document.close();
       } catch (error) {
         console.error('Error generating sitemap:', error);
       }
