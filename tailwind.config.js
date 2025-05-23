@@ -134,9 +134,38 @@ export default {
 					animation: {
 						'pulse-subtle': 'pulse-subtle 3s ease-in-out infinite',
 						'bounce-gentle': 'bounce-gentle 2s ease-in-out infinite',
-						'ring-pulse': 'ring-pulse 2s ease-in-out infinite'
-					}
-				}
+						'ring-pulse': 'ring-pulse 2s ease-in-out infinite',
+						'float': 'float 6s ease-in-out infinite',
+						'shimmer': 'shimmer 3s infinite',
+						'glow': 'glow 2s ease-in-out infinite alternate',
+						'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+						'bounce-subtle': 'bounce-subtle 2s infinite',
+					},
+					keyframes: {
+						float: {
+							'0%, 100%': { transform: 'translateY(0)' },
+							'50%': { transform: 'translateY(-10px)' },
+						},
+						shimmer: {
+							'0%': { transform: 'translateX(-100%) skewX(-12deg)' },
+							'100%': { transform: 'translateX(200%) skewX(-12deg)' },
+						},
+						glow: {
+							'0%': { opacity: 0.4 },
+							'100%': { opacity: 0.8 },
+						},
+						'bounce-subtle': {
+							'0%, 100%': { transform: 'translateY(-5%)' },
+							'50%': { transform: 'translateY(5%)' },
+						},
+					},
+					backgroundSize: {
+						'size-200': '200% 200%',
+					},
+					backgroundPosition: {
+						'right-center': '100% center',
+					},
+				},
 			},
 		},
 	},

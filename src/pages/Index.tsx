@@ -55,6 +55,8 @@ const Index = () => {
   const [upcomingTVShows, setUpcomingTVShows] = useState<ContentItem[]>([]);
   const [loadingTVShows, setLoadingTVShows] = useState(true);
   const [topRatedMovies, setTopRatedMovies] = useState<ContentItem[]>([]);
+  const [isAnimating, setIsAnimating] = useState(false);
+
   const { ref: timeValueRef, isInView } = useInView();
   const [count, setCount] = useState(0);
   const scrollToPlans = () => {
@@ -137,6 +139,15 @@ const Index = () => {
   // Scroll to the how it works section
   const scrollToHowItWorks = () => {
     howItWorksRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const handleAnimatedClick = () => {
+    if (isAnimating) return;
+    setIsAnimating(true);
+    setTimeout(() => {
+      scrollToPlans();
+      setIsAnimating(false);
+    }, 1000); // Animation duration
   };
 
   useEffect(() => {
@@ -269,22 +280,47 @@ const Index = () => {
             />
           </div>
           <div className="flex justify-center items-center px-4">
-            <Button
-              size="lg"
-              className="bg-filmeja-purple hover:bg-filmeja-purple/90 text-white w-full sm:w-auto flex items-center justify-center gap-3 
-              shadow-lg shadow-filmeja-purple/20 hover:shadow-filmeja-purple/40
-              animate-bounce-gentle
-              relative overflow-hidden
-              group ring-2 ring-offset-2 ring-offset-filmeja-dark ring-filmeja-purple/50 animate-ring-pulse"
-              onClick={() => scrollToPlans()}
-            >
-              <Play className="mr-2 h-5 w-5 animate-pulse" />
-              <span className="text-center relative z-10">
-                Quero ver minha<br />
-                recomendação agora
-              </span>
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-out" />
-            </Button>
+          <Button
+                size="lg"
+                className={`
+                  bg-gradient-to-r from-filmeja-purple via-purple-600 to-filmeja-purple
+                  animate-[pulse_2s_cubic-bezier(0.4,0,0.6,1)_infinite]
+                  text-white font-semibold
+                  inline-flex items-center justify-center gap-3 
+                  px-8 py-8
+                  relative overflow-hidden
+                  rounded-xl
+                  border-2 border-purple-400/30
+                  transform scale-100 hover:scale-105 transition-transform
+                  min-w-[280px] md:min-w-[320px]
+                  ${isAnimating ? 'cursor-not-allowed' : 'cursor-pointer'}
+                `}
+                onClick={handleAnimatedClick}
+                disabled={isAnimating}
+              >
+                <div className="absolute inset-0 opacity-50 mix-blend-overlay animate-glow" />
+                <div className="absolute -inset-1 animate-pulse-slow opacity-30 bg-gradient-to-r from-purple-600 via-purple-400 to-purple-600 blur-xl" />
+                
+                <Play 
+                  className={`
+                    h-6 w-6
+                    transition-all duration-1000 ease-in-out
+                    ${isAnimating ? 'translate-x-[140px]' : 'mr-2'}
+                  `}
+                />
+                <span 
+                  className={`
+                    text-center relative z-10 text-lg whitespace-nowrap
+                    transition-all duration-300
+                    ${isAnimating ? 'opacity-0' : 'opacity-100'}
+                  `}
+                >
+                  Quero ver minha<br />
+                  <span className="font-bold">recomendação agora</span>
+                </span>
+                
+                <div className="absolute top-0 left-0 w-full h-full animate-shimmer bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12" />
+              </Button>
           </div>
         </div>
       </section>
@@ -413,22 +449,49 @@ const Index = () => {
             />
           </div>
           <div className="flex justify-center items-center px-4">
+            <div className="flex justify-center items-center px-4">
             <Button
-              size="lg"
-              className="bg-filmeja-purple hover:bg-filmeja-purple/90 text-white w-full sm:w-auto flex items-center justify-center gap-3 
-              shadow-lg shadow-filmeja-purple/20 hover:shadow-filmeja-purple/40
-              animate-bounce-gentle
-              relative overflow-hidden
-              group ring-2 ring-offset-2 ring-offset-filmeja-dark ring-filmeja-purple/50 animate-ring-pulse"
-              onClick={() => scrollToPlans()}
-            >
-              <Play className="mr-2 h-5 w-5 animate-pulse" />
-              <span className="text-center relative z-10">
-                Quero ver minha<br />
-                recomendação agora
-              </span>
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-out" />
-            </Button>
+                size="lg"
+                className={`
+                  bg-gradient-to-r from-filmeja-purple via-purple-600 to-filmeja-purple
+                  animate-[pulse_2s_cubic-bezier(0.4,0,0.6,1)_infinite]
+                  text-white font-semibold
+                  inline-flex items-center justify-center gap-3 
+                  px-8 py-8
+                  relative overflow-hidden
+                  rounded-xl
+                  border-2 border-purple-400/30
+                  transform scale-100 hover:scale-105 transition-transform
+                  min-w-[280px] md:min-w-[320px]
+                  ${isAnimating ? 'cursor-not-allowed' : 'cursor-pointer'}
+                `}
+                onClick={handleAnimatedClick}
+                disabled={isAnimating}
+              >
+                <div className="absolute inset-0 opacity-50 mix-blend-overlay animate-glow" />
+                <div className="absolute -inset-1 animate-pulse-slow opacity-30 bg-gradient-to-r from-purple-600 via-purple-400 to-purple-600 blur-xl" />
+                
+                <Play 
+                  className={`
+                    h-6 w-6
+                    transition-all duration-1000 ease-in-out
+                    ${isAnimating ? 'translate-x-[140px]' : 'mr-2'}
+                  `}
+                />
+                <span 
+                  className={`
+                    text-center relative z-10 text-lg whitespace-nowrap
+                    transition-all duration-300
+                    ${isAnimating ? 'opacity-0' : 'opacity-100'}
+                  `}
+                >
+                  Quero ver minha<br />
+                  <span className="font-bold">recomendação agora</span>
+                </span>
+                
+                <div className="absolute top-0 left-0 w-full h-full animate-shimmer bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12" />
+              </Button>
+            </div>
           </div>
         </div>
       </section>
