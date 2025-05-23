@@ -36,8 +36,8 @@ const MoodCarousel: React.FC = () => {
   };
 
   const MovieSkeleton = () => (
-    <div className="relative w-full max-w-sm mx-auto">
-      <div className="aspect-[2/3] w-full overflow-hidden rounded-lg max-h-[60vh] sm:max-h-[70vh]">
+    <div className="relative w-full max-w-4xl mx-auto flex flex-col md:flex-row gap-8">
+      <div className="aspect-[2/3] w-full md:w-1/2 lg:w-2/5 overflow-hidden rounded-lg max-h-[60vh] sm:max-h-[75vh]">
         <Skeleton className="w-full h-full bg-white/5 animate-pulse" />
         <div className="absolute inset-0 flex items-center justify-center flex-col gap-6 z-10">
           <Skeleton className="w-10 h-10 rounded-full bg-white/5 animate-pulse" />
@@ -45,7 +45,7 @@ const MoodCarousel: React.FC = () => {
           <Skeleton className="w-32 h-10 rounded-lg bg-white/5 animate-pulse" />
         </div>
       </div>
-      <div className="p-4">
+      <div className="p-4 md:w-1/2 lg:w-3/5">
         <Skeleton className="h-8 w-4/5 mb-4 bg-white/5 animate-pulse" />
         <div className="flex items-center gap-1.5 mb-4">
           {Array.from({ length: 5 }).map((_, i) => (
@@ -89,14 +89,14 @@ const MoodCarousel: React.FC = () => {
       </div>
 
       <Dialog open={showModal} onOpenChange={setShowModal}>
-        <DialogContent className="sm:max-w-lg h-[85vh] sm:h-auto overflow-y-auto flex flex-col items-center justify-center [&>button]:z-[100]">
+        <DialogContent className="sm:max-w-5xl h-[85vh] sm:h-auto sm:min-h-[600px] overflow-y-auto flex flex-col items-center justify-center [&>button]:z-[100] p-6 sm:p-8">
           {loading ? (
             <MovieSkeleton />
           ) : (
-            <div className="w-full max-w-sm mx-auto">
+            <div className="w-full max-w-5xl mx-auto">
               {recommendations.slice(0, 1).map((movie) => (
-                <div key={movie.id} className="relative">
-                  <div className="aspect-[2/3] w-full overflow-hidden rounded-lg max-h-[60vh] sm:max-h-[70vh]">
+                <div key={movie.id} className="relative flex flex-col md:flex-row gap-8">
+                  <div className="aspect-[2/3] w-full md:w-1/2 lg:w-2/5 overflow-hidden rounded-lg max-h-[60vh] sm:max-h-[75vh]">
                     <div className="absolute inset-0 bg-black/50 backdrop-blur-md flex items-center justify-center flex-col gap-4 z-10">
                       <Lock className="w-10 h-10 text-white/90" />
                       <h3 className="text-xl font-semibold text-white text-center px-4 text-shadow">
@@ -115,7 +115,7 @@ const MoodCarousel: React.FC = () => {
                       className="w-full h-full object-cover"
                     />
                   </div>
-                  <div className="p-4">
+                  <div className="p-4 md:w-1/2 lg:w-3/5">
                     <h2 className="text-xl font-bold text-white mb-3">
                       {movie.title}
                     </h2>
