@@ -49,7 +49,7 @@ const MovieCard: React.FC<MovieCardProps> = ({
   const mediaTypeLabel = getMediaType();
 
   return (
-    <Link to={`/details/${item.media_type}/${item.id}`}>
+    // <Link to={`/details/${item.media_type}/${item.id}`}>
       <div className={`content-card group ${sizeClasses[size]} mx-auto`}>
         <div className="aspect-[2/3] relative overflow-hidden rounded-md">
           <img
@@ -96,7 +96,7 @@ const MovieCard: React.FC<MovieCardProps> = ({
           </div>
         </div>
       </div>
-    </Link>
+    // </Link>
   );
 };
 
