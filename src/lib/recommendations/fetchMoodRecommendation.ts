@@ -64,6 +64,19 @@ export async function fetchMoodRecommendation(params: MoodRecommendationParams):
   try {
     const { data: { user } } = await supabase.auth.getUser();
 
+    const { data: recentRecommendations, error: historyError } = await supabase
+    .from('watch_history')
+    .select('title')
+    .eq('user_id', user?.id)
+    .order('created_at', { ascending: false })
+    .limit(10);
+
+  if (historyError) {
+    console.error("Error fetching watch history:", historyError);
+  }
+
+  const recentTitles = recentRecommendations?.map(item => item.title) || [];
+
     const { data: watchedContent } = await supabase
       .from("watched_content")
       .select("tmdb_id, media_type")
@@ -105,8 +118,11 @@ export async function fetchMoodRecommendation(params: MoodRecommendationParams):
       O usuário já assistiu os seguintes títulos:
       ${JSON.stringify(validWatchedContent)}
 
+      Últimas recomendações (não recomendar estes títulos também):
+      ${JSON.stringify(recentTitles)}
+
       Forneça uma lista de 10 ${mediaType === "movie" ? "filmes" : "séries"} que são muito populares, bem avaliados e correspondem ao humor do usuário.
-      NÃO INCLUA os títulos que o usuário já assistiu.
+      NÃO INCLUA os títulos que o usuário já assistiu ou que foram recomendados recentemente.
       Tem que estar presente nos principais streamings: Netflix, Max, Amazon Prime Video, Disney, etc. 
       
       Responda no seguinte formato JSON:

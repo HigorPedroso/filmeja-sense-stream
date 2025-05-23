@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Send, Bot, User } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { addToWatchHistory } from "@/lib/utils/watch-history";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Message {
   id: string;
@@ -49,24 +50,42 @@ export function AiChat({ onShowContent, watchedContent = [], userAvatar, userId 
 
   const handleSend = async () => {
     if (!input.trim()) return;
-
-    // Format watched content for the prompt
-    const watchedTitles = watchedContent
-      .map(item => `${item.title || item.name} (${item.type})`)
-      .join(", ");
-
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      text: input,
-      sender: "user",
-      timestamp: new Date(),
-    };
-
-    setMessages((prev) => [...prev, userMessage]);
-    setInput("");
-    setIsTyping(true);
-
+  
     try {
+      // Fetch last 10 recommendations from watch_history
+      const { data: recentRecommendations, error: historyError} = await supabase
+        .from('watch_history')
+        .select('title')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(10);
+  
+      if (historyError) {
+        console.error("Error fetching watch history:", historyError);
+      }
+  
+      // Format watched content and recent recommendations
+      const watchedTitles = watchedContent
+        .map(item => `${item.title || item.name} (${item.type})`)
+        .join(", ");
+  
+      const recentTitles = recentRecommendations
+        ?.map(item => `${item.title}`)
+        .join(", ");
+  
+      const userMessage: Message = {
+        id: Date.now().toString(),
+        text: input,
+        sender: "user",
+        timestamp: new Date(),
+      };
+  
+      setMessages((prev) => [...prev, userMessage]);
+      setInput("");
+      setIsTyping(true);
+
+      console.log(`Aqui é o histórico ${recentTitles}`)
+  
       const response = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${
           import.meta.env.VITE_GEMINI_API_KEY
@@ -81,7 +100,8 @@ export function AiChat({ onShowContent, watchedContent = [], userAvatar, userId 
                   {
                     text: `Você é um assistente amigável que recomenda filmes e séries. 
                     Histórico do usuário: ${watchedTitles || "Nenhum título assistido ainda"}.
-                    Com base nesta descrição: "${input}" e no histórico do usuário, recomende UM título específico que seja diferente dos já assistidos.
+                    Últimas recomendações (não recomendar estes): ${recentTitles || "Nenhuma recomendação recente"}.
+                    Com base nesta descrição: "${input}" e no histórico do usuário, recomende UM título específico que seja diferente dos já assistidos e das últimas recomendações.
                     Retorne APENAS um JSON no seguinte formato, sem texto adicional:
                     {
                       "title": "Nome do Título",
