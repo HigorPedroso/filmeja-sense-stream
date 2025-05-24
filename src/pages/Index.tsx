@@ -17,6 +17,8 @@ import {
   Users,
   Coffee,
   Palette,
+  Lock,
+  Star,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import HowItWorksStep from "@/components/HowItWorksStep";
@@ -37,9 +39,11 @@ import { useCountUp } from "@/hooks/useCountUp";
 import { useInView } from "@/hooks/useInView";
 import DesktopMockup from "@/components/DesktopMockup";
 import MobileMockup from "@/components/MobileMockup";
-import StreamingServices from '@/components/StreamingServices';
+import StreamingServices from "@/components/StreamingServices";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const Index = () => {
   // Get a reference to the how it works section
@@ -56,6 +60,9 @@ const Index = () => {
   const [loadingTVShows, setLoadingTVShows] = useState(true);
   const [topRatedMovies, setTopRatedMovies] = useState<ContentItem[]>([]);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [recommendations, setRecommendations] = useState<any[]>([]);
+  const [loadingMovie, setLoadingMovie] = useState(false);
 
   const { ref: timeValueRef, isInView } = useInView();
   const [count, setCount] = useState(0);
@@ -63,26 +70,30 @@ const Index = () => {
     plansRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-    useEffect(() => {
+  useEffect(() => {
     const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
       if (!session) {
         // Set session expiry to 30 days
-        const { data: { user } } = await supabase.auth.getUser();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
         if (user) {
           await supabase.auth.setSession({
-            access_token: session?.access_token || '',
-            refresh_token: session?.refresh_token || '',
-            expires_in: 30 * 24 * 60 * 60 // 30 days in seconds
+            access_token: session?.access_token || "",
+            refresh_token: session?.refresh_token || "",
+            expires_in: 30 * 24 * 60 * 60, // 30 days in seconds
           });
-          navigate('/dashboard');
+          navigate("/dashboard");
         }
       } else {
-        navigate('/dashboard');
+        navigate("/dashboard");
       }
     };
-    
+
     checkAuth();
   }, [navigate]);
 
@@ -141,13 +152,44 @@ const Index = () => {
     howItWorksRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const handleAnimatedClick = () => {
+  const handleAnimatedClick = async () => {
     if (isAnimating) return;
     setIsAnimating(true);
-    setTimeout(() => {
-      scrollToPlans();
+
+    // Wait for button animation
+    await new Promise((resolve) => setTimeout(resolve, 800));
+
+    // Show modal and fetch random trending movie
+    setShowModal(true);
+    setLoadingMovie(true);
+
+    try {
+      const response = await fetch(
+        `https://api.themoviedb.org/3/trending/movie/day?api_key=${
+          import.meta.env.VITE_TMDB_API_KEY
+        }`
+      );
+      const data = await response.json();
+
+      // Get random movie from results
+      const randomIndex = Math.floor(Math.random() * data.results.length);
+      const randomMovie = data.results[randomIndex];
+
+      // Fetch additional movie details including genres
+      const movieDetails = await fetch(
+        `https://api.themoviedb.org/3/movie/${randomMovie.id}?api_key=${
+          import.meta.env.VITE_TMDB_API_KEY
+        }`
+      );
+      const detailedMovie = await movieDetails.json();
+
+      setRecommendations([detailedMovie]);
+    } catch (error) {
+      console.error("Error fetching random movie:", error);
+    } finally {
+      setLoadingMovie(false);
       setIsAnimating(false);
-    }, 1000); // Animation duration
+    }
   };
 
   useEffect(() => {
@@ -202,6 +244,33 @@ const Index = () => {
   ];
 
   const currentHeadline = useTypewriter(headlines, 50, 4000);
+
+  const MovieSkeleton = () => (
+    <div className="relative w-full max-w-4xl mx-auto flex flex-col md:flex-row gap-8">
+      <div className="aspect-[2/3] w-full md:w-1/2 lg:w-2/5 overflow-hidden rounded-lg max-h-[60vh] sm:max-h-[75vh]">
+        <Skeleton className="w-full h-full bg-white/5 animate-pulse" />
+        <div className="absolute inset-0 flex items-center justify-center flex-col gap-6 z-10">
+          <Skeleton className="w-10 h-10 rounded-full bg-white/5 animate-pulse" />
+          <Skeleton className="w-48 h-7 rounded-lg bg-white/5 animate-pulse" />
+          <Skeleton className="w-32 h-10 rounded-lg bg-white/5 animate-pulse" />
+        </div>
+      </div>
+      <div className="p-4 md:w-1/2 lg:w-3/5">
+        <Skeleton className="h-8 w-4/5 mb-4 bg-white/5 animate-pulse" />
+        <div className="flex items-center gap-1.5 mb-4">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Skeleton key={i} className="w-5 h-5 rounded-full bg-white/5 animate-pulse" />
+          ))}
+          <Skeleton className="w-12 h-5 ml-2 bg-white/5 animate-pulse" />
+        </div>
+        <Skeleton className="h-20 w-full mb-4 bg-white/5 animate-pulse" />
+        <div className="flex flex-wrap gap-2">
+          <Skeleton className="h-7 w-24 rounded-full bg-white/5 animate-pulse" />
+          <Skeleton className="h-7 w-32 rounded-full bg-white/5 animate-pulse" />
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-filmeja-dark">
@@ -280,9 +349,9 @@ const Index = () => {
             />
           </div>
           <div className="flex justify-center items-center px-4">
-          <Button
-                size="lg"
-                className={`
+            <Button
+              size="lg"
+              className={`
                   bg-gradient-to-r from-filmeja-purple via-purple-600 to-filmeja-purple
                   animate-[pulse_2s_cubic-bezier(0.4,0,0.6,1)_infinite]
                   text-white font-semibold
@@ -293,34 +362,35 @@ const Index = () => {
                   border-2 border-purple-400/30
                   transform scale-100 hover:scale-105 transition-transform
                   min-w-[280px] md:min-w-[320px]
-                  ${isAnimating ? 'cursor-not-allowed' : 'cursor-pointer'}
+                  ${isAnimating ? "cursor-not-allowed" : "cursor-pointer"}
                 `}
-                onClick={handleAnimatedClick}
-                disabled={isAnimating}
-              >
-                <div className="absolute inset-0 opacity-50 mix-blend-overlay animate-glow" />
-                <div className="absolute -inset-1 animate-pulse-slow opacity-30 bg-gradient-to-r from-purple-600 via-purple-400 to-purple-600 blur-xl" />
-                
-                <Play 
-                  className={`
+              onClick={handleAnimatedClick}
+              disabled={isAnimating}
+            >
+              <div className="absolute inset-0 opacity-50 mix-blend-overlay animate-glow" />
+              <div className="absolute -inset-1 animate-pulse-slow opacity-30 bg-gradient-to-r from-purple-600 via-purple-400 to-purple-600 blur-xl" />
+
+              <Play
+                className={`
                     h-6 w-6
                     transition-all duration-1000 ease-in-out
-                    ${isAnimating ? 'translate-x-[140px]' : 'mr-2'}
+                    ${isAnimating ? "translate-x-[140px]" : "mr-2"}
                   `}
-                />
-                <span 
-                  className={`
+              />
+              <span
+                className={`
                     text-center relative z-10 text-lg whitespace-nowrap
                     transition-all duration-300
-                    ${isAnimating ? 'opacity-0' : 'opacity-100'}
+                    ${isAnimating ? "opacity-0" : "opacity-100"}
                   `}
-                >
-                  Quero ver minha<br />
-                  <span className="font-bold">recomendação agora</span>
-                </span>
-                
-                <div className="absolute top-0 left-0 w-full h-full animate-shimmer bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12" />
-              </Button>
+              >
+                Quero ver minha
+                <br />
+                <span className="font-bold">recomendação agora</span>
+              </span>
+
+              <div className="absolute top-0 left-0 w-full h-full animate-shimmer bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12" />
+            </Button>
           </div>
         </div>
       </section>
@@ -359,10 +429,12 @@ const Index = () => {
                 Fique por dentro dos próximos lançamentos e nunca perca um filme
                 aguardado
               </p>
-                <Button onClick={() => scrollToPlans()} className="bg-filmeja-purple hover:bg-filmeja-purple/90 text-white">
-                  Ver mais lançamentos
-                </Button>
-
+              <Button
+                onClick={() => scrollToPlans()}
+                className="bg-filmeja-purple hover:bg-filmeja-purple/90 text-white"
+              >
+                Ver mais lançamentos
+              </Button>
             </div>
           </div>
         </div>
@@ -399,9 +471,12 @@ const Index = () => {
                 Fique por dentro das próximas séries e acompanhe todos os
                 lançamentos
               </p>
-                <Button onClick={() => scrollToPlans()} className="bg-filmeja-purple hover:bg-filmeja-purple/90 text-white">
-                  Ver mais séries
-                </Button>
+              <Button
+                onClick={() => scrollToPlans()}
+                className="bg-filmeja-purple hover:bg-filmeja-purple/90 text-white"
+              >
+                Ver mais séries
+              </Button>
             </div>
           </div>
         </div>
@@ -450,7 +525,7 @@ const Index = () => {
           </div>
           <div className="flex justify-center items-center px-4">
             <div className="flex justify-center items-center px-4">
-            <Button
+              <Button
                 size="lg"
                 className={`
                   bg-gradient-to-r from-filmeja-purple via-purple-600 to-filmeja-purple
@@ -463,34 +538,97 @@ const Index = () => {
                   border-2 border-purple-400/30
                   transform scale-100 hover:scale-105 transition-transform
                   min-w-[280px] md:min-w-[320px]
-                  ${isAnimating ? 'cursor-not-allowed' : 'cursor-pointer'}
+                  ${isAnimating ? "cursor-not-allowed" : "cursor-pointer"}
                 `}
                 onClick={handleAnimatedClick}
                 disabled={isAnimating}
               >
                 <div className="absolute inset-0 opacity-50 mix-blend-overlay animate-glow" />
                 <div className="absolute -inset-1 animate-pulse-slow opacity-30 bg-gradient-to-r from-purple-600 via-purple-400 to-purple-600 blur-xl" />
-                
-                <Play 
+
+                <Play
                   className={`
                     h-6 w-6
                     transition-all duration-1000 ease-in-out
-                    ${isAnimating ? 'translate-x-[140px]' : 'mr-2'}
+                    ${isAnimating ? "translate-x-[140px]" : "mr-2"}
                   `}
                 />
-                <span 
+                <span
                   className={`
                     text-center relative z-10 text-lg whitespace-nowrap
                     transition-all duration-300
-                    ${isAnimating ? 'opacity-0' : 'opacity-100'}
+                    ${isAnimating ? "opacity-0" : "opacity-100"}
                   `}
                 >
-                  Quero ver minha<br />
+                  Quero ver minha
+                  <br />
                   <span className="font-bold">recomendação agora</span>
                 </span>
-                
+
                 <div className="absolute top-0 left-0 w-full h-full animate-shimmer bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12" />
               </Button>
+
+              <Dialog open={showModal} onOpenChange={setShowModal}>
+        <DialogContent className="sm:max-w-5xl h-[85vh] sm:h-auto sm:min-h-[600px] overflow-y-auto flex flex-col items-center justify-center [&>button]:z-[100] p-6 sm:p-8">
+          {loading ? (
+            <MovieSkeleton />
+          ) : (
+            <div className="w-full max-w-5xl mx-auto">
+              {recommendations.slice(0, 1).map((movie) => (
+                <div key={movie.id} className="relative flex flex-col md:flex-row gap-8">
+                  <div className="aspect-[2/3] w-full md:w-1/2 lg:w-2/5 overflow-hidden rounded-lg max-h-[60vh] sm:max-h-[75vh]">
+                    <div className="absolute inset-0 bg-black/50 backdrop-blur-md flex items-center justify-center flex-col gap-4 z-10">
+                      <Lock className="w-10 h-10 text-white/90" />
+                      <h3 className="text-xl font-semibold text-white text-center px-4 text-shadow">
+                        Recomendação Bloqueada
+                      </h3>
+                      <Button
+                        className="bg-filmeja-purple hover:bg-filmeja-purple/90 shadow-lg px-6 py-2 text-base"
+                        onClick={() => navigate("/signup")}
+                      >
+                        Desbloquear
+                      </Button>
+                    </div>
+                    <img
+                      src={`https://image.tmdb.org/t/p/w500${movie.poster_path}`}
+                      alt={movie.title}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="p-4 md:w-1/2 lg:w-3/5">
+                    <h2 className="text-xl font-bold text-white mb-3">
+                      {movie.title}
+                    </h2>
+                    <div className="flex items-center gap-1.5 mb-3">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <Star
+                          key={i}
+                          fill="currentColor"
+                          className="w-5 h-5 text-filmeja-purple"
+                        />
+                      ))}
+                      <span className="text-white text-base ml-2">5.0</span>
+                    </div>
+                    <p className="text-gray-300 text-base mb-3">
+                      {movie.overview}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {movie.genres?.map((genre: any) => (
+                        <span
+                          key={genre.id}
+                          className="px-3 py-1.5 bg-white/10 rounded-full text-sm text-white"
+                        >
+                          {genre.name}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
             </div>
           </div>
         </div>
