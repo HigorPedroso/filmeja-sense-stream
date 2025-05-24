@@ -200,7 +200,7 @@ export const ContentDetails = ({
               disabled={!content.providers?.flatrate?.length}
             >
               <Play className="w-4 h-4 mr-2" />
-              Assistir Agora
+              {content.providers?.flatrate?.length ? "Assistir Agora" : "Somente nos cinemas"}
             </Button>
             <motion.div whileTap={{ scale: 0.95 }} className="relative">
               <motion.div
