@@ -10,8 +10,42 @@ interface StreamingModalProps {
   content: ContentType;
 }
 
+// Add this function before the StreamingModal component
+const getAmazonAffiliateLink = async (movieId: number): Promise<string | null> => {
+  try {
+    const response = await fetch(
+      `https://api.themoviedb.org/3/movie/${movieId}/watch/providers?api_key=${import.meta.env.VITE_TMDB_API_KEY}`
+    );
+    const data = await response.json();
+
+    const brProviders = data.results?.BR?.flatrate || [];
+    const hasAmazonPrime = brProviders.some(
+      (provider: any) => 
+        provider.provider_name === "Amazon Prime Video" || 
+        provider.provider_name === "Prime Video"
+    );
+
+    return hasAmazonPrime ? "https://amzn.to/43dxfa6" : null;
+  } catch (error) {
+    console.error("Error checking Amazon Prime availability:", error);
+    return null;
+  }
+};
+
+// Update the StreamingModal component to use the new function
 export const StreamingModal = ({ isOpen, onClose, content }: StreamingModalProps) => {
   if (!isOpen || !content.providers?.flatrate) return null;
+
+  const handleProviderClick = async (provider: any) => {
+    if (provider.provider_name === "Amazon Prime Video" || provider.provider_name === "Prime Video") {
+      const affiliateLink = await getAmazonAffiliateLink(content.id);
+      if (affiliateLink) {
+        window.open(affiliateLink, "_blank");
+        return;
+      }
+    }
+    window.open(provider.provider_url, "_blank");
+  };
 
   return (
     <motion.div
@@ -52,9 +86,7 @@ export const StreamingModal = ({ isOpen, onClose, content }: StreamingModalProps
                 <Button
                   variant="outline"
                   className="w-full bg-white/5 hover:bg-white/10 border-white/10 group"
-                  onClick={() =>
-                    window.open(provider.provider_url, "_blank")
-                  }
+                  onClick={() => handleProviderClick(provider)}
                 >
                   <div className="flex items-center w-full">
                     <img
