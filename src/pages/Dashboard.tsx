@@ -12,7 +12,9 @@ import {
   Heart,
   Sparkles,
   X,
-  Play, // Add this
+  Play,
+  Lock,
+  Check, // Add this
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ContentCarousel from "@/components/ContentCarousel";
@@ -24,7 +26,12 @@ import AiRecommendationWidget from "@/components/AiRecommendationWidget";
 import RandomWheel from "@/components/RandomWheel";
 import MoodCarousel from "@/components/MoodCarousel";
 import ImageBackground from "@/components/ImageBackground";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion, AnimatePresence } from "framer-motion";
 import trailerSound from "@/assets/sounds/trailer-whoosh.mp3"; // You'll need to add this sound file
@@ -172,6 +179,10 @@ const Dashboard = () => {
   const [searchParams] = useSearchParams();
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [showPremiumModal, setShowPremiumModal] = useState(false);
+  const [showPremiumFilminModal, setShowPremiumFilminModal] = useState(false);
+  const [dailyViews, setDailyViews] = useState(0);
+  const [monthlyViews, setMonthlyViews] = useState(0);
 
   const [userContentPreference, setUserContentPreference] = useState<
     "movies" | "series" | null
@@ -282,6 +293,38 @@ const Dashboard = () => {
   }, [toast]);
 
   useEffect(() => {
+    const saveOnboardingData = async () => {
+      const onboardingData = localStorage.getItem('onboarding_data');
+      
+      if (onboardingData) {
+        try {
+          const data = JSON.parse(onboardingData);
+          const { error } = await supabase
+            .from("user_preferences")
+            .insert({
+              user_id: data.user_id,
+              genres: data.genres,
+              content_type: data.content_type,
+              languages: data.languages,
+              watch_duration: data.watch_duration,
+              watch_time: data.watch_time,
+              created_at: new Date().toISOString(),
+            })
+            .select();
+  
+          if (!error) {
+            localStorage.removeItem('onboarding_data');
+          }
+        } catch (error) {
+          console.error('Error saving onboarding data:', error);
+        }
+      }
+    };
+  
+    saveOnboardingData();
+  }, []);
+
+  useEffect(() => {
     if (searchParams.get("payment") === "success") {
       setShowSuccessModal(true);
     }
@@ -300,44 +343,51 @@ const Dashboard = () => {
   useEffect(() => {
     const checkPremiumStatus = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
         if (!user) return;
 
         const { data: subscriber, error } = await supabase
-          .from('subscribers')
-          .select('*')
-          .eq('user_id', user.id)
-          .in('subscription_status', ['active', 'canceling'])
+          .from("subscribers")
+          .select("*")
+          .eq("user_id", user.id)
+          .in("subscription_status", ["active", "canceling"])
           .single();
 
-          if (error) {
-            console.error('Error fetching subscriber status:', error);
-            setIsPremium(false);
-            return;
-          }
+        if (error) {
+          console.error("Error fetching subscriber status:", error);
+          setIsPremium(false);
+          return;
+        }
 
         // Check if subscription exists and is active
-        const isActive = subscriber && 
-        (!subscriber.current_period_end || 
-         new Date(subscriber.current_period_end) > new Date());
+        const isActive =
+          subscriber &&
+          (!subscriber.current_period_end ||
+            new Date(subscriber.current_period_end) > new Date());
 
-      setIsPremium(isActive);
+        setIsPremium(isActive);
       } catch (error) {
-        console.error('Error checking premium status:', error);
+        console.error("Error checking premium status:", error);
         setIsPremium(false);
       }
     };
 
     checkPremiumStatus();
-    
+
     // Set up real-time subscription for status changes
     const subscription = supabase
-      .channel('subscription-status')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'subscribers'
-      }, checkPremiumStatus)
+      .channel("subscription-status")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "subscribers",
+        },
+        checkPremiumStatus
+      )
       .subscribe();
 
     return () => {
@@ -359,13 +409,22 @@ const Dashboard = () => {
       setShowRecommendationModal,
       setMoodRecommendation,
     }).catch((error) => {
-      toast({
-        title: "Erro",
-        description:
-          "Não foi possível encontrar conteúdo disponível em streaming",
-        variant: "destructive",
-      });
-      setShowRecommendationModal(false);
+      if (error.type === "PREMIUM_REQUIRED") {
+        setShowPremiumModal(true); // Show premium upgrade modal
+        setDailyViews(error.dailyViews);
+        setMonthlyViews(error.monthlyViews);
+        toast({
+          title: "Limite Atingido",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Erro",
+          description: "Não foi possível carregar a recomendação",
+          variant: "destructive",
+        });
+      }
     });
   };
 
@@ -427,6 +486,83 @@ const Dashboard = () => {
     fetchUserPreferences();
   }, []);
 
+  useEffect(() => {
+    console.log("TEntando bem aqui");
+    const checkOnboardingStatus = async () => {
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!user) {
+          setHasCompletedOnboarding(false);
+          return;
+        }
+
+        // Check if user has visited before
+        const { data: visits, error: visitsError } = await supabase
+          .from("user_visits")
+          .select("visit_count")
+          .eq("user_id", user.id)
+          .single();
+
+        if (!visits) {
+          // First visit - create record and skip onboarding
+          const { error: insertError } = await supabase
+            .from("user_visits")
+            .insert({
+              user_id: user.id,
+              visit_count: 1,
+            })
+            .select()
+            .single();
+
+          if (insertError) {
+            console.error("Error creating visit record:", insertError);
+            return;
+          }
+
+          setHasCompletedOnboarding(true); // Skip onboarding on first visit
+          setIsCheckingOnboarding(false);
+          return;
+        }
+
+        // Update existing visit count
+        const { error: updateError } = await supabase
+          .from("user_visits")
+          .upsert({
+            user_id: user.id,
+            visit_count: visits.visit_count + 1,
+            updated_at: new Date().toISOString(),
+          })
+          .select();
+
+        if (updateError) {
+          console.error("Error updating visit count:", updateError);
+        }
+
+        // Show onboarding only on second visit when preferences don't exist
+        if (visits.visit_count === 1) {
+          const { data: preferences, error: prefError } = await supabase
+            .from("user_preferences")
+            .select("*")
+            .eq("user_id", user.id)
+            .maybeSingle();
+
+          setHasCompletedOnboarding(!!preferences);
+        } else {
+          setHasCompletedOnboarding(true);
+        }
+      } catch (error) {
+        console.error("Error checking onboarding status:", error);
+        setHasCompletedOnboarding(false);
+      } finally {
+        setIsCheckingOnboarding(false);
+      }
+    };
+
+    checkOnboardingStatus();
+  }, []);
+
   const fetchGenreRecommendation = async (genre: {
     id: number;
     name: string;
@@ -434,366 +570,250 @@ const Dashboard = () => {
     setIsLoadingRecommendation(true);
     setShowRecommendationModal(true);
 
-    function extractJsonFromResponse(text: string) {
-      try {
-        return JSON.parse(text);
-      } catch {
-        const jsonMatch = text.match(/```(?:json)?\s*(\[[\s\S]*?\])\s*```/);
-        if (jsonMatch?.[1]) {
-          try {
-            return JSON.parse(jsonMatch[1].trim());
-          } catch {
-            const arrayMatch = text.match(/\[\s*{[\s\S]*?}\s*\]/);
-            if (arrayMatch?.[0]) {
-              try {
-                return JSON.parse(arrayMatch[0]);
-              } catch {
-                console.error("Failed to parse array structure");
-              }
-            }
-          }
-        }
-
-        const suggestions = [];
-        const matches = text.matchAll(/{[^}]*"title"[^}]*"tmdbId"[^}]*}/g);
-        for (const match of matches) {
-          try {
-            suggestions.push(JSON.parse(match[0]));
-          } catch {
-            continue;
-          }
-        }
-        return suggestions;
-      }
-    }
-
     try {
       const {
         data: { user },
       } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
 
-      const { data: recentRecommendations, error: historyError } = await supabase
-      .from('watch_history')
-      .select('title')
-      .eq('user_id', user?.id)
-      .order('created_at', { ascending: false })
-      .limit(10);
- 
-    if (historyError) {
-      console.error("Error fetching watch history:", historyError);
-    }
- 
-    const recentTitles = recentRecommendations?.map(item => item.title) || [];
-
-      // Fetch watched content from Supabase
-      const { data: watchedContent } = await supabase
-        .from("watched_content")
-        .select("tmdb_id, media_type")
-        .eq("user_id", user?.id);
-
-      // Fetch details for each watched content from TMDB
-      const watchedDetails = await Promise.all(
-        (watchedContent || []).map(async (item) => {
-          try {
-            const response = await fetch(
-              `https://api.themoviedb.org/3/${item.media_type}/${
-                item.tmdb_id
-              }?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=pt-BR`
-            );
-            const data = await response.json();
-            return {
-              title: data.title || data.name,
-              tmdbId: data.id,
-              type: item.media_type,
-            };
-          } catch (error) {
-            console.error("Error fetching TMDB details:", error);
-            return null;
-          }
-        })
-      );
-
-      const validWatchedContent = watchedDetails.filter(Boolean);
-
-      const { data: preferences } = await supabase
-        .from("user_preferences")
-        .select("*")
-        .eq("user_id", user?.id)
+      // Check user subscription status
+      const { data: userProfile } = await supabase
+        .from("profiles")
+        .select("is_premium")
+        .eq("id", user.id)
         .single();
 
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      if (!userProfile?.is_premium) {
+        const today = new Date().toISOString().split("T")[0];
+        const monthStart = new Date(today.slice(0, 7) + "-01").toISOString();
 
-      const watched = JSON.parse(localStorage.getItem("watchedMovies") || "[]");
-      const genreCount: Record<string, number> = {};
-      watched.forEach((m: any) =>
-        m.genres.forEach((g: string) => {
-          genreCount[g] = (genreCount[g] || 0) + 1;
-        })
-      );
+        const { data: viewStats } = await supabase
+          .from("user_recommendation_views")
+          .select("daily_views, monthly_views")
+          .eq("user_id", user.id)
+          .gte("view_date", monthStart)
+          .order("view_date", { ascending: false })
+          .limit(1)
+          .single();
 
-      const topGenres = Object.entries(genreCount)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 3)
-        .map(([g]) => g);
+        const dailyViews = viewStats?.daily_views || 0;
+        const monthlyViews = viewStats?.monthly_views || 0;
 
-      const shouldFetchMovies =
-        userContentPreference === "movies"
-          ? recommendationCount < 2
-          : recommendationCount >= 2;
-      const mediaType = shouldFetchMovies ? "movie" : "tv";
+        if (dailyViews >= 1 || monthlyViews >= 5) {
+          setShowPremiumModal(true);
+          setDailyViews(dailyViews);
+          setMonthlyViews(monthlyViews);
+          setShowRecommendationModal(false);
+          setIsLoadingRecommendation(false);
 
-      // 2. Gerar prompt para o Gemini
-      const prompt = `
-    Você é um assistente que responde apenas em JSON válido. 
-    O usuário já assistiu os seguintes títulos:
-    ${JSON.stringify(validWatchedContent)}
-
-    Últimas recomendações (não recomendar estes títulos também):
-    ${JSON.stringify(recentTitles)}
-
-    Forneça uma lista de 50 ${
-      mediaType === "movie" ? "filmes" : "séries"
-    } que são muito populares, bem avaliados e correspondem ao gênero: ${
-        genre.name
-      }. 
-    NÃO INCLUA os títulos que o usuário já assistiu ou que foram recomendados recentemente.
-    Tem que estar presente nos principais streamings: Netflix, Max, Amazon Prime Video, Disney, etc. 
-    
-    Responda no seguinte formato JSON:
-    [
-      { "title": "Título", "tmdbId": 12345, "description": "Descrição do filme ou série", "imgUrl": "url da imagem", "tipo": "movie ou tv" }
-    ]
-    `;
-
-      // 3. Enviar para o Gemini
-      const geminiResponse = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${
-          import.meta.env.VITE_GEMINI_API_KEY
-        }`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [
-              {
-                parts: [
-                  {
-                    text:
-                      prompt +
-                      "\nResponda apenas com o JSON, sem texto adicional.",
-                  },
-                ],
-              },
-            ],
-            generationConfig: {
-              temperature: 0.7,
-              topK: 40,
-              topP: 0.95,
-              maxOutputTokens: 1024,
-            },
-          }),
+          toast({
+            title: "Limite Atingido",
+            description:
+              "Você atingiu o limite de recomendações gratuitas. Assine o plano premium para continuar recebendo recomendações ilimitadas!",
+            variant: "destructive",
+          });
+          return; // Exit early
         }
-      );
 
-      const geminiData = await geminiResponse.json();
-      const raw = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text;
-
-      if (!raw) throw new Error("Resposta vazia do Gemini");
-
-      let suggestions: {
-        title: string;
-        tmdbId: number;
-        description: string;
-        urlImg: string;
-        tipo: string;
-      }[] = extractJsonFromResponse(raw) || [];
-
-      if (suggestions.length === 0) {
-        throw new Error("Gemini não retornou sugestões válidas.");
+        await supabase.from("user_recommendation_views").upsert({
+          user_id: user.id,
+          view_date: today,
+          daily_views: dailyViews + 1,
+          monthly_views: monthlyViews + 1,
+        });
       }
 
-      // Find correct TMDB IDs for suggestions
-      const suggestionsWithCorrectIds = await Promise.all(
-        suggestions.map(async (suggestion) => {
-          try {
-            const searchType = suggestion.tipo === "movie" ? "movie" : "tv";
-            const searchResponse = await fetch(
-              `https://api.themoviedb.org/3/search/${searchType}?api_key=${
-                import.meta.env.VITE_TMDB_API_KEY
-              }&query=${encodeURIComponent(suggestion.title)}&language=pt-BR`
-            );
-            const searchData = await searchResponse.json();
-
-            if (searchData.results && searchData.results.length > 0) {
-              // Check if user has already watched this content
-              const { data: watchedData } = await supabase
-                .from("watched_content")
-                .select("*")
-                .eq("user_id", user?.id)
-                .eq("tmdb_id", searchData.results[0].id)
-                .eq("media_type", searchType)
-                .single();
-
-              // If content has been watched, mark it
-              return {
-                ...suggestion,
-                tmdbId: searchData.results[0].id,
-                alreadyWatched: !!watchedData,
-              };
-            }
-            return suggestion;
-          } catch (error) {
-            console.error("Error searching TMDB:", error);
-            return suggestion;
-          }
-        })
-      );
-
-      function fisherYatesShuffle<T>(array: T[]): T[] {
-        const arr = [...array]; // cria uma cópia para não modificar o original
-        for (let i = arr.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1)); // índice aleatório entre 0 e i
-          [arr[i], arr[j]] = [arr[j], arr[i]]; // troca os elementos de posição
-        }
-        return arr;
-      }
-
-      const unwatchedSuggestions = suggestionsWithCorrectIds.filter(
-        (s) => !s.alreadyWatched
-      );
-      // Shuffle all suggestions before processing
-      const shuffledSuggestions = fisherYatesShuffle(unwatchedSuggestions);
-
-      // Try each suggestion until we find one that works
-      let content = null;
-      let providers = null;
-      let details, videos, similar;
-
-      for (const suggestion of shuffledSuggestions) {
+      function extractJsonFromResponse(text: string) {
         try {
-          // Try to get providers
-          const providerRes = await fetch(
-            `https://api.themoviedb.org/3/${mediaType}/${
-              suggestion.tmdbId
-            }/watch/providers?api_key=${import.meta.env.VITE_TMDB_API_KEY}`
-          );
-          const providerJson = await providerRes.json();
-          const br = providerJson.results.BR;
-
-          // Check if content is available
-          if (
-            br &&
-            (br.flatrate?.length > 0 ||
-              br.free?.length > 0 ||
-              br.ads?.length > 0)
-          ) {
-            // Get additional details
-            [details, videos, similar] = await Promise.all([
-              fetch(
-                `https://api.themoviedb.org/3/${mediaType}/${
-                  suggestion.tmdbId
-                }?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=pt-BR`
-              ).then((r) => r.json()),
-              fetch(
-                `https://api.themoviedb.org/3/${mediaType}/${
-                  suggestion.tmdbId
-                }/videos?api_key=${
-                  import.meta.env.VITE_TMDB_API_KEY
-                }&language=pt-BR`
-              ).then((r) => r.json()),
-              fetch(
-                `https://api.themoviedb.org/3/${mediaType}/${
-                  suggestion.tmdbId
-                }/similar?api_key=${
-                  import.meta.env.VITE_TMDB_API_KEY
-                }&language=pt-BR`
-              ).then((r) => r.json()),
-            ]);
-
-            content = suggestion;
-            providers = br;
-            break;
+          return JSON.parse(text);
+        } catch {
+          const jsonMatch = text.match(/```(?:json)?\s*(\[[\s\S]*?\])\s*```/);
+          if (jsonMatch?.[1]) {
+            try {
+              return JSON.parse(jsonMatch[1].trim());
+            } catch {
+              const arrayMatch = text.match(/\[\s*{[\s\S]*?}\s*\]/);
+              if (arrayMatch?.[0]) {
+                try {
+                  return JSON.parse(arrayMatch[0]);
+                } catch {
+                  console.error("Failed to parse array structure");
+                }
+              }
+            }
           }
-        } catch (error) {
-          console.error("Error checking content:", error);
-          continue;
+
+          const suggestions = [];
+          const matches = text.matchAll(/{[^}]*"title"[^}]*"tmdbId"[^}]*}/g);
+          for (const match of matches) {
+            try {
+              suggestions.push(JSON.parse(match[0]));
+            } catch {
+              continue;
+            }
+          }
+          return suggestions;
         }
-      }
-
-      if (!content && suggestions.length > 0) {
-        // If no streaming content found, use the first suggestion as fallback
-        content = suggestions[0];
-        [details, videos, similar] = await Promise.all([
-          fetch(
-            `https://api.themoviedb.org/3/${mediaType}/${
-              content.tmdbId
-            }?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=pt-BR`
-          ).then((r) => r.json()),
-          fetch(
-            `https://api.themoviedb.org/3/${mediaType}/${
-              content.tmdbId
-            }/videos?api_key=${
-              import.meta.env.VITE_TMDB_API_KEY
-            }&language=pt-BR`
-          ).then((r) => r.json()),
-          fetch(
-            `https://api.themoviedb.org/3/${mediaType}/${
-              content.tmdbId
-            }/similar?api_key=${
-              import.meta.env.VITE_TMDB_API_KEY
-            }&language=pt-BR`
-          ).then((r) => r.json()),
-        ]);
-      }
-
-      if (!content) {
-        throw new Error("Nenhum conteúdo encontrado");
       }
 
       try {
-        const { error: historyError } = await supabase
-          .from('watch_history')
-          .insert({
-            user_id: user?.id,
-            content_id: content.tmdbId || content.id,
-            content_type: mediaType,
-            title: content.title || content.name,
-            poster_path: content.poster_path || content.backdrop_path,
-            created_at: new Date().toISOString()
-          });
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        const { data: recentRecommendations, error: historyError } =
+          await supabase
+            .from("watch_history")
+            .select("title")
+            .eq("user_id", user?.id)
+            .order("created_at", { ascending: false })
+            .limit(10);
 
         if (historyError) {
-          console.error('Error saving to watch history:', historyError);
+          console.error("Error fetching watch history:", historyError);
         }
+
+        const recentTitles =
+          recentRecommendations?.map((item) => item.title) || [];
+
+        const { data: watchedContent } = await supabase
+          .from("watched_content")
+          .select("tmdb_id, media_type")
+          .eq("user_id", user?.id);
+
+        const watchedDetails = await Promise.all(
+          (watchedContent || []).map(async (item) => {
+            try {
+              const response = await fetch(
+                `https://api.themoviedb.org/3/${item.media_type}/${
+                  item.tmdb_id
+                }?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=pt-BR`
+              );
+              const data = await response.json();
+              return {
+                title: data.title || data.name,
+                tmdbId: data.id,
+                type: item.media_type,
+              };
+            } catch (error) {
+              console.error("Error fetching TMDB details:", error);
+              return null;
+            }
+          })
+        );
+
+        const validWatchedContent = watchedDetails.filter(Boolean);
+
+        const { data: preferences } = await supabase
+          .from("user_preferences")
+          .select("*")
+          .eq("user_id", user?.id)
+          .single();
+
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+
+        const watched = JSON.parse(
+          localStorage.getItem("watchedMovies") || "[]"
+        );
+        const genreCount: Record<string, number> = {};
+        watched.forEach((m: any) =>
+          m.genres.forEach((g: string) => {
+            genreCount[g] = (genreCount[g] || 0) + 1;
+          })
+        );
+
+        const topGenres = Object.entries(genreCount)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 3)
+          .map(([g]) => g);
+
+        const shouldFetchMovies =
+          userContentPreference === "movies"
+            ? recommendationCount < 2
+            : recommendationCount >= 2;
+        const mediaType = shouldFetchMovies ? "movie" : "tv";
+
+        const prompt = `
+        Você é um assistente que responde apenas em JSON válido. 
+        O usuário já assistiu os seguintes títulos:
+        ${JSON.stringify(validWatchedContent)}
+        
+        Últimas recomendações (não recomendar estes títulos também):
+        ${JSON.stringify(recentTitles)}
+        
+        Forneça uma lista de 50 ${
+          mediaType === "movie" ? "filmes" : "séries"
+        } que são muito populares, bem avaliados e correspondem ao gênero: ${
+          genre.name
+        }. 
+        NÃO INCLUA os títulos que o usuário já assistiu ou que foram recomendados recentemente.
+        Tem que estar presente nos principais streamings: Netflix, Max, Amazon Prime Video, Disney, etc. 
+        
+        Responda no seguinte formato JSON:
+        [
+          { "title": "Título", "tmdbId": 12345, "description": "Descrição do filme ou série", "imgUrl": "url da imagem", "tipo": "movie ou tv" }
+        ]
+        `;
+
+        const geminiResponse = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${
+            import.meta.env.VITE_GEMINI_API_KEY
+          }`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [
+                {
+                  parts: [
+                    {
+                      text:
+                        prompt +
+                        "\nResponda apenas com o JSON, sem texto adicional.",
+                    },
+                  ],
+                },
+              ],
+              generationConfig: {
+                temperature: 0.7,
+                topK: 40,
+                topP: 0.95,
+                maxOutputTokens: 1024,
+              },
+            }),
+          }
+        );
+
+        const geminiData = await geminiResponse.json();
+        const raw = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+        if (!raw) throw new Error("Resposta vazia do Gemini");
+
+        let suggestions: {
+          title: string;
+          tmdbId: number;
+          description: string;
+          urlImg: string;
+          tipo: string;
+        }[] = extractJsonFromResponse(raw) || [];
+
+        console.log("Sugestões geradas:", suggestions);
       } catch (error) {
-        console.error('Error saving to watch history:', error);
+        console.error("Erro ao buscar recomendação:", error);
+        toast({
+          title: "Erro",
+          description:
+            "Não foi possível encontrar conteúdo disponível em streaming",
+          variant: "destructive",
+        });
+        setShowRecommendationModal(false);
+      } finally {
+        setIsLoadingRecommendation(false);
       }
-
-      setMoodRecommendation({
-        ...content,
-        ...details,
-        overview: details.overview || content.description,
-        videos: videos.results,
-        providers,
-        similar: similar.results,
-        mediaType,
-      });
-
-      setRecommendationCount((prev) => (prev + 1) % 3);
     } catch (error) {
       console.error("Erro ao buscar recomendação:", error);
-
-      toast({
-        title: "Erro",
-        description:
-          "Não foi possível encontrar conteúdo disponível em streaming",
-        variant: "destructive",
-      });
-
-      setShowRecommendationModal(false);
+      setIsLoadingRecommendation(false);
     }
-
-    setIsLoadingRecommendation(false);
   };
 
   const fetchContentDetails = async (title: string, type?: "movie" | "tv") => {
@@ -982,39 +1002,6 @@ const Dashboard = () => {
     );
   };
 
-  useEffect(() => {
-    const checkOnboardingStatus = async () => {
-      try {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        if (!user) {
-          setHasCompletedOnboarding(false);
-          return;
-        }
-
-        const { data, error } = await supabase
-          .from("user_preferences")
-          .select()
-          .eq("user_id", user.id)
-          .maybeSingle();
-
-        if (error && error.code !== "PGRST116") {
-          throw error;
-        }
-
-        setHasCompletedOnboarding(!!data);
-      } catch (error) {
-        console.error("Error checking onboarding status:", error);
-        setHasCompletedOnboarding(false);
-      } finally {
-        setIsCheckingOnboarding(false);
-      }
-    };
-
-    checkOnboardingStatus();
-  }, []);
-
   if (isCheckingOnboarding) {
     return (
       <div className="min-h-screen bg-filmeja-dark flex items-center justify-center">
@@ -1032,7 +1019,7 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-filmeja-dark overflow-x-hidden">
       {/* Premium overlay */}
-      {!isPremium && (
+      {/* {!isPremium && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-md z-30 flex flex-col items-center justify-center">
           <div className="glass-card p-8 max-w-md text-center">
             <h2 className="text-2xl font-bold mb-4 text-white">
@@ -1050,7 +1037,7 @@ const Dashboard = () => {
             </Button>
           </div>
         </div>
-      )}
+      )} */}
       <Sidebar
         isExpanded={isExpanded}
         setIsExpanded={setIsExpanded}
@@ -1089,11 +1076,18 @@ const Dashboard = () => {
             </Button>
 
             <Button
-              onClick={() => setShowAiChat(true)}
+              onClick={() => {
+                if (!isPremium) {
+                  setShowPremiumFilminModal(true);
+                  return;
+                }
+                setShowAiChat(true);
+              }}
               className="w-full md:w-auto bg-gradient-to-r from-filmeja-purple/20 to-filmeja-blue/20 hover:from-filmeja-purple/40 hover:to-filmeja-blue/40 border-2 border-white text-white px-6 md:px-8 py-4 rounded-xl backdrop-blur-sm transition-all active:scale-95 touch-manipulation"
             >
               <Sparkles className="w-5 h-5 mr-2 md:mr-3" />
               Converse com Filmin.IA
+              {!isPremium && <Lock className="w-4 h-4 ml-2" />}
             </Button>
           </div>
         </div>
@@ -1351,7 +1345,7 @@ const Dashboard = () => {
             }}
           /> */}
 
-{userFavorites.length > 0 && (
+          {userFavorites.length > 0 && (
             <TopTrendingList
               type="movie"
               title="Minha lista"
@@ -1423,6 +1417,72 @@ const Dashboard = () => {
               <ContentCarousel title="" items={moodRecommendations} />
             </section>
           )}
+
+          <Dialog open={showPremiumModal} onOpenChange={setShowPremiumModal}>
+            <DialogContent className="bg-filmeja-dark/95 border-white/10 text-white">
+              <h2 className="text-2xl font-bold mb-4">Limite Atingido</h2>
+              <p className="mb-6">
+                Você atingiu o limite de recomendações gratuitas. Assine o plano
+                premium para continuar recebendo recomendações ilimitadas!
+              </p>
+              <Button
+                onClick={() => {
+                  setShowPremiumModal(false);
+                  setShowPaymentModal(true);
+                }}
+                className="w-full bg-filmeja-purple hover:bg-filmeja-purple/90"
+              >
+                Assinar Premium
+              </Button>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog
+            open={showPremiumFilminModal}
+            onOpenChange={setShowPremiumFilminModal}
+          >
+            <DialogContent className="bg-filmeja-dark/95 border-white/10 text-white">
+              <DialogHeader>
+                <DialogTitle className="text-2xl font-bold mb-2 flex items-center gap-2">
+                  <Sparkles className="w-6 h-6 text-filmeja-purple" />
+                  Filmin.IA - Recurso Premium
+                </DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <p className="text-lg">
+                  Este recurso é exclusivo para assinantes premium, o recurso
+                  mais forte e potente de recomendações do FilmeJá!
+                </p>
+                <ul className="space-y-2">
+                  <li className="flex items-center gap-2">
+                    <Check className="w-5 h-5 text-green-500" />
+                    Recomendações personalizadas através de chat inteligente
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="w-5 h-5 text-green-500" />
+                    Sugestões baseadas em conversas naturais
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="w-5 h-5 text-green-500" />
+                    Descoberta avançada de conteúdo
+                  </li>
+                </ul>
+                <p className="text-sm text-gray-400 mt-2">
+                  Assine o plano premium por apenas R$9,99/mês e tenha acesso
+                  ilimitado!
+                </p>
+              </div>
+              <Button
+                onClick={() => {
+                  setShowPremiumFilminModal(false);
+                  setShowPaymentModal(true);
+                }}
+                className="w-full bg-filmeja-purple hover:bg-filmeja-purple/90 mt-4"
+              >
+                Assinar Premium
+              </Button>
+            </DialogContent>
+          </Dialog>
         </main>
       </div>
     </div>

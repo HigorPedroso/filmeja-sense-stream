@@ -2,7 +2,7 @@
 import { useAuth } from "@/hooks/useAuth";
 import { useState, useEffect } from "react";
 import AvatarSelectionModal from "./AvatarSelectionModal";
-import { Crown } from "lucide-react";
+import { Coins, Crown } from "lucide-react";
 import { Badge } from "./ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import PremiumPaymentModal from "./PremiumPaymentModal";
@@ -50,6 +50,11 @@ const HeaderDashboard = () => {
     }
   }, [location.search, toast]);
 
+  // Add these new states at the top with other states
+  const [dailyCredits, setDailyCredits] = useState<number | null>(null);
+  const [monthlyCredits, setMonthlyCredits] = useState<number | null>(null);
+  
+  // Update the checkPremiumStatus function
   const checkPremiumStatus = async () => {
     if (user && !isCheckingStatus) {
       setIsCheckingStatus(true);
@@ -62,28 +67,63 @@ const HeaderDashboard = () => {
           return;
         }
         
+        // Get premium status and credits
+        const { data: viewStats } = await supabase
+          .from('user_recommendation_views')
+          .select('daily_views, monthly_views')
+          .eq('user_id', user.id)
+          .order('view_date', { ascending: false })
+          .limit(1)
+          .single();
+  
+        const dailyRemaining = 1 - (viewStats?.daily_views || 0);
+        const monthlyRemaining = 5 - (viewStats?.monthly_views || 0);
+        
+        setDailyCredits(Math.max(0, dailyRemaining));
+        setMonthlyCredits(Math.max(0, monthlyRemaining));
+  
+        // Check premium status
         const response = await fetch('https://yynlzhfibeozrwrtrjbs.supabase.co/functions/v1/check-subscription', {
-          method: 'GET',
           headers: {
             'Authorization': `Bearer ${accessToken}`,
             'Content-Type': 'application/json'
           },
         });
         
-        if (!response.ok) {
-          console.error("Error checking premium status:", response.statusText);
-          throw new Error(`Error checking premium status: ${response.statusText}`);
-        }
+        if (!response.ok) throw new Error(`Error: ${response.statusText}`);
         
         const data = await response.json();
         setIsPremium(data.isPremium);
       } catch (error) {
-        console.error("Error checking premium status:", error);
+        console.error("Error checking status:", error);
       } finally {
         setIsCheckingStatus(false);
       }
     }
   };
+
+  // Update the premium badge/button section
+  {isPremium ? (
+    <Badge className="bg-filmeja-purple text-white flex items-center gap-1 text-xs">
+      <Crown className="w-3 h-3" />
+      Premium
+    </Badge>
+  ) : (
+    <div className="flex flex-col items-end">
+      <button 
+        onClick={() => setIsPremiumModalOpen(true)}
+        className="text-xs text-filmeja-purple hover:underline flex items-center gap-1"
+      >
+        <Crown className="w-3 h-3" />
+        Assinar Premium
+      </button>
+      <span className="text-xs text-gray-400">
+        {dailyCredits !== null && monthlyCredits !== null && (
+          `${dailyCredits} hoje • ${monthlyCredits} este mês`
+        )}
+      </span>
+    </div>
+  )}
 
   // Check premium status on mount and when user changes
   useEffect(() => {
@@ -119,19 +159,27 @@ const HeaderDashboard = () => {
               </span>
               
               {isPremium ? (
-                <Badge className="bg-filmeja-purple text-white flex items-center gap-1 text-xs">
-                  <Crown className="w-3 h-3" />
-                  Premium
-                </Badge>
-              ) : (
-                <button 
-                  onClick={() => setIsPremiumModalOpen(true)}
-                  className="text-xs text-filmeja-purple hover:underline flex items-center gap-1"
-                >
-                  <Crown className="w-3 h-3" />
-                  Assinar Premium
-                </button>
-              )}
+  <Badge className="bg-filmeja-purple text-white flex items-center gap-1 text-xs">
+    <Crown className="w-3 h-3" />
+    Premium
+  </Badge>
+) : (
+  <div className="flex flex-col items-end">
+    <button 
+      onClick={() => setIsPremiumModalOpen(true)}
+      className="text-xs text-filmeja-purple hover:underline flex items-center gap-1"
+    >
+      <Crown className="w-3 h-3" />
+      Assinar Premium
+    </button>
+    <span className="text-xs text-gray-400 flex items-center gap-1">
+      <Coins className="w-3 h-3 text-yellow-500" />
+      {dailyCredits !== null && monthlyCredits !== null && (
+        `${dailyCredits} hoje • ${monthlyCredits} este mês`
+      )}
+    </span>
+  </div>
+)}
             </div>
             
             <div 

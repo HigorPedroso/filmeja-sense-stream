@@ -2,11 +2,12 @@
 export interface ContentModalProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  content: any;
+  content: ContentType | null;
   isLoading: boolean;
-  onRequestNew?: () => void;
+  onRequestNew?: () => Promise<void>;
   selectedMood?: string;
-  onMarkAsWatched: (content: any) => Promise<void>;
+  onMarkAsWatched?: () => void;
+  hasReachedLimit?: boolean; // Add this prop
 }
 
 export interface ContentType {

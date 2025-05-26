@@ -63,7 +63,50 @@ export async function fetchMoodRecommendation(params: MoodRecommendationParams):
 
   try {
     const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("User not authenticated");
 
+    // Check user subscription status
+    const { data: userProfile } = await supabase
+      .from('profiles')
+      .select('is_premium')
+      .eq('id', user.id)
+      .single();
+
+    if (!userProfile?.is_premium) {
+      // Check view limits for free users
+      const today = new Date().toISOString().split('T')[0];
+      const monthStart = new Date(today.slice(0, 7) + '-01').toISOString();
+
+      const { data: viewStats } = await supabase
+        .from('user_recommendation_views')
+        .select('daily_views, monthly_views')
+        .eq('user_id', user.id)
+        .gte('view_date', monthStart)
+        .order('view_date', { ascending: false })
+        .limit(1)
+        .single();
+
+      const dailyViews = viewStats?.daily_views || 0;
+      const monthlyViews = viewStats?.monthly_views || 0;
+
+      if (dailyViews >= 1 || monthlyViews >= 5) {
+        setShowRecommendationModal(false);
+        throw {
+          type: 'PREMIUM_REQUIRED',
+          message: 'Você atingiu o limite de recomendações gratuitas. Assine o plano premium para continuar recebendo recomendações ilimitadas!'
+        };
+      }
+
+      // Update view counts
+      await supabase.from('user_recommendation_views').upsert({
+        user_id: user.id,
+        view_date: today,
+        daily_views: dailyViews + 1,
+        monthly_views: monthlyViews + 1
+      });
+    }
+
+    // Continue with existing recommendation logic
     const { data: recentRecommendations, error: historyError } = await supabase
     .from('watch_history')
     .select('title')

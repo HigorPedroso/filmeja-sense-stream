@@ -18,6 +18,7 @@ export const ContentModal = ({
   onRequestNew,
   selectedMood,
   onMarkAsWatched,
+  hasReachedLimit, // Add this prop
 }: ContentModalProps) => {
   const [contentData, setContentData] = useState<ContentType>({
     id: 0,
@@ -80,6 +81,25 @@ export const ContentModal = ({
                   backgroundPosition: "center",
                 }}
               />
+              
+              {hasReachedLimit && (
+                <div className="absolute inset-0 bg-black/80 backdrop-blur-xl z-50 flex flex-col items-center justify-center p-6 text-center">
+                  <h3 className="text-2xl font-bold text-white mb-4">Limite de Visualizações Atingido</h3>
+                  <p className="text-gray-200 mb-6">
+                    Assine o plano premium para continuar descobrindo recomendações incríveis!
+                  </p>
+                  <button
+                    onClick={() => {
+                      onOpenChange(false);
+                      // Trigger premium modal from parent
+                      window.dispatchEvent(new CustomEvent('openPremiumModal'));
+                    }}
+                    className="bg-filmeja-purple hover:bg-filmeja-purple/90 text-white px-6 py-2 rounded-lg"
+                  >
+                    Assinar Premium
+                  </button>
+                </div>
+              )}
               
               <ContentDetails 
                 content={contentData}

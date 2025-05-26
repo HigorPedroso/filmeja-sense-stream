@@ -116,10 +116,11 @@ export function ProfilePage() {
         }
 
         // Fetch all data in parallel
+        // Update the fetchUserProfile function's subscription check
         const [profileResponse, preferencesResponse, subscriptionResponse] = await Promise.all([
           supabase.from('profiles').select('*').eq('id', user.id).single(),
           supabase.from('user_preferences').select('*').eq('user_id', user.id).single(),
-          supabase.from('subscribers').select('*').eq('user_id', user.id).single()
+          supabase.from('subscribers').select('*').eq('user_id', user.id).eq('subscription_status', 'active').single()
         ]);
 
         const { data: profileData, error: profileError } = profileResponse;
@@ -136,7 +137,7 @@ export function ProfilePage() {
           email: user.email!,
           full_name: profileData?.full_name || user.user_metadata?.full_name || 'Usuário',
           avatar_url: profileData?.avatar_url || user.user_metadata?.avatar_url,
-          isPremium: !!subscriptionData,
+          isPremium: subscriptionData?.status === 'active', // Update this line
           preferences: {
             genres: preferencesData?.genres || [],
             moods: preferencesData?.languages || [],
@@ -487,49 +488,68 @@ export function ProfilePage() {
     Histórico de Recomendações
   </h2>
   
-  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
-    {watchHistory.length > 0 ? (
-      watchHistory.map((item) => (
-        <motion.button
-          key={item.id}
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={() => handleContentSelect(item)}
-          className="relative group aspect-[2/3] rounded-xl overflow-hidden focus:outline-none focus:ring-2 focus:ring-filmeja-purple/50"
-        >
-          <div className="relative w-full h-full bg-filmeja-dark/50 rounded-xl overflow-hidden">
-            <img
-              src={item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : '/placeholder-poster.jpg'}
-              alt={item.title}
-              className="w-full h-full object-cover"
-              loading="lazy"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.src = '/placeholder-poster.jpg';
-              }}
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-              <div className="absolute bottom-0 p-3 w-full">
-                <p className="text-sm font-medium text-white line-clamp-2 text-left">
-                  {item.title}
-                </p>
-                <p className="text-xs text-gray-400 mt-1 text-left">
-                  {formatDistanceToNow(new Date(item.created_at), {
-                    addSuffix: true,
-                    locale: ptBR,
-                  })}
-                </p>
+  {profile.isPremium ? (
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
+      {watchHistory.length > 0 ? (
+        watchHistory.map((item) => (
+          <motion.button
+            key={item.id}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => handleContentSelect(item)}
+            className="relative group aspect-[2/3] rounded-xl overflow-hidden focus:outline-none focus:ring-2 focus:ring-filmeja-purple/50"
+          >
+            <div className="relative w-full h-full bg-filmeja-dark/50 rounded-xl overflow-hidden">
+              <img
+                src={item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : '/placeholder-poster.jpg'}
+                alt={item.title}
+                className="w-full h-full object-cover"
+                loading="lazy"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.src = '/placeholder-poster.jpg';
+                }}
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <div className="absolute bottom-0 p-3 w-full">
+                  <p className="text-sm font-medium text-white line-clamp-2 text-left">
+                    {item.title}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1 text-left">
+                    {formatDistanceToNow(new Date(item.created_at), {
+                      addSuffix: true,
+                      locale: ptBR,
+                    })}
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
-        </motion.button>
-      ))
-    ) : (
-      <p className="text-gray-400 col-span-full text-center py-8">
-        Nenhuma recomendação no histórico ainda
+          </motion.button>
+        ))
+      ) : (
+        <p className="text-gray-400 col-span-full text-center py-8">
+          Nenhuma recomendação no histórico ainda
+        </p>
+      )}
+    </div>
+  ) : (
+    <div className="text-center py-8">
+      <Crown className="w-12 h-12 text-filmeja-purple mx-auto mb-4" />
+      <h3 className="text-lg font-semibold text-white mb-2">
+        Recurso Premium
+      </h3>
+      <p className="text-gray-400 mb-6 max-w-md mx-auto">
+        Mantenha um histórico completo de todas as suas recomendações e acesse-as a qualquer momento com o plano Premium.
       </p>
-    )}
-  </div>
+      <Button
+        onClick={() => setShowSubscriptionModal(true)}
+        className="bg-gradient-to-r from-filmeja-purple to-filmeja-blue text-white hover:opacity-90"
+      >
+        <Crown className="w-4 h-4 mr-2" />
+        Assinar Premium
+      </Button>
+    </div>
+  )}
 </motion.div>
 
 {/* Add the ContentModal */}
