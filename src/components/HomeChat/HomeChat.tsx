@@ -100,6 +100,7 @@ export function HomeChat() {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const chatEndRef = useRef<HTMLDivElement>(null);
   const [signupData, setSignupData] = useState<Partial<SignupData>>({});
+  const [inputValues, setInputValues] = useState<Record<string, string>>({});
   const [currentSignupStep, setCurrentSignupStep] = useState<
     keyof typeof signupSteps | null
   >(null);
@@ -508,27 +509,27 @@ export function HomeChat() {
 
                   {message.requiresInput && (
                     <div className="mt-4">
+
                       <Input
+                        key={`input-${message.id}-${currentSignupStep}`}
                         type={message.isPassword ? "password" : "text"}
-                        value={inputValue}
-                        onChange={(e) => setInputValue(e.target.value)}
+                        value={inputValues[message.id] || ""}
+                        onChange={(e) => setInputValues(prev => ({ ...prev, [message.id]: e.target.value }))}
                         onKeyPress={(e) => {
-                          if (e.key === "Enter" && inputValue.trim()) {
-                            handleSignupStep(inputValue);
-                            setInputValue("");
+                          if (e.key === "Enter" && inputValues[message.id]?.trim()) {
+                            handleSignupStep(inputValues[message.id]);
+                            setInputValues(prev => ({ ...prev, [message.id]: "" }));
                           }
                         }}
                         className="bg-white/5 border-white/10 text-white"
-                        placeholder={
-                          message.isPassword ? "********" : "Digite aqui..."
-                        }
+                        placeholder={message.isPassword ? "********" : "Digite aqui..."}
                       />
                       <Button
                         className="mt-2 w-full bg-filmeja-purple hover:bg-filmeja-purple/90"
                         onClick={() => {
-                          if (inputValue.trim()) {
-                            handleSignupStep(inputValue);
-                            setInputValue("");
+                          if (inputValues[message.id]?.trim()) {
+                            handleSignupStep(inputValues[message.id]);
+                            setInputValues(prev => ({ ...prev, [message.id]: "" }));
                           }
                         }}
                       >
