@@ -344,7 +344,7 @@ const Index = () => {
             <HowItWorksStep
               step={3}
               title="Assista na sua plataforma favorita"
-              description="Descobra exatamente onde o filme ou série está disponível e comece a assistir com apenas um clique."
+              description="Descubra exatamente onde o filme ou série está disponível e comece a assistir com apenas um clique."
               icon={<Settings className="h-6 w-6" />}
             />
           </div>
