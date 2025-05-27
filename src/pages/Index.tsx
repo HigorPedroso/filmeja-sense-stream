@@ -158,10 +158,10 @@ const Index = () => {
   const handleAnimatedClick = async () => {
     if (isAnimating) return;
     setIsAnimating(true);
-    
+
     // Wait for button animation
     await new Promise((resolve) => setTimeout(resolve, 800));
-    
+
     // Show HomeChat dialog
     setShowHomeChat(true);
     setIsAnimating(false);
@@ -234,7 +234,10 @@ const Index = () => {
         <Skeleton className="h-8 w-4/5 mb-4 bg-white/5 animate-pulse" />
         <div className="flex items-center gap-1.5 mb-4">
           {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} className="w-5 h-5 rounded-full bg-white/5 animate-pulse" />
+            <Skeleton
+              key={i}
+              className="w-5 h-5 rounded-full bg-white/5 animate-pulse"
+            />
           ))}
           <Skeleton className="w-12 h-5 ml-2 bg-white/5 animate-pulse" />
         </div>
@@ -498,9 +501,9 @@ const Index = () => {
           </div>
           <div className="flex justify-center items-center px-4">
             <div className="flex justify-center items-center px-4">
-            <Button
-              size="lg"
-              className={`
+              <Button
+                size="lg"
+                className={`
                   bg-gradient-to-r from-filmeja-purple via-purple-600 to-filmeja-purple
                   animate-[pulse_2s_cubic-bezier(0.4,0,0.6,1)_infinite]
                   text-white font-semibold
@@ -513,36 +516,52 @@ const Index = () => {
                   min-w-[280px] md:min-w-[320px]
                   ${isAnimating ? "cursor-not-allowed" : "cursor-pointer"}
                 `}
-              onClick={handleAnimatedClick}
-              disabled={isAnimating}
-            >
-              <div className="absolute inset-0 opacity-50 mix-blend-overlay animate-glow" />
-              <div className="absolute -inset-1 animate-pulse-slow opacity-30 bg-gradient-to-r from-purple-600 via-purple-400 to-purple-600 blur-xl" />
+                onClick={handleAnimatedClick}
+                disabled={isAnimating}
+              >
+                <div className="absolute inset-0 opacity-50 mix-blend-overlay animate-glow" />
+                <div className="absolute -inset-1 animate-pulse-slow opacity-30 bg-gradient-to-r from-purple-600 via-purple-400 to-purple-600 blur-xl" />
 
-              <Play
-                className={`
+                <Play
+                  className={`
                     h-6 w-6
                     transition-all duration-1000 ease-in-out
                     ${isAnimating ? "translate-x-[140px]" : "mr-2"}
                   `}
-              />
-              <span
-                className={`
+                />
+                <span
+                  className={`
                     text-center relative z-10 text-lg whitespace-nowrap
                     transition-all duration-300
                     ${isAnimating ? "opacity-0" : "opacity-100"}
                   `}
-              >
-                Quero testar agora
-              </span>
+                >
+                  Quero testar agora
+                </span>
 
-              <div className="absolute top-0 left-0 w-full h-full animate-shimmer bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12" />
-            </Button>
+                <div className="absolute top-0 left-0 w-full h-full animate-shimmer bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12" />
+              </Button>
               <Dialog open={showHomeChat} onOpenChange={setShowHomeChat}>
-        <DialogContent className="sm:max-w-5xl h-[85vh] sm:h-auto sm:min-h-[600px] overflow-y-auto flex flex-col items-center justify-center [&>button:last-child]:hidden">
-        <HomeChat />
-        </DialogContent>
-      </Dialog>
+                <DialogContent
+                  className="
+                    w-full max-w-full sm:max-w-3xl
+                    h-[90vh] sm:h-auto sm:min-h-[450px] sm:max-h-[80vh]
+                    flex flex-col
+                    bg-black/70 backdrop-blur-2xl
+                    border border-white/10
+                    rounded-none sm:rounded-2xl
+                    shadow-2xl
+                    p-0 sm:p-8
+                    overflow-hidden
+                    transition-all duration-300
+                    [&>button:last-child]:hidden
+                  "
+                >
+                  <div className="w-full h-full flex flex-col">
+                    <HomeChat onClose={() => setShowHomeChat(false)} />
+                  </div>
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
         </div>
@@ -890,7 +909,8 @@ const Index = () => {
         <div className="container mx-auto relative z-10">
           <div className="max-w-3xl mx-auto text-center">
             <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
-            Descubra agora, de graça, o que assistir sem perder tempo — recomendações personalizadas em segundos!
+              Descubra agora, de graça, o que assistir sem perder tempo —
+              recomendações personalizadas em segundos!
             </h2>
             <Link to="/signup">
               <Button

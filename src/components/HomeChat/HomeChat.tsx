@@ -430,8 +430,8 @@ export function HomeChat({ onClose }: { onClose?: () => void }) {
   };
 
   return (
-    <>
-      <div className="sticky top-0 z-20 border-b border-white/10 flex items-center gap-2 bg-black/80 backdrop-blur-xl mt-0 pt-0 md:p-4">
+    <div className="max-w-xl w-full h-[600px] border rounded-lg flex flex-col overflow-hidden">
+      <div className="sticky top-0 z-20 border-b border-white/10 flex items-center gap-2 bg-black/80 backdrop-blur-xl p-4">
         <Bot className="w-5 h-5 text-filmeja-purple" />
         <h3 className="text-lg font-semibold text-white flex-1">Filmin.AI te ajuda</h3>
         <Button
@@ -448,7 +448,7 @@ export function HomeChat({ onClose }: { onClose?: () => void }) {
         </Button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-2 md:p-6 space-y-4">
+      <div className="flex-1 overflow-y-auto p-2 md:p-6 space-y-4 max-h-[calc(100%-60px)]">
         <AnimatePresence>
           {messages.map((message) => (
             <motion.div
@@ -599,6 +599,6 @@ export function HomeChat({ onClose }: { onClose?: () => void }) {
         </AnimatePresence>
         <div ref={chatEndRef} />
       </div>
-      </>
+      </div>
   );
 }
