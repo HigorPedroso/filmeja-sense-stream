@@ -120,7 +120,7 @@ export function ProfilePage() {
         const [profileResponse, preferencesResponse, subscriptionResponse] = await Promise.all([
           supabase.from('profiles').select('*').eq('id', user.id).single(),
           supabase.from('user_preferences').select('*').eq('user_id', user.id).single(),
-          supabase.from('subscribers').select('*').eq('user_id', user.id).eq('subscription_status', 'active').single()
+          supabase.from('subscribers').select('*').eq('user_id', user.id).eq('subscription_status', 'active').maybeSingle()
         ]);
 
         const { data: profileData, error: profileError } = profileResponse;
@@ -137,7 +137,7 @@ export function ProfilePage() {
           email: user.email!,
           full_name: profileData?.full_name || user.user_metadata?.full_name || 'Usuário',
           avatar_url: profileData?.avatar_url || user.user_metadata?.avatar_url,
-          isPremium: subscriptionData?.status === 'active', // Update this line
+          isPremium: !!subscriptionData, // Update this line
           preferences: {
             genres: preferencesData?.genres || [],
             moods: preferencesData?.languages || [],
