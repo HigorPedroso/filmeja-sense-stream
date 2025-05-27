@@ -207,7 +207,7 @@ const Index = () => {
   const headlines = [
     "Não sabe o que assistir? Deixa que o FilmeJá encontra por você – grátis e rápido.",
     "Sem ideia do que ver hoje? O FilmeJá recomenda em segundos.",
-    "Cansado de perder tempo escolhendo? O FilmeJá resolve pra você de graç",
+    "Cansado de perder tempo escolhendo? O FilmeJá resolve pra você de graça.",
     "Tá perdido nos catálogos? Descubra o que ver com um clique no FilmeJá.",
     "Quer só apertar o play? Receba agora a melhor dica com o FilmeJá.",
     "Chega de enrolar pra escolher. O FilmeJá acerta no seu gosto – teste grátis.",
