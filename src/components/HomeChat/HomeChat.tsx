@@ -225,7 +225,10 @@ export function HomeChat() {
   };
 
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    // Only scroll after the initial two messages (welcome + first question)
+    if (messages.length > 2) {
+      chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   }, [messages]);
 
   const handleSignupStep = async (value: string) => {
@@ -441,7 +444,7 @@ export function HomeChat() {
         maxHeight: '100dvh',
       }}
     >
-      <div className="sticky top-0 z-10 p-4 border-b border-white/10 flex items-center gap-2 bg-black/30 backdrop-blur-xl">
+      <div className="sticky top-0 z-10 p-4 border-b border-white/10 flex items-center gap-2 bg-black/30">
         <Bot className="w-5 h-5 text-filmeja-purple" />
         <h3 className="text-lg font-semibold text-white">Filmin.AI te ajuda</h3>
       </div>
