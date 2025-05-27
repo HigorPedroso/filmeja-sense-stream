@@ -205,17 +205,17 @@ const Index = () => {
   }, []);
 
   const headlines = [
-    "Não sabe o que assistir? O FilmeJá decide por você.",
-    "Sem ideia do que assistir? O FilmeJá escolhe pra você.",
-    "Cansado de procurar? Deixa que o FilmeJá resolve.",
-    "Tá perdido nos catálogos? O FilmeJá te guia.",
-    "Quer só apertar o play? O FilmeJá diz o que ver.",
-    "Horas procurando? Agora é só perguntar pro FilmeJá.",
-    "Dúvida na escolha? FilmeJá responde em segundos.",
-    "Um clique. Uma recomendação. FilmeJá.",
-    "Seu tempo vale mais. FilmeJá indica pra você.",
-    "Streaming sem enrolação. FilmeJá te mostra o melhor.",
-    "Quer assistir algo bom agora? FilmeJá tem a resposta.",
+    "Não sabe o que assistir? Deixa que o FilmeJá encontra por você – grátis e rápido.",
+    "Sem ideia do que ver hoje? O FilmeJá recomenda em segundos.",
+    "Cansado de perder tempo escolhendo? O FilmeJá resolve pra você de graç",
+    "Tá perdido nos catálogos? Descubra o que ver com um clique no FilmeJá.",
+    "Quer só apertar o play? Receba agora a melhor dica com o FilmeJá.",
+    "Chega de enrolar pra escolher. O FilmeJá acerta no seu gosto – teste grátis.",
+    "Dúvida na escolha? O FilmeJá responde com inteligência artificial.",
+    "Uma pergunta. Uma recomendação certeira. Isso é FilmeJá.",
+    "Seu tempo vale mais. FilmeJá encontra o filme certo pra você.",
+    "Streaming sem frustração. FilmeJá mostra o que vale a pena assistir.",
+    "O que ver agora? Pergunte pro FilmeJá. É grátis!",
   ];
 
   const currentHeadline = useTypewriter(headlines, 50, 4000);
