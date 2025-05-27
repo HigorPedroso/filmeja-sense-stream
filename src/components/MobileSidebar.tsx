@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { AiChat } from "./AiChat/AiChat";
 import { supabase } from "@/integrations/supabase/client";
 import { ContentModal } from "@/components/ContentModal/ContentModal"; // Add this import at the top
+import PremiumPaymentModal from "@/components/PremiumPaymentModal"; // Add this import
 
 export function MobileSidebar() {
   const navigate = useNavigate();
@@ -16,11 +17,23 @@ export function MobileSidebar() {
   const [moodRecommendation, setMoodRecommendation] = useState<any>(null);
   const [showRecommendationModal, setShowRecommendationModal] = useState(false);
   const [isLoadingRecommendation, setIsLoadingRecommendation] = useState(false);
+  const [isPremium, setIsPremium] = useState<boolean>(false);
+  const [showPremiumModal, setShowPremiumModal] = useState(false);
 
   useEffect(() => {
     const fetchUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       setCurrentUser(user);
+
+      // Check premium status
+      if (user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("is_premium")
+          .eq("id", user.id)
+          .single();
+        setIsPremium(!!profile?.is_premium);
+      }
     };
     fetchUser();
   }, []);
@@ -198,7 +211,13 @@ export function MobileSidebar() {
           variant="ghost"
           className="text-gray-300"
           title="Recomendados"
-          onClick={() => setShowAiChat(true)}
+          onClick={() => {
+            if (!isPremium) {
+              setShowPremiumModal(true);
+            } else {
+              setShowAiChat(true);
+            }
+          }}
         >
           <MessageSquare className="w-5 h-5" />
         </Button>
@@ -212,6 +231,14 @@ export function MobileSidebar() {
         </Button>
       </nav>
 
+      <PremiumPaymentModal
+        isOpen={showPremiumModal}
+        onClose={() => setShowPremiumModal(false)}
+        onSuccess={() => {
+          setIsPremium(true);
+          setShowPremiumModal(false);
+        }}
+      />
     </div>
     
     </>
