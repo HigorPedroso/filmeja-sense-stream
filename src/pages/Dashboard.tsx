@@ -696,6 +696,12 @@ const Dashboard = () => {
         const dailyViews = lastViewDate !== today ? 0 : (viewStats?.daily_views || 0);
         const monthlyViews = viewStats?.monthly_views || 0;
 
+        await supabase.from("user_recommendation_views").upsert({
+          user_id: user.id,
+          view_date: today,
+          daily_views: dailyViews,
+        });
+
         if (dailyViews >= 1 || monthlyViews >= 5) {
           setShowPremiumModal(true);
           setDailyViews(dailyViews);
