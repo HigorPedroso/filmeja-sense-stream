@@ -35,12 +35,12 @@ const chatSteps: ChatStep[] = [
       { value: "comedy", label: "Comédia" },
       { value: "romance", label: "Romance" },
       { value: "horror", label: "Terror" },
-      { value: "psychological", label: "Drama Psicológico" },
+      { value: "psychological", label: "Drama" },
       { value: "fantasy", label: "Fantasia" },
-      { value: "scifi", label: "Ficção Científica" },
+      { value: "scifi", label: "Ficção" },
       { value: "mystery", label: "Mistério" },
       { value: "documentary", label: "Documentário" },
-      { value: "family", label: "Família/Infantil" },
+      { value: "family", label: "Família" },
     ],
     multiSelect: true,
   },
@@ -444,7 +444,7 @@ export function HomeChat() {
         maxHeight: '100dvh',
       }}
     >
-      <div className="sticky top-0 z-20 p-4 border-b border-white/10 flex items-center gap-2 bg-black/80 backdrop-blur-xl">
+      <div className="sticky top-0 mt-[-20] z-20 p-4 border-b border-white/10 flex items-center gap-2 bg-black/80 backdrop-blur-xl">
         <Bot className="w-5 h-5 text-filmeja-purple" />
         <h3 className="text-lg font-semibold text-white flex-1">Filmin.AI te ajuda</h3>
         <Button
