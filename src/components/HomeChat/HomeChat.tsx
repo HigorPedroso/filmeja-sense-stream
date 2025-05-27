@@ -106,6 +106,14 @@ export function HomeChat({ onClose }: { onClose?: () => void }) {
     keyof typeof signupSteps | null
   >(null);
   const [inputValue, setInputValue] = useState("");
+  // Add a state to store the user avatar URL
+  const [userAvatar] = useState<string>(() => {
+    // Generate a random avatar on component mount
+    const avatarStyles = ["adventurer", "adventurer-neutral", "avataaars", "big-smile", "bottts", "croodles", "fun-emoji", "pixel-art"];
+const randomStyle = avatarStyles[Math.floor(Math.random() * avatarStyles.length)];
+const randomSeed = Math.floor(Math.random() * 1000);
+return `https://api.dicebear.com/7.x/${randomStyle}/svg?seed=${randomSeed}`;
+  });
 
   useEffect(() => {
     // Initial welcome message
@@ -466,14 +474,20 @@ export function HomeChat({ onClose }: { onClose?: () => void }) {
                 }`}
               >
                 <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                  className={`w-8 h-8 rounded-full flex items-center justify-center overflow-hidden ${
                     message.sender === "user"
                       ? "bg-filmeja-purple"
                       : "bg-filmeja-blue"
                   }`}
                 >
-                  <Bot className="w-5 h-5 text-white" />
+                  {message.sender === "user" ? (
+                    <img src={userAvatar} alt="User Avatar" className="w-full h-full object-cover" />
+                  ) : (
+                    <Bot className="w-5 h-5 text-white" />
+                  )}
                 </div>
+                
+                {/* Rest of the message rendering code remains the same */}
                 <div
                   className={`p-4 rounded-xl ${
                     message.sender === "user"
