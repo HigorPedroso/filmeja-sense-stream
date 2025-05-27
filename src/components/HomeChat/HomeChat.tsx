@@ -427,13 +427,28 @@ export function HomeChat() {
   };
 
   return (
-    <div className="flex flex-col h-[500px] bg-black/30 backdrop-blur-xl rounded-xl border border-white/10 w-full max-w-[800px] mx-auto">
+    <div
+      className="
+        flex flex-col
+        w-full max-w-[800px] mx-auto
+        bg-black/30 backdrop-blur-xl rounded-xl border border-white/10
+        h-[500px] md:h-[500px] 
+        md:rounded-xl md:my-8
+        min-h-screen md:min-h-0
+        fixed md:static top-0 left-0 right-0 bottom-0 z-50
+        md:z-auto
+      "
+      style={{
+        height: '100dvh', // Use full viewport height on mobile
+        maxHeight: '100dvh',
+      }}
+    >
       <div className="p-4 border-b border-white/10 flex items-center gap-2">
         <Bot className="w-5 h-5 text-filmeja-purple" />
         <h3 className="text-lg font-semibold text-white">Filmin.AI te ajuda</h3>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6 space-y-4">
+      <div className="flex-1 overflow-y-auto p-2 md:p-6 space-y-4">
         <AnimatePresence>
           {messages.map((message) => (
             <motion.div
