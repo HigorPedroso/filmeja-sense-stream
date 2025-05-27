@@ -583,7 +583,6 @@ const Dashboard = () => {
   }, []);
 
   useEffect(() => {
-    console.log("TEntando bem aqui");
     const checkOnboardingStatus = async () => {
       try {
         const {
