@@ -437,7 +437,6 @@ export function HomeChat() {
         w-full max-w-[800px] mx-auto
         bg-black/30 backdrop-blur-xl rounded-none md:rounded-xl border border-white/10
         min-h-screen md:min-h-0
-        md:my-8
       "
       style={{
         height: '100dvh',
