@@ -441,7 +441,7 @@ export function HomeChat() {
         maxHeight: '100dvh',
       }}
     >
-      <div className="p-4 border-b border-white/10 flex items-center gap-2">
+      <div className="sticky top-0 z-10 p-4 border-b border-white/10 flex items-center gap-2 bg-black/30 backdrop-blur-xl">
         <Bot className="w-5 h-5 text-filmeja-purple" />
         <h3 className="text-lg font-semibold text-white">Filmin.AI te ajuda</h3>
       </div>
