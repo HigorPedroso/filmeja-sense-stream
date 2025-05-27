@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/useAuth";
 import { Input } from "../ui/input";
 import { supabase } from "@/integrations/supabase/client";
+import { DialogClose } from "../ui/dialog";
 
 interface ChatStep {
   id: string;
@@ -434,18 +435,17 @@ export function HomeChat({ onClose }: { onClose?: () => void }) {
       <div className="sticky top-0 z-20 border-b border-white/10 flex items-center gap-2 bg-black/80 backdrop-blur-xl p-4">
         <Bot className="w-5 h-5 text-filmeja-purple" />
         <h3 className="text-lg font-semibold text-white flex-1">Filmin.AI te ajuda</h3>
+        <DialogClose asChild>
         <Button
           variant="ghost"
-          className="ml-auto text-white"
-          onClick={() => {
-            if (onClose) onClose();
-          }}
+          className="ml-auto text-white hover:bg-white/10"
         >
           <span className="sr-only">Fechar</span>
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-            <path d="M6 6L14 14M14 6L6 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M6 6L14 14M14 6L6 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </Button>
+        </DialogClose>
       </div>
 
       <div className="flex-1 overflow-y-auto p-2 md:p-6 space-y-4 max-h-[calc(100%-60px)]">
