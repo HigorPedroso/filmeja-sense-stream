@@ -437,13 +437,14 @@ export function HomeChat({ onClose }: { onClose?: () => void }) {
         w-full max-w-[800px] mx-auto
         bg-black/30 backdrop-blur-xl rounded-none md:rounded-xl border border-white/10
         min-h-screen md:min-h-0
+        md:my-8
       "
       style={{
         height: '100dvh',
         maxHeight: '100dvh',
       }}
     >
-      <div className="sticky top-0 z-20 p-4 border-b border-white/10 flex items-center gap-2 bg-black/80 backdrop-blur-xl">
+      <div className="sticky top-0 z-20 border-b border-white/10 flex items-center gap-2 bg-black/80 backdrop-blur-xl mt-0 pt-0 md:p-4">
         <Bot className="w-5 h-5 text-filmeja-purple" />
         <h3 className="text-lg font-semibold text-white flex-1">Filmin.AI te ajuda</h3>
         <Button
