@@ -11,6 +11,7 @@ import { ContentModal } from "@/components/ContentModal/ContentModal";
 import { fetchContentWithProviders } from "@/lib/utils/tmdb";
 import { getContentDetails } from "../lib/tmdb";
 import { toast } from "@/hooks/use-toast";
+import PremiumPaymentModal from "@/components/PremiumPaymentModal"; // Import the modal
 
 
 interface SidebarProps {
@@ -30,11 +31,23 @@ export function Sidebar({ isExpanded, setIsExpanded, onLogout }: SidebarProps) {
   const [moodRecommendation, setMoodRecommendation] = useState<any>(null);
   const [showRecommendationModal, setShowRecommendationModal] = useState(false);
   const [isLoadingRecommendation, setIsLoadingRecommendation] = useState(false);
+  const [isPremium, setIsPremium] = useState<boolean>(false);
+  const [showPremiumModal, setShowPremiumModal] = useState(false);
 
   useEffect(() => {
     const fetchUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       setCurrentUser(user);
+
+      // Check premium status
+      if (user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("is_premium")
+          .eq("id", user.id)
+          .single();
+        setIsPremium(!!profile?.is_premium);
+      }
     };
     fetchUser();
   }, []);
@@ -225,7 +238,13 @@ export function Sidebar({ isExpanded, setIsExpanded, onLogout }: SidebarProps) {
                 variant="ghost"
                 className="w-full justify-center py-3 text-gray-300 hover:bg-white/10 hover:text-white transition-colors"
                 title="Chat com IA"
-                onClick={() => setShowAiChat(true)}
+                onClick={() => {
+                  if (!isPremium) {
+                    setShowPremiumModal(true);
+                  } else {
+                    setShowAiChat(true);
+                  }
+                }}
               >
                 <MessageSquare className="w-5 h-5" />
                 {isExpanded && (
@@ -233,6 +252,16 @@ export function Sidebar({ isExpanded, setIsExpanded, onLogout }: SidebarProps) {
                 )}
               </Button>
             </div>
+
+            {/* Premium Modal */}
+            <PremiumPaymentModal
+              isOpen={showPremiumModal}
+              onClose={() => setShowPremiumModal(false)}
+              onSuccess={() => {
+                setIsPremium(true);
+                setShowPremiumModal(false);
+              }}
+            />
           </nav>
         </div>
 
