@@ -470,7 +470,42 @@ export function HomeChat() {
 
                   {message.options && (
                     <div className="mt-4 space-y-2">
-                      {message.options && (
+                      {/* Custom layout for favorite-genres: 2 columns per row */}
+                      {message.currentStep !== undefined &&
+                        chatSteps[message.currentStep]?.id === "favorite-genres" ? (
+                        <div className="grid grid-cols-2 gap-2">
+                          {message.options.map((option) => {
+                            const isSelected =
+                              message.currentStep !== undefined &&
+                              chatSteps[message.currentStep]?.multiSelect &&
+                              (
+                                answers[chatSteps[message.currentStep].id] || []
+                              ).includes(option.value);
+
+                            return (
+                              <Button
+                                key={option.value}
+                                onClick={() =>
+                                  message.currentStep >= 0
+                                    ? handleAnswer(
+                                        option.value,
+                                        message.currentStep
+                                      )
+                                    : handleSignupStep(option.value)
+                                }
+                                className={`w-full justify-start text-left ${
+                                  isSelected
+                                    ? "bg-filmeja-purple text-white hover:bg-filmeja-purple/90"
+                                    : "bg-white/5 hover:bg-white/10 text-white"
+                                }`}
+                                variant="ghost"
+                              >
+                                {option.label}
+                              </Button>
+                            );
+                          })}
+                        </div>
+                      ) : (
                         <div className="mt-4 space-y-2">
                           {message.options.map((option) => {
                             const isSelected =
@@ -498,6 +533,10 @@ export function HomeChat() {
                                 }`}
                                 variant="ghost"
                               >
+                                {/* Add Google icon for the Google signup option */}
+                                {option.value === "google" && (
+                                  <img src="/google.png" alt="Google" className="w-5 h-5 mr-2" />
+                                )}
                                 {option.label}
                               </Button>
                             );
