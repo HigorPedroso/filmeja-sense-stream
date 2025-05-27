@@ -444,15 +444,13 @@ export function HomeChat() {
         maxHeight: '100dvh',
       }}
     >
-      <div className="sticky top-0 z-10 p-4 border-b border-white/10 flex items-center gap-2 bg-black">
+      <div className="sticky top-0 z-20 p-4 border-b border-white/10 flex items-center gap-2 bg-black/80 backdrop-blur-xl">
         <Bot className="w-5 h-5 text-filmeja-purple" />
         <h3 className="text-lg font-semibold text-white flex-1">Filmin.AI te ajuda</h3>
         <Button
           variant="ghost"
           className="ml-auto text-white"
           onClick={() => {
-            // You can customize this to close the modal/chat as needed
-            // For example, if you receive an onClose prop, call it here
             window.location.href = "/dashboard";
           }}
         >
