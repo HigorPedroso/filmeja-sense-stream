@@ -53,6 +53,7 @@ import PaymentSuccessModal from "@/components/PaymentSuccessModal";
 import { Sidebar } from "@/components/Sidebar";
 import { MobileSidebar } from "@/components/MobileSidebar";
 import { fetchContentWithProviders } from "@/lib/utils/tmdb";
+import { extractJsonFromResponse } from "@/utils/jsonParser";
 
 // Mock user data - in a real app, this would come from authentication
 const mockUser = {
@@ -478,9 +479,13 @@ const Dashboard = () => {
       );
 
       const geminiData = await geminiResponse.json();
-      const suggestions = JSON.parse(geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || "[]");
+      const raw = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text;
 
-      if (suggestions.length === 0) {
+      if (!raw) throw new Error("Empty response from Gemini");
+
+      const suggestions = extractJsonFromResponse(raw);
+
+      if (!suggestions || suggestions.length === 0) {
         throw new Error("No suggestions found");
       }
 
