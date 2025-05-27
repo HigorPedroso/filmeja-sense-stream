@@ -70,15 +70,32 @@ const HeaderDashboard = () => {
         // Get premium status and credits
         const { data: viewStats } = await supabase
           .from('user_recommendation_views')
-          .select('daily_views, monthly_views')
+          .select('daily_views, monthly_views, view_date') // include view_date
           .eq('user_id', user.id)
           .order('view_date', { ascending: false })
           .limit(1)
           .single();
   
-        const dailyRemaining = 1 - (viewStats?.daily_views || 0);
-        const monthlyRemaining = 5 - (viewStats?.monthly_views || 0);
-        
+        const today = new Date().toISOString().split('T')[0];
+        let dailyViews = viewStats?.daily_views || 0;
+        let monthlyViews = viewStats?.monthly_views || 0;
+        let lastViewDate = viewStats?.view_date;
+  
+        // If it's a new day, reset dailyViews and update view_date
+        if (lastViewDate !== today) {
+          dailyViews = 0;
+          // Upsert to update the view_date and reset daily_views
+          await supabase.from('user_recommendation_views').upsert({
+            user_id: user.id,
+            view_date: today,
+            daily_views: 0,
+            monthly_views: monthlyViews,
+          });
+        }
+  
+        const dailyRemaining = 1 - dailyViews;
+        const monthlyRemaining = 5 - monthlyViews;
+  
         setDailyCredits(Math.max(0, dailyRemaining));
         setMonthlyCredits(Math.max(0, monthlyRemaining));
   
