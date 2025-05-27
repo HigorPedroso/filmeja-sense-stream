@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/useAuth";
 import { Input } from "../ui/input";
 import { supabase } from "@/integrations/supabase/client";
+import { DialogContent } from "../ui/dialog";
 
 interface ChatStep {
   id: string;
@@ -94,7 +95,7 @@ interface SignupData {
   password: string;
 }
 
-export function HomeChat() {
+export function HomeChat({ onClose }: { onClose?: () => void }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentStep, setCurrentStep] = useState(-1);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -430,7 +431,7 @@ export function HomeChat() {
   };
 
   return (
-    <div
+    <DialogContent
       className="
         fixed md:static top-0 left-0 right-0 bottom-0 z-50
         flex flex-col
@@ -450,7 +451,7 @@ export function HomeChat() {
           variant="ghost"
           className="ml-auto text-white"
           onClick={() => {
-            window.location.href = "/dashboard";
+            if (onClose) onClose();
           }}
         >
           <span className="sr-only">Fechar</span>
@@ -611,6 +612,6 @@ export function HomeChat() {
         </AnimatePresence>
         <div ref={chatEndRef} />
       </div>
-    </div>
+    </DialogContent>
   );
 }
