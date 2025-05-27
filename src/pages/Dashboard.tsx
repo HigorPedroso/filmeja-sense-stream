@@ -684,16 +684,16 @@ const Dashboard = () => {
         const monthStart = new Date(today.slice(0, 7) + "-01").toISOString();
 
         const { data: viewStats } = await supabase
-          .from("user_recommendation_views")
-          .select("daily_views, monthly_views", "view_date")
-          .eq("user_id", user.id)
-          .gte("view_date", monthStart)
-          .order("view_date", { ascending: false })
-          .limit(1)
-          .single();
+        .from("user_recommendation_views")
+        .select("daily_views, monthly_views, view_date")  // Fixed select statement
+        .eq("user_id", user.id)
+        .gte("view_date", monthStart)
+        .order("view_date", { ascending: false })
+        .limit(1)
+        .single();
 
-          const isFirstAccessToday = !viewStats || viewStats.view_date !== today;
-          const dailyViews = isFirstAccessToday ? 0 : (viewStats?.daily_views || 0);
+        const isFirstAccessToday = !viewStats || viewStats.view_date !== today;
+        const dailyViews = isFirstAccessToday ? 0 : (viewStats?.daily_views || 0);
         const monthlyViews = viewStats?.monthly_views || 0;
 
         if (dailyViews >= 1 || monthlyViews >= 5) {
