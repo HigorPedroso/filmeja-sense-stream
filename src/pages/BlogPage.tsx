@@ -15,6 +15,7 @@ import { ChevronDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "react-router-dom";
+import Navbar from "@/components/Navbar";
 
 interface BlogPost {
   id: string;
@@ -100,6 +101,7 @@ export default function BlogPage() {
   // Add this in the search and filters section
   return (
     <div className="min-h-screen bg-filmeja-dark text-white">
+      <Navbar transparent/>
       {/* Hero Section */}
       <motion.div
         initial={{ opacity: 0 }}

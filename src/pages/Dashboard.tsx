@@ -14,7 +14,8 @@ import {
   X,
   Play,
   Lock,
-  Check, // Add this
+  Check,
+  Crown, // Add this
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ContentCarousel from "@/components/ContentCarousel";
@@ -427,157 +428,94 @@ const Dashboard = () => {
   };
 
   const handleFirst = async () => {
-    const onboardingData = localStorage.getItem("onboarding_data");
 
-    function extractJsonFromResponse(text: string) {
-      try {
-        return JSON.parse(text);
-      } catch {
-        const jsonMatch = text.match(/```(?:json)?\s*(\[[\s\S]*?\])\s*```/);
-        if (jsonMatch?.[1]) {
-          try {
-            return JSON.parse(jsonMatch[1].trim());
-          } catch {
-            const arrayMatch = text.match(/\[\s*{[\s\S]*?}\s*\]/);
-            if (arrayMatch?.[0]) {
-              try {
-                return JSON.parse(arrayMatch[0]);
-              } catch {
-                console.error("Failed to parse array structure");
-              }
-            }
-          }
-        }
-
-        const suggestions = [];
-        const matches = text.matchAll(/{[^}]*"title"[^}]*"tmdbId"[^}]*}/g);
-        for (const match of matches) {
-          try {
-            suggestions.push(JSON.parse(match[0]));
-          } catch {
-            continue;
-          }
-        }
-        return suggestions;
+    setIsLoadingRecommendation(true);
+    setShowRecommendationModal(true);
+    try {
+      const onboardingData = localStorage.getItem("onboarding_data");
+      if (!onboardingData) {
+        throw new Error("Onboarding data not found");
       }
-    }
 
-    const prompt = `
-          Você é um assistente que responde apenas em JSON válido. 
-          
-          Preferências do usuário:
-          - Gêneros favoritos: ${onboardingPrefs.genres.join(", ")}
-          - Tipo de conteúdo preferido: ${onboardingPrefs.content_type}
-          - Duração preferida: ${onboardingPrefs.watch_duration}
-          - Horário preferido: ${onboardingPrefs.watch_time}
-          
-          O usuário já assistiu os seguintes títulos:
-          ${JSON.stringify(validWatchedContent)}
-          
-          Últimas recomendações (não recomendar estes títulos também):
-          ${JSON.stringify(recentTitles)}
-          
-          Forneça uma lista de 50 ${
-            mediaType === "movie" ? "filmes" : "séries"
-          } que:
-          1. São muito populares e bem avaliados
-          2. Correspondem ao gênero: ${genre.name}
-          3. Se alinham com as preferências do usuário (gêneros favoritos e duração)
-          4. São adequados para o horário preferido do usuário (${
-            onboardingPrefs.watch_time
-          })
-          
-          NÃO INCLUA os títulos que o usuário já assistiu ou que foram recomendados recentemente.
-          Tem que estar presente nos principais streamings: Netflix, Max, Amazon Prime Video, Disney, etc.
-          
-          Responda no seguinte formato JSON:
-          [
-            { "title": "Título", "tmdbId": 12345, "description": "Descrição do filme ou série", "imgUrl": "url da imagem", "tipo": "movie ou tv" }
-          ]
-          `;
+      const onboardingPrefs = JSON.parse(onboardingData);
 
-    const onboardingPrefs = JSON.parse(onboardingData);
+      const prompt = `
+        Você é um assistente que responde apenas em JSON válido. 
+        
+        Preferências do usuário:
+        - Gêneros favoritos: ${onboardingPrefs.genres.join(", ")}
+        - Tipo de conteúdo preferido: ${onboardingPrefs.content_type}
+        - Duração preferida: ${onboardingPrefs.watch_duration}
+        - Horário preferido: ${onboardingPrefs.watch_time}
+        
+        Forneça uma lista de 20 filmes premiados que:
+        1. São muito bem avaliados (rating acima de 8)
+        2. Correspondem às preferências do usuário
+        3. São adequados para o horário preferido do usuário
+        4. Ganharam prêmios importantes (Oscar, Globo de Ouro, etc)
+        
+        Responda no seguinte formato JSON:
+        [
+          { "title": "Título", "tmdbId": 12345, "description": "Descrição do filme", "tipo": "movie" }
+        ]
+      `;
 
-    const geminiResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${
-        import.meta.env.VITE_GEMINI_API_KEY
-      }`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                {
-                  text:
-                    prompt +
-                    "\nResponda apenas com o JSON, sem texto adicional.",
-                },
-              ],
+      const geminiResponse = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${import.meta.env.VITE_GEMINI_API_KEY}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: {
+              temperature: 0.7,
+              topK: 40,
+              topP: 0.95,
+              maxOutputTokens: 1024,
             },
-          ],
-          generationConfig: {
-            temperature: 0.7,
-            topK: 40,
-            topP: 0.95,
-            maxOutputTokens: 1024,
-          },
-        }),
+          }),
+        }
+      );
+
+      const geminiData = await geminiResponse.json();
+      const suggestions = JSON.parse(geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || "[]");
+
+      if (suggestions.length === 0) {
+        throw new Error("No suggestions found");
       }
-    );
 
-    const geminiData = await geminiResponse.json();
-    const raw = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text;
+      // Get random suggestion
+      const randomSuggestion = suggestions[Math.floor(Math.random() * suggestions.length)];
 
-    if (!raw) throw new Error("Resposta vazia do Gemini");
+      // Fetch full details
+      const [details, videos, similar, providers] = await Promise.all([
+        fetch(`https://api.themoviedb.org/3/movie/${randomSuggestion.tmdbId}?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=pt-BR`).then(r => r.json()),
+        fetch(`https://api.themoviedb.org/3/movie/${randomSuggestion.tmdbId}/videos?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=pt-BR`).then(r => r.json()),
+        fetch(`https://api.themoviedb.org/3/movie/${randomSuggestion.tmdbId}/similar?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=pt-BR`).then(r => r.json()),
+        fetch(`https://api.themoviedb.org/3/movie/${randomSuggestion.tmdbId}/watch/providers?api_key=${import.meta.env.VITE_TMDB_API_KEY}`).then(r => r.json()),
+      ]);
 
-    const suggestions = extractJsonFromResponse(raw) || [];
+      setMoodRecommendation({
+        ...details,
+        videos: videos.results,
+        providers: providers.results?.BR,
+        similar: similar.results,
+        mediaType: 'movie',
+      });
 
-    if (suggestions.length === 0) {
-      throw new Error("Nenhuma sugestão encontrada");
+      localStorage.removeItem("onboarding_data");
+
+    } catch (error) {
+      console.error('Error fetching recommendation:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar a recomendação",
+        variant: "destructive",
+      });
+      setShowRecommendationModal(false);
+    } finally {
+      setIsLoadingRecommendation(false);
     }
-
-    // Get random suggestion from the list
-    const randomSuggestion =
-      suggestions[Math.floor(Math.random() * suggestions.length)];
-
-    // Fetch full details for the selected content
-    const contentType = randomSuggestion.tipo || "movie";
-    const contentId = randomSuggestion.tmdbId;
-
-    const [details, videos, similar, providers] = await Promise.all([
-      fetch(
-        `https://api.themoviedb.org/3/${contentType}/${contentId}?api_key=${
-          import.meta.env.VITE_TMDB_API_KEY
-        }&language=pt-BR`
-      ).then((r) => r.json()),
-      fetch(
-        `https://api.themoviedb.org/3/${contentType}/${contentId}/videos?api_key=${
-          import.meta.env.VITE_TMDB_API_KEY
-        }&language=pt-BR`
-      ).then((r) => r.json()),
-      fetch(
-        `https://api.themoviedb.org/3/${contentType}/${contentId}/similar?api_key=${
-          import.meta.env.VITE_TMDB_API_KEY
-        }&language=pt-BR`
-      ).then((r) => r.json()),
-      fetch(
-        `https://api.themoviedb.org/3/${contentType}/${contentId}/watch/providers?api_key=${
-          import.meta.env.VITE_TMDB_API_KEY
-        }`
-      ).then((r) => r.json()),
-    ]);
-
-    setMoodRecommendation({
-      ...details,
-      videos: videos.results,
-      providers: providers.results?.BR,
-      similar: similar.results,
-      mediaType: contentType,
-    });
-
-    localStorage.removeItem("onboarding_data");
   };
 
   const handleUpgradeToPremium = () => {
@@ -1214,9 +1152,9 @@ const Dashboard = () => {
             
           <Button
               onClick={() => handleFirst()}
-              className="w-full md:w-auto bg-filmeja-purple/20 hover:bg-filmeja-purple/40 border-2 border-filmeja-purple text-white px-6 md:px-8 py-4 rounded-xl backdrop-blur-sm transition-all active:scale-95 touch-manipulation"
+              className="w-full md:w-auto bg-filmeja-blue/20 hover:bg-filmeja-blue/40 border-2 border-filmeja-blue text-white px-6 md:px-8 py-4 rounded-xl backdrop-blur-sm transition-all active:scale-95 touch-manipulation"
             >
-              <Heart className="w-5 h-5 mr-2 md:mr-3" />
+              <Crown className="w-5 h-5 mr-2 md:mr-3" />
               Ver recomendação premiada
             </Button>
             
