@@ -509,6 +509,7 @@ const Dashboard = () => {
       });
 
       localStorage.removeItem("onboarding_data");
+      //setShowPremiumFilminModal(false)
 
     } catch (error) {
       console.error('Error fetching recommendation:', error);
@@ -1157,9 +1158,9 @@ const Dashboard = () => {
             
           <Button
               onClick={() => handleFirst()}
-              className="w-full md:w-auto bg-filmeja-blue/20 hover:bg-filmeja-blue/40 border-2 border-filmeja-blue text-white px-6 md:px-8 py-4 rounded-xl backdrop-blur-sm transition-all active:scale-95 touch-manipulation"
+              className="w-full md:w-auto bg-pink-500/20 hover:bg-pink-500/40 border-2 border-pink-500 text-white px-6 md:px-8 py-4 rounded-xl backdrop-blur-sm transition-all active:scale-95 touch-manipulation hover:shadow-lg hover:shadow-pink-500/20"
             >
-              <Crown className="w-5 h-5 mr-2 md:mr-3" />
+              <Crown className="w-5 h-5 mr-2 md:mr-3 text-pink-300" />
               Ver recomendação premiada
             </Button>
             
