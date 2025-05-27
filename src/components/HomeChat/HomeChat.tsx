@@ -429,17 +429,15 @@ export function HomeChat() {
   return (
     <div
       className="
+        fixed md:static top-0 left-0 right-0 bottom-0 z-50
         flex flex-col
         w-full max-w-[800px] mx-auto
-        bg-black/30 backdrop-blur-xl rounded-xl border border-white/10
-        h-[500px] md:h-[500px] 
-        md:rounded-xl md:my-8
+        bg-black/30 backdrop-blur-xl rounded-none md:rounded-xl border border-white/10
         min-h-screen md:min-h-0
-        fixed md:static top-0 left-0 right-0 bottom-0 z-50
-        md:z-auto
+        md:my-8
       "
       style={{
-        height: '100dvh', // Use full viewport height on mobile
+        height: '100dvh',
         maxHeight: '100dvh',
       }}
     >
