@@ -102,9 +102,19 @@ const MoodCarousel: React.FC = () => {
                       <h3 className="text-xl font-semibold text-white text-center px-4 text-shadow">
                         Recomendação Bloqueada
                       </h3>
+                      <p className="text-sm font-semibold text-white text-center px-4 text-shadow">
+                        Desbloquei gratuitamente
+                      </p>
                       <Button
                         className="bg-filmeja-purple hover:bg-filmeja-purple/90 shadow-lg px-6 py-2 text-base"
-                        onClick={() => navigate("/signup")}
+                        onClick={() => {
+                          setShowModal(false);
+                          navigate("/#pricing");
+                          setTimeout(() => {
+                            const pricingSection = document.getElementById("pricing");
+                            pricingSection?.scrollIntoView({ behavior: "smooth" });
+                          }, 100);
+                        }}
                       >
                         Desbloquear
                       </Button>

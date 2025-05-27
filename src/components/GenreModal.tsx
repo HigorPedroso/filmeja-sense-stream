@@ -58,12 +58,22 @@ const GenreModal = ({ isOpen, onClose, genre, items, loading }: GenreModalProps)
                     <h3 className="text-xl font-semibold text-white text-center px-4 text-shadow">
                       Recomendação Bloqueada
                     </h3>
-                    <Button
-                      className="bg-filmeja-purple hover:bg-filmeja-purple/90 shadow-lg px-6 py-2 text-base"
-                      onClick={() => navigate("/signup")}
-                    >
-                      Desbloquear
-                    </Button>
+                    <p className="text-sm font-semibold text-white text-center px-4 text-shadow">
+                        Desbloquei gratuitamente
+                      </p>
+                      <Button
+                        className="bg-filmeja-purple hover:bg-filmeja-purple/90 shadow-lg px-6 py-2 text-base"
+                        onClick={() => {
+                          onClose();
+                          navigate("/#pricing");
+                          setTimeout(() => {
+                            const pricingSection = document.getElementById("pricing");
+                            pricingSection?.scrollIntoView({ behavior: "smooth" });
+                          }, 100);
+                        }}
+                      >
+                        Desbloquear
+                      </Button>
                   </div>
                   <img
                     src={`https://image.tmdb.org/t/p/w500${movie.poster_path}`}

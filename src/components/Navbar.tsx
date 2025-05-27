@@ -82,6 +82,16 @@ const Navbar: React.FC<NavbarProps> = ({ transparent = false }) => {
             </Link>
           ) : (
             <>
+              <Link to="/signup">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-white hover:text-filmeja-purple"
+              >
+                <User className="h-5 w-5" />
+              </Button>
+            </Link>
+
               <Button
                 className="bg-filmeja-purple hover:bg-filmeja-purple/90 text-white"
                 onClick={() => setShowChat(true)}
