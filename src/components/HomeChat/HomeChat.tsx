@@ -7,7 +7,6 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/useAuth";
 import { Input } from "../ui/input";
 import { supabase } from "@/integrations/supabase/client";
-import { DialogContent } from "../ui/dialog";
 
 interface ChatStep {
   id: string;
@@ -431,7 +430,7 @@ export function HomeChat({ onClose }: { onClose?: () => void }) {
   };
 
   return (
-    <DialogContent
+    <div
       className="
         fixed md:static top-0 left-0 right-0 bottom-0 z-50
         flex flex-col
@@ -612,6 +611,6 @@ export function HomeChat({ onClose }: { onClose?: () => void }) {
         </AnimatePresence>
         <div ref={chatEndRef} />
       </div>
-    </DialogContent>
+    </div>
   );
 }

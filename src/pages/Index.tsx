@@ -539,7 +539,9 @@ const Index = () => {
               <div className="absolute top-0 left-0 w-full h-full animate-shimmer bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12" />
             </Button>
               <Dialog open={showHomeChat} onOpenChange={setShowHomeChat}>
+        <DialogContent className="sm:max-w-5xl h-[85vh] sm:h-auto sm:min-h-[600px] overflow-y-auto flex flex-col items-center justify-center [&>button:last-child]:hidden">
         <HomeChat />
+        </DialogContent>
       </Dialog>
             </div>
           </div>
