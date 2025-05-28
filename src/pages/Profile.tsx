@@ -473,7 +473,10 @@ export function ProfilePage() {
             onOpenChange={setShowPreferencesModal}
             currentPreferences={{
               genres: profile?.preferences?.genres || [],
-              moods: profile?.preferences?.moods || []
+              moods: profile?.preferences?.moods || [],
+              content_type: profile?.preferences?.content_type || '', 
+              watch_duration: profile?.preferences?.watch_duration || '',
+              watch_time: profile?.preferences?.watch_time || ''
             }}
             onComplete={handlePreferencesUpdate}
             isEditing={true}
