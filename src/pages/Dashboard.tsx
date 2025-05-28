@@ -1195,53 +1195,76 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
     e.preventDefault();
     setIsSigningUp(true);
     setSignupError("");
-  
+
     try {
+      // Get the anonymous user's ID if they're logged in anonymously
+
       const {
         data: { user },
       } = await supabase.auth.getUser();
-  
-      const isAnon = user?.is_anonymous;
-  
-      if (!user) throw new Error("Usuário não autenticado");
-  
-      if (isAnon) {
-        // Vincula o email/senha ao usuário anônimo atual
-        const { data, error } = await supabase.auth.linkIdentity({
-          // email/password provider
-          provider: "Email",
-          // credenciais
-          email: signupEmail,
-          password: signupPassword,
-        });
-  
-        if (error) throw error;
-  
-        // Atualiza os metadados do usuário
-        await supabase.auth.updateUser({
+
+        const isAnon = user.is_anonymous;
+
+      // Sign up with email and password
+      const { data, error } = await supabase.auth.signUp({
+        email: signupEmail,
+        password: signupPassword,
+        options: {
           data: {
             full_name: signupName,
+            // If they were anonymous, link their preferences
+            anonymous_id: isAnon ? user?.id : null,
           },
-        });
-  
-      } else {
-        // Usuário já autenticado não anônimo — não deveria cair aqui
-        throw new Error("Você já possui uma conta.");
-      }
-  
-      // Mostra toast de confirmação
+        },
+      });
+
+      if (error) throw error;
+
+      // Create user profile
+      // if (data.user) {
+      //   const { error: profileError } = await supabase.from("profiles").insert({
+      //     id: data.user.id,
+      //     full_name: signupName,
+      //     created_at: new Date().toISOString(),
+      //   });
+
+      //   if (profileError) throw profileError;
+
+        // If they had onboarding data, save it to their preferences
+        //   const onboardingData = localStorage.getItem("onboarding_data");
+        //   if (onboardingData) {
+        //     const prefs = JSON.parse(onboardingData);
+        //     const { error: prefError } = await supabase
+        //       .from('user_preferences')
+        //       .insert({
+        //         user_id: data.user.id,
+        //         genres: prefs.genres || [],
+        //         content_type: prefs.content_type || "both",
+        //         watch_duration: prefs.watch_duration || "1h+",
+        //         watch_time: prefs.watch_time || "night",
+        //       });
+
+        //     if (prefError) console.error("Error saving preferences:", prefError);
+        //     localStorage.removeItem("onboarding_data");
+        //   }
+        // }
+    
+      
+
+      // Show email confirmation toast
       toast({
         title: "Conta criada com sucesso!",
         description:
           "Enviamos um link de confirmação para o seu e-mail. Por favor, verifique sua caixa de entrada para ativar sua conta.",
         duration: 6000,
       });
-  
+
+      // Show email confirmation dialog
       setShowEmailConfirmationDialog(true);
+
       setShowSignupModal(false);
       setIsAnonymousUser(false);
       localStorage.removeItem("onboarding_data");
-  
     } catch (error: any) {
       console.error("Signup error:", error);
       setSignupError(error.message || "Erro ao criar conta. Tente novamente.");
@@ -1249,7 +1272,6 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
       setIsSigningUp(false);
     }
   };
-  
 
   const handleContentTypeChange = (newType: "movies" | "series") => {
     setContentType(newType);
