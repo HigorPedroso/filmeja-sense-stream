@@ -1208,8 +1208,6 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
       if (isAnon) {
         // Vincula o email/senha ao usuário anônimo atual
         const { data, error } = await supabase.auth.linkIdentity({
-          // email/password provider
-          provider: "email",
           // credenciais
           email: signupEmail,
           password: signupPassword,
