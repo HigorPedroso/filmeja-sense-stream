@@ -15,7 +15,10 @@ import {
   Play,
   Lock,
   Check,
-  Crown, // Add this
+  Crown,
+  Loader2,
+  Info,
+  Mail, // Add this
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ContentCarousel from "@/components/ContentCarousel";
@@ -30,6 +33,8 @@ import ImageBackground from "@/components/ImageBackground";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -54,6 +59,8 @@ import { Sidebar } from "@/components/Sidebar";
 import { MobileSidebar } from "@/components/MobileSidebar";
 import { fetchContentWithProviders } from "@/lib/utils/tmdb";
 import { extractJsonFromResponse } from "@/utils/jsonParser";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 
 // Mock user data - in a real app, this would come from authentication
 const mockUser = {
@@ -183,13 +190,61 @@ const Dashboard = () => {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [showPremiumModal, setShowPremiumModal] = useState(false);
   const [showPremiumFilminModal, setShowPremiumFilminModal] = useState(false);
-  const [onBoardingData, setOnBoardingData] = useState(false)
+  const [onBoardingData, setOnBoardingData] = useState(false);
   const [dailyViews, setDailyViews] = useState(0);
   const [monthlyViews, setMonthlyViews] = useState(0);
+  const [isAnonymousUser, setIsAnonymousUser] = useState(false);
+  const [showSignupPromptModal, setShowSignupPromptModal] = useState(false);
+  const [showSignupModal, setShowSignupModal] = useState(false);
+  const [signupEmail, setSignupEmail] = useState("");
+  const [signupPassword, setSignupPassword] = useState("");
+  const [signupName, setSignupName] = useState("");
+  const [isSigningUp, setIsSigningUp] = useState(false);
+  const [signupError, setSignupError] = useState("");
+  const [showEmailConfirmationDialog, setShowEmailConfirmationDialog] =
+    useState(false);
 
   const [userContentPreference, setUserContentPreference] = useState<
     "movies" | "series" | null
   >(null);
+
+  useEffect(() => {
+    const checkAnonymousUser = async () => {
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        if (user) {
+          // Check if user is anonymous by looking at the provider
+          const isAnon = user.is_anonymous;
+          setIsAnonymousUser(isAnon);
+
+          if (isAnon) {
+            console.log("Anonymous user detected");
+            handleFirst();
+
+            toast({
+              title: "Bem-vindo!",
+              description:
+                "Você está usando uma conta temporária. Crie uma conta para salvar suas preferências.",
+              duration: 6000,
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Error checking anonymous user status:", error);
+      }
+    };
+
+    checkAnonymousUser();
+  }, [toast]);
+
+  useEffect(() => {
+    if (searchParams.get("payment") === "success") {
+      setShowSuccessModal(true);
+    }
+  }, [searchParams]);
 
   const handleGenreSelect = (selectedGenre: { id: number; name: string }) => {
     setGenre(selectedGenre);
@@ -300,7 +355,7 @@ const Dashboard = () => {
       const onboardingData = localStorage.getItem("onboarding_data");
 
       if (onboardingData) {
-        setOnBoardingData(true)
+        setOnBoardingData(true);
         try {
           const data = JSON.parse(onboardingData);
           const { error } = await supabase
@@ -323,12 +378,6 @@ const Dashboard = () => {
 
     saveOnboardingData();
   }, []);
-
-  useEffect(() => {
-    if (searchParams.get("payment") === "success") {
-      setShowSuccessModal(true);
-    }
-  }, [searchParams]);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -429,7 +478,6 @@ const Dashboard = () => {
   };
 
   const handleFirst = async () => {
-
     setIsLoadingRecommendation(true);
     setShowRecommendationModal(true);
     try {
@@ -450,10 +498,13 @@ const Dashboard = () => {
         - Horário preferido: ${onboardingPrefs.watch_time}
         
         Forneça uma lista de 20 filmes premiados que:
-        1. São muito bem avaliados (rating acima de 8)
-        2. Correspondem às preferências do usuário
-        3. São adequados para o horário preferido do usuário
-        4. Ganharam prêmios importantes (Oscar, Globo de Ouro, etc)
+        1. Apenas recomendações de conteudos que estão nos principais streamings
+        2. São muito bem avaliados (rating acima de 8)
+        3. Correspondem às preferências do usuário
+        4. São adequados para o horário preferido do usuário
+        5. Ganharam prêmios importantes (Oscar, Globo de Ouro, etc)
+        6. Sejam acima de 2020, nenhum filme ou série antes desse ano deve ser recomendado
+        
         
         Responda no seguinte formato JSON:
         [
@@ -462,7 +513,9 @@ const Dashboard = () => {
       `;
 
       const geminiResponse = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${import.meta.env.VITE_GEMINI_API_KEY}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${
+          import.meta.env.VITE_GEMINI_API_KEY
+        }`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -490,14 +543,31 @@ const Dashboard = () => {
       }
 
       // Get random suggestion
-      const randomSuggestion = suggestions[Math.floor(Math.random() * suggestions.length)];
+      const randomSuggestion =
+        suggestions[Math.floor(Math.random() * suggestions.length)];
 
       // Fetch full details
       const [details, videos, similar, providers] = await Promise.all([
-        fetch(`https://api.themoviedb.org/3/movie/${randomSuggestion.tmdbId}?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=pt-BR`).then(r => r.json()),
-        fetch(`https://api.themoviedb.org/3/movie/${randomSuggestion.tmdbId}/videos?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=pt-BR`).then(r => r.json()),
-        fetch(`https://api.themoviedb.org/3/movie/${randomSuggestion.tmdbId}/similar?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=pt-BR`).then(r => r.json()),
-        fetch(`https://api.themoviedb.org/3/movie/${randomSuggestion.tmdbId}/watch/providers?api_key=${import.meta.env.VITE_TMDB_API_KEY}`).then(r => r.json()),
+        fetch(
+          `https://api.themoviedb.org/3/movie/${
+            randomSuggestion.tmdbId
+          }?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=pt-BR`
+        ).then((r) => r.json()),
+        fetch(
+          `https://api.themoviedb.org/3/movie/${
+            randomSuggestion.tmdbId
+          }/videos?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=pt-BR`
+        ).then((r) => r.json()),
+        fetch(
+          `https://api.themoviedb.org/3/movie/${
+            randomSuggestion.tmdbId
+          }/similar?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=pt-BR`
+        ).then((r) => r.json()),
+        fetch(
+          `https://api.themoviedb.org/3/movie/${
+            randomSuggestion.tmdbId
+          }/watch/providers?api_key=${import.meta.env.VITE_TMDB_API_KEY}`
+        ).then((r) => r.json()),
       ]);
 
       setMoodRecommendation({
@@ -505,17 +575,16 @@ const Dashboard = () => {
         videos: videos.results,
         providers: providers.results?.BR,
         similar: similar.results,
-        mediaType: 'movie',
+        mediaType: "movie",
       });
 
       localStorage.removeItem("onboarding_data");
-      setShowPremiumFilminModal(false)
-
+      setShowPremiumFilminModal(false);
     } catch (error) {
-      console.error('Error fetching recommendation:', error);
+      console.error("Error fetching recommendation:", error);
       toast({
         title: "Erro",
-        description: "Não foi possível carregar a recomendação",
+        description: "Você já visualizou essa recomendação",
         variant: "destructive",
       });
       setShowRecommendationModal(false);
@@ -1065,6 +1134,85 @@ const Dashboard = () => {
     }
   };
 
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSigningUp(true);
+    setSignupError("");
+
+    try {
+      // Get the anonymous user's ID if they're logged in anonymously
+      const {
+        data: { user: anonymousUser },
+      } = await supabase.auth.getUser();
+      const isAnon = anonymousUser.is_anonymous;
+
+      // Sign up with email and password
+      const { data, error } = await supabase.auth.signUp({
+        email: signupEmail,
+        password: signupPassword,
+        options: {
+          data: {
+            name: signupName,
+            // If they were anonymous, link their preferences
+            anonymous_id: isAnon ? anonymousUser?.id : null,
+          },
+        },
+      });
+
+      if (error) throw error;
+
+      // Create user profile
+      if (data.user) {
+        const { error: profileError } = await supabase.from("profiles").insert({
+          id: data.user.id,
+          full_name: signupName,
+          created_at: new Date().toISOString(),
+        });
+
+        if (profileError) throw profileError;
+
+        // If they had onboarding data, save it to their preferences
+        //   const onboardingData = localStorage.getItem("onboarding_data");
+        //   if (onboardingData) {
+        //     const prefs = JSON.parse(onboardingData);
+        //     const { error: prefError } = await supabase
+        //       .from('user_preferences')
+        //       .insert({
+        //         user_id: data.user.id,
+        //         genres: prefs.genres || [],
+        //         content_type: prefs.content_type || "both",
+        //         watch_duration: prefs.watch_duration || "1h+",
+        //         watch_time: prefs.watch_time || "night",
+        //       });
+
+        //     if (prefError) console.error("Error saving preferences:", prefError);
+        //     localStorage.removeItem("onboarding_data");
+        //   }
+        // }
+      }
+
+      // Show email confirmation toast
+      toast({
+        title: "Conta criada com sucesso!",
+        description:
+          "Enviamos um link de confirmação para o seu e-mail. Por favor, verifique sua caixa de entrada para ativar sua conta.",
+        duration: 6000,
+      });
+
+      // Show email confirmation dialog
+      setShowEmailConfirmationDialog(true);
+
+      setShowSignupModal(false);
+      setIsAnonymousUser(false);
+      localStorage.removeItem("onboarding_data");
+    } catch (error: any) {
+      console.error("Signup error:", error);
+      setSignupError(error.message || "Erro ao criar conta. Tente novamente.");
+    } finally {
+      setIsSigningUp(false);
+    }
+  };
+
   const handleContentTypeChange = (newType: "movies" | "series") => {
     setContentType(newType);
   };
@@ -1154,19 +1302,25 @@ const Dashboard = () => {
 
           {/* Updated container classes for better centering */}
           <div className="flex flex-col md:flex-row items-center justify-center w-full max-w-sm md:max-w-3xl gap-4 md:gap-6">
-            
-          {onBoardingData && 
-          <Button
-              onClick={() => handleFirst()}
-              className="w-full md:w-auto bg-pink-500/20 hover:bg-pink-500/40 border-2 border-pink-500 text-white px-6 md:px-8 py-4 rounded-xl backdrop-blur-sm transition-all active:scale-95 touch-manipulation hover:shadow-lg hover:shadow-pink-500/20"
-            >
-              <Crown className="w-5 h-5 mr-2 md:mr-3 text-pink-300" />
-              Ver recomendação premiada
-            </Button>
-             } 
-            
+            {onBoardingData && (
+              <Button
+                onClick={() => handleFirst()}
+                className="w-full md:w-auto bg-pink-500/20 hover:bg-pink-500/40 border-2 border-pink-500 text-white px-6 md:px-8 py-4 rounded-xl backdrop-blur-sm transition-all active:scale-95 touch-manipulation hover:shadow-lg hover:shadow-pink-500/20"
+              >
+                <Crown className="w-5 h-5 mr-2 md:mr-3 text-pink-300" />
+                Ver recomendação premiada
+              </Button>
+            )}
+
             <Button
-              onClick={() => setShowMoodOverlay(true)}
+              onClick={() => {
+                // Check if user is anonymous before showing mood overlay
+                if (isAnonymousUser) {
+                  setShowSignupPromptModal(true);
+                } else {
+                  setShowMoodOverlay(true);
+                }
+              }}
               className="w-full md:w-auto bg-filmeja-purple/20 hover:bg-filmeja-purple/40 border-2 border-filmeja-purple text-white px-6 md:px-8 py-4 rounded-xl backdrop-blur-sm transition-all active:scale-95 touch-manipulation"
             >
               <Heart className="w-5 h-5 mr-2 md:mr-3" />
@@ -1174,7 +1328,14 @@ const Dashboard = () => {
             </Button>
 
             <Button
-              onClick={() => setShowGenreModal(true)}
+              onClick={() => {
+                // Check if user is anonymous before showing mood overlay
+                if (isAnonymousUser) {
+                  setShowSignupPromptModal(true);
+                } else {
+                  setShowGenreModal(true);
+                }
+              }}
               className="w-full md:w-auto bg-filmeja-blue/20 hover:bg-filmeja-blue/40 border-2 border-filmeja-blue text-white px-6 md:px-8 py-4 rounded-xl backdrop-blur-sm transition-all active:scale-95 touch-manipulation"
             >
               <Film className="w-5 h-5 mr-2 md:mr-3" />
@@ -1183,11 +1344,15 @@ const Dashboard = () => {
 
             <Button
               onClick={() => {
-                if (!isPremium) {
+                // Check if user is anonymous before showing mood overlay
+                if (isAnonymousUser) {
+                  setShowSignupPromptModal(true);
+                } else if (!isPremium) {
                   setShowPremiumFilminModal(true);
                   return;
+                } else {
+                  setShowAiChat(true);
                 }
-                setShowAiChat(true);
               }}
               className="w-full md:w-auto bg-gradient-to-r from-filmeja-purple/20 to-filmeja-blue/20 hover:from-filmeja-purple/40 hover:to-filmeja-blue/40 border-2 border-white text-white px-6 md:px-8 py-4 rounded-xl backdrop-blur-sm transition-all active:scale-95 touch-manipulation"
             >
@@ -1393,6 +1558,196 @@ const Dashboard = () => {
           isOpen={showSuccessModal}
           onClose={() => setShowSuccessModal(false)}
         />
+
+        <Dialog
+          open={showSignupPromptModal}
+          onOpenChange={setShowSignupPromptModal}
+        >
+          <DialogContent className="bg-filmeja-dark/95 border-white/10 text-white">
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-bold mb-2 flex items-center gap-2">
+                <Heart className="w-6 h-6 text-filmeja-purple" />
+                Está gostando do FilmeJá?
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p className="text-lg">
+                Crie sua conta agora mesmo de graça e aproveite mais
+                recomendações personalizadas!
+              </p>
+              <ul className="space-y-2">
+                <li className="flex items-center gap-2">
+                  <Check className="w-5 h-5 text-green-500" />
+                  Salve suas preferências e histórico
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-5 h-5 text-green-500" />
+                  Receba recomendações mais precisas
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-5 h-5 text-green-500" />
+                  Crie sua lista de favoritos
+                </li>
+              </ul>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3 mt-4">
+              <Button
+                onClick={() => {
+                  setShowSignupPromptModal(false);
+                  setShowSignupModal(true);
+                }}
+                className="flex-1 bg-filmeja-purple hover:bg-filmeja-purple/90"
+              >
+                Criar conta
+              </Button>
+              <Button
+                onClick={() => {
+                  setShowSignupPromptModal(false);
+                  setShowMoodOverlay(false);
+                }}
+                variant="outline"
+                className="flex-1 border-white/20 text-white hover:bg-white/10"
+              >
+                Continuar sem conta
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={showSignupModal} onOpenChange={setShowSignupModal}>
+          <DialogContent className="bg-gradient-to-br from-filmeja-dark to-black border-white/10 text-white max-w-md w-full p-0 overflow-hidden">
+            <div className="relative">
+              {/* Background decoration */}
+              <div className="absolute top-0 right-0 w-32 h-32 bg-filmeja-purple/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+              <div className="absolute bottom-0 left-0 w-32 h-32 bg-filmeja-blue/20 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2"></div>
+
+              <div className="p-6 relative z-10">
+                <DialogHeader className="mb-6">
+                  <DialogTitle className="text-2xl font-bold flex items-center gap-2">
+                    <Sparkles className="w-6 h-6 text-filmeja-purple" />
+                    Crie sua conta
+                  </DialogTitle>
+                  <DialogDescription className="text-gray-300">
+                    Junte-se ao FilmeJá e descubra filmes e séries perfeitos
+                    para você.
+                  </DialogDescription>
+                </DialogHeader>
+
+                <form onSubmit={handleSignup} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="name"
+                      className="text-sm font-medium text-gray-200"
+                    >
+                      Nome
+                    </Label>
+                    <Input
+                      id="name"
+                      placeholder="Como podemos te chamar?"
+                      value={signupName}
+                      onChange={(e) => setSignupName(e.target.value)}
+                      required
+                      className="bg-white/5 border-white/10 text-white placeholder:text-gray-400"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="email"
+                      className="text-sm font-medium text-gray-200"
+                    >
+                      E-mail
+                    </Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="seu@email.com"
+                      value={signupEmail}
+                      onChange={(e) => setSignupEmail(e.target.value)}
+                      required
+                      className="bg-white/5 border-white/10 text-white placeholder:text-gray-400"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="password"
+                      className="text-sm font-medium text-gray-200"
+                    >
+                      Senha
+                    </Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      placeholder="Crie uma senha segura"
+                      value={signupPassword}
+                      onChange={(e) => setSignupPassword(e.target.value)}
+                      required
+                      minLength={6}
+                      className="bg-white/5 border-white/10 text-white placeholder:text-gray-400"
+                    />
+                  </div>
+
+                  {signupError && (
+                    <div className="p-3 bg-red-500/20 border border-red-500/30 rounded-md text-sm text-red-200">
+                      {signupError}
+                    </div>
+                  )}
+
+                  <Button
+                    type="submit"
+                    disabled={isSigningUp}
+                    className="w-full bg-gradient-to-r from-filmeja-purple to-filmeja-blue hover:opacity-90 transition-all py-2 h-11"
+                  >
+                    {isSigningUp ? (
+                      <div className="flex items-center justify-center">
+                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                        Criando conta...
+                      </div>
+                    ) : (
+                      "Criar minha conta"
+                    )}
+                  </Button>
+
+                  <div className="text-center text-sm text-gray-400 mt-4">
+                    Ao criar uma conta, você concorda com nossos{" "}
+                    <a
+                      href="https://filmesja.com.br/termos"
+                      target="_blank"
+                      className="text-filmeja-purple hover:underline"
+                    >
+                      Termos de Serviço
+                    </a>{" "}
+                    e{" "}
+                    <a
+                      href="https://filmesja.com.br/privacidade"
+                      target="_blank"
+                      className="text-filmeja-purple hover:underline"
+                    >
+                      Política de Privacidade
+                    </a>
+                  </div>
+                </form>
+
+                {/* <div className="mt-6 pt-6 border-t border-white/10 text-center">
+            <p className="text-sm text-gray-400">
+              Já tem uma conta?{" "}
+              <Button
+                variant="link"
+                className="text-filmeja-purple p-0 h-auto"
+                onClick={() => {
+                  setShowSignupModal(false);
+                  navigate("/login");
+                }}
+              >
+                Entrar
+              </Button>
+            </p>
+          </div> */}
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </ImageBackground>
 
       {/* Main content */}
@@ -1410,6 +1765,9 @@ const Dashboard = () => {
               ?.filter((item) => item.media_type === "movie")
               ?.slice(0, 10)}
             onItemClick={async (item) => {
+              if (isAnonymousUser) {
+                setShowSignupPromptModal(true);
+              } else {
               setShowRecommendationModal(true);
 
               try {
@@ -1420,6 +1778,7 @@ const Dashboard = () => {
               } catch {
                 setShowRecommendationModal(false);
               }
+            }
             }}
           />
 
@@ -1430,6 +1789,9 @@ const Dashboard = () => {
               ?.filter((item) => item.media_type === "tv")
               ?.slice(0, 10)}
             onItemClick={async (item) => {
+              if (isAnonymousUser) {
+                setShowSignupPromptModal(true);
+              } else {
               setShowRecommendationModal(true);
 
               try {
@@ -1440,6 +1802,7 @@ const Dashboard = () => {
               } catch {
                 setShowRecommendationModal(false);
               }
+            }
             }}
           />
 
@@ -1458,14 +1821,19 @@ const Dashboard = () => {
               showFavorites={true}
               favoriteContent={userFavorites}
               onItemClick={async (item) => {
-                setShowRecommendationModal(true);
-                try {
-                  await fetchContentWithProviders(item, {
-                    onLoadingChange: setIsLoadingRecommendation,
-                    onContentFetched: setMoodRecommendation,
-                  });
-                } catch {
-                  setShowRecommendationModal(false);
+                // Check if user is anonymous
+                if (isAnonymousUser) {
+                  setShowSignupPromptModal(true);
+                } else {
+                  setShowRecommendationModal(true);
+                  try {
+                    await fetchContentWithProviders(item, {
+                      onLoadingChange: setIsLoadingRecommendation,
+                      onContentFetched: setMoodRecommendation,
+                    });
+                  } catch {
+                    setShowRecommendationModal(false);
+                  }
                 }
               }}
               onFavoriteUpdate={handleFavoriteUpdate}
@@ -1587,6 +1955,52 @@ const Dashboard = () => {
               >
                 Assinar Premium
               </Button>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog
+            open={showEmailConfirmationDialog}
+            onOpenChange={setShowEmailConfirmationDialog}
+          >
+            <DialogContent className="bg-gradient-to-br from-filmeja-dark to-black border-white/10 text-white max-w-md">
+              <DialogHeader>
+                <DialogTitle className="text-2xl font-bold flex items-center gap-2">
+                  <Mail className="w-6 h-6 text-filmeja-purple" />
+                  Verifique seu e-mail
+                </DialogTitle>
+              </DialogHeader>
+
+              <div className="space-y-4 py-2">
+                <p>
+                  Enviamos um link de confirmação para{" "}
+                  <span className="font-medium text-filmeja-purple">
+                    {signupEmail}
+                  </span>
+                  .
+                </p>
+                <p>
+                  Por favor, verifique sua caixa de entrada e clique no link
+                  para ativar sua conta.
+                </p>
+                <div className="bg-filmeja-purple/10 border border-filmeja-purple/20 rounded-lg p-4 text-sm">
+                  <p className="flex items-start gap-2">
+                    <Info className="w-5 h-5 text-filmeja-purple flex-shrink-0 mt-0.5" />
+                    <span>
+                      Se não encontrar o e-mail, verifique sua pasta de spam ou
+                      lixo eletrônico.
+                    </span>
+                  </p>
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button
+                  onClick={() => setShowEmailConfirmationDialog(false)}
+                  className="w-full bg-gradient-to-r from-filmeja-purple to-filmeja-blue"
+                >
+                  Entendi
+                </Button>
+              </DialogFooter>
             </DialogContent>
           </Dialog>
         </main>

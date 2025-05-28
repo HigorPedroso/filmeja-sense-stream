@@ -12,6 +12,8 @@ import { fetchContentWithProviders } from "@/lib/utils/tmdb";
 import { getContentDetails } from "../lib/tmdb";
 import { toast } from "@/hooks/use-toast";
 import PremiumPaymentModal from "@/components/PremiumPaymentModal"; // Import the modal
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Check, Sparkles } from "lucide-react";
 
 
 interface SidebarProps {
@@ -33,14 +35,20 @@ export function Sidebar({ isExpanded, setIsExpanded, onLogout }: SidebarProps) {
   const [isLoadingRecommendation, setIsLoadingRecommendation] = useState(false);
   const [isPremium, setIsPremium] = useState<boolean>(false);
   const [showPremiumModal, setShowPremiumModal] = useState(false);
+  const [showSignupModal, setShowSignupModal] = useState(false);
+  const [isAnonymousUser, setIsAnonymousUser] = useState(false);
 
   useEffect(() => {
     const fetchUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       setCurrentUser(user);
 
-      // Check premium status
+      // Check if user is anonymous
       if (user) {
+        const isAnon = user.is_anonymous;
+        setIsAnonymousUser(isAnon);
+        
+        // Check premium status
         const { data: profile } = await supabase
           .from("profiles")
           .select("is_premium")
@@ -162,6 +170,16 @@ export function Sidebar({ isExpanded, setIsExpanded, onLogout }: SidebarProps) {
     setIsLoadingRecommendation(false);
   };
 
+  const handleLogoutOrSignup = async () => {
+    if (isAnonymousUser) {
+      // Show signup modal for anonymous users
+      setShowSignupModal(true);
+    } else {
+      // Regular logout for normal users
+      onLogout();
+    }
+  };
+
   return (
     <>
       <div className={`fixed top-0 left-0 h-full transition-all duration-300 z-50 
@@ -279,19 +297,85 @@ export function Sidebar({ isExpanded, setIsExpanded, onLogout }: SidebarProps) {
           </Button>
 
           <Button
-            variant="ghost"
-            className="w-full justify-center py-3 text-gray-300 hover:bg-white/10 hover:text-white transition-colors"
-            onClick={onLogout}
-          >
-            <LogOut className="w-5 h-5 group-hover:text-filmeja-purple transition-colors" />
-            {isExpanded && (
-              <span className="text-sm font-medium group-hover:text-filmeja-purple transition-colors">
-                Sair
-              </span>
-            )}
-          </Button>
+          variant="ghost"
+          className="w-full justify-center py-3 text-gray-300 hover:bg-white/10 hover:text-white transition-colors"
+          onClick={handleLogoutOrSignup}
+        >
+          
+          {isAnonymousUser ? (
+            <>
+              <LogOut className="w-5 h-5 group-hover:text-filmeja-purple transition-colors" />
+              {isExpanded && (
+                <span className="text-sm font-medium group-hover:text-filmeja-purple transition-colors">
+                  Criar Conta
+                </span>
+              )}
+            </>
+          ) : (
+            <>
+              <LogOut className="w-5 h-5 group-hover:text-filmeja-purple transition-colors" />
+              {isExpanded && (
+                <span className="text-sm font-medium group-hover:text-filmeja-purple transition-colors">
+                  Sair
+                </span>
+              )}
+            </>
+          )}
+        </Button>
         </div>
       </div>
+      <Dialog open={showSignupModal} onOpenChange={setShowSignupModal}>
+        <DialogContent className="bg-gradient-to-br from-filmeja-dark to-black border-white/10 text-white max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold flex items-center gap-2">
+              <Sparkles className="w-6 h-6 text-filmeja-purple" />
+              Crie sua conta
+            </DialogTitle>
+            <DialogDescription className="text-gray-300">
+              Salve suas preferências e continue descobrindo filmes e séries incríveis!
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-2">
+            <p>
+              Você está usando uma conta temporária. Crie uma conta permanente para:
+            </p>
+            <ul className="space-y-2">
+              <li className="flex items-center gap-2">
+                <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
+                <span>Salvar suas preferências e histórico</span>
+              </li>
+              <li className="flex items-center gap-2">
+                <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
+                <span>Criar sua lista de favoritos</span>
+              </li>
+              <li className="flex items-center gap-2">
+                <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
+                <span>Receber recomendações personalizadas</span>
+              </li>
+            </ul>
+          </div>
+          
+          <DialogFooter className="flex flex-col sm:flex-row gap-3">
+            <Button 
+              onClick={() => {
+                setShowSignupModal(false);
+                navigate("/signup");
+              }}
+              className="flex-1 bg-gradient-to-r from-filmeja-purple to-filmeja-blue"
+            >
+              Criar minha conta
+            </Button>
+            <Button 
+              variant="outline"
+              onClick={() => setShowSignupModal(false)}
+              className="flex-1 border-white/20 text-white hover:bg-white/10"
+            >
+              Continuar como visitante
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
 
       {showAiChat && (

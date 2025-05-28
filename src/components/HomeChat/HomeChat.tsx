@@ -89,13 +89,25 @@ const signupSteps = {
   password: { question: "Crie uma senha segura:" },
 };
 
+// Replace signupSteps with recommendationStep
+const recommendationStep = {
+  question: "Já tenho uma recomendação perfeita para você! 🎬",
+  options: [
+    { value: "get_recommendation", label: "Ver minha recomendação" }
+  ]
+};
+
 interface SignupData {
   email: string;
   name: string;
   password: string;
 }
 
+// Add this import at the top
+import { useNavigate } from "react-router-dom";
+
 export function HomeChat({ onClose }: { onClose?: () => void }) {
+  const navigate = useNavigate();
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentStep, setCurrentStep] = useState(-1);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -109,10 +121,20 @@ export function HomeChat({ onClose }: { onClose?: () => void }) {
   // Add a state to store the user avatar URL
   const [userAvatar] = useState<string>(() => {
     // Generate a random avatar on component mount
-    const avatarStyles = ["adventurer", "adventurer-neutral", "avataaars", "big-smile", "bottts", "croodles", "fun-emoji", "pixel-art"];
-const randomStyle = avatarStyles[Math.floor(Math.random() * avatarStyles.length)];
-const randomSeed = Math.floor(Math.random() * 1000);
-return `https://api.dicebear.com/7.x/${randomStyle}/svg?seed=${randomSeed}`;
+    const avatarStyles = [
+      "adventurer",
+      "adventurer-neutral",
+      "avataaars",
+      "big-smile",
+      "bottts",
+      "croodles",
+      "fun-emoji",
+      "pixel-art",
+    ];
+    const randomStyle =
+      avatarStyles[Math.floor(Math.random() * avatarStyles.length)];
+    const randomSeed = Math.floor(Math.random() * 1000);
+    return `https://api.dicebear.com/7.x/${randomStyle}/svg?seed=${randomSeed}`;
   });
 
   useEffect(() => {
@@ -135,13 +157,13 @@ return `https://api.dicebear.com/7.x/${randomStyle}/svg?seed=${randomSeed}`;
         ...prev,
         {
           id: Date.now().toString(),
-          text: "Já tenho uma recomendação perfeita para você! 🎬\n\nPara liberar sua recomendação personalizada, crie sua conta gratuita em segundos:",
+          text: "Já tenho uma recomendação perfeita para você! 🎬\n\nClique no botão abaixo para ver o que escolhi especialmente para você:",
           sender: "ai",
-          options: signupSteps.method.options,
+          options: recommendationStep.options,
           currentStep: -1,
         },
       ]);
-      setCurrentSignupStep("method");
+      setCurrentSignupStep("recommendation");
       return;
     }
 
@@ -241,6 +263,22 @@ return `https://api.dicebear.com/7.x/${randomStyle}/svg?seed=${randomSeed}`;
   }, [messages]);
 
   const handleSignupStep = async (value: string) => {
+    if (currentSignupStep === "recommendation" && value === "get_recommendation") {
+      // Show loading message
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now().toString(),
+          text: "Processando sua recomendação personalizada...",
+          sender: "ai",
+        },
+      ]);
+      
+      // Call the anonymous sign in function
+      await handleVerRecomendacao();
+      return;
+    }
+    
     if (currentSignupStep === "method") {
       if (value === "google") {
         try {
@@ -397,7 +435,7 @@ return `https://api.dicebear.com/7.x/${randomStyle}/svg?seed=${randomSeed}`;
                 languages: ["any"],
                 watch_duration: answers["watch-duration"],
                 watch_time: answers["watch-time"],
-              }
+              },
             },
           },
         });
@@ -405,14 +443,17 @@ return `https://api.dicebear.com/7.x/${randomStyle}/svg?seed=${randomSeed}`;
         if (error) throw error;
 
         // Save onboarding data to localStorage for later use
-        localStorage.setItem('onboarding_data', JSON.stringify({
-          genres: answers["favorite-genres"],
-          content_type: answers["content-preference"],
-          languages: ["any"],
-          watch_duration: answers["watch-duration"],
-          watch_time: answers["watch-time"],
-          user_id: data.user!.id
-        }));
+        localStorage.setItem(
+          "onboarding_data",
+          JSON.stringify({
+            genres: answers["favorite-genres"],
+            content_type: answers["content-preference"],
+            languages: ["any"],
+            watch_duration: answers["watch-duration"],
+            watch_time: answers["watch-time"],
+            user_id: data.user!.id,
+          })
+        );
 
         setMessages((prev) => [
           ...prev,
@@ -422,7 +463,6 @@ return `https://api.dicebear.com/7.x/${randomStyle}/svg?seed=${randomSeed}`;
             sender: "ai",
           },
         ]);
-
       } catch (error: any) {
         setMessages((prev) => [
           ...prev,
@@ -438,21 +478,80 @@ return `https://api.dicebear.com/7.x/${randomStyle}/svg?seed=${randomSeed}`;
     }
   };
 
+  // Add the handleVerRecomendacao function
+  const handleVerRecomendacao = async () => {
+    try {
+      const { data, error } = await supabase.auth.signInAnonymously();
+
+      if (error) {
+        console.error("Erro ao fazer login anônimo:", error.message);
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: Date.now().toString(),
+            text: "Ops! Tivemos um problema ao processar sua recomendação. Por favor, tente novamente.",
+            sender: "ai",
+            options: recommendationStep.options,
+          },
+        ]);
+        return;
+      }
+
+      // Save onboarding data to localStorage for later use
+      localStorage.setItem('onboarding_data', JSON.stringify({
+        genres: answers["favorite-genres"] || [],
+        content_type: answers["content-preference"] || "both",
+        languages: ["any"],
+        watch_duration: answers["watch-duration"] || "1h+",
+        watch_time: answers["watch-time"] || "night",
+        user_id: data.user?.id,
+        is_anonymous: true
+      }));
+
+      // Redirect to dashboard
+      navigate("/dashboard");
+    } catch (error) {
+      console.error("Erro inesperado:", error);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now().toString(),
+          text: "Ocorreu um erro inesperado. Por favor, tente novamente mais tarde.",
+          sender: "ai",
+        },
+      ]);
+    }
+  };
+
   return (
     <div className="max-w-xl w-full h-[600px] border rounded-lg flex flex-col overflow-hidden">
       <div className="sticky top-0 z-20 border-b border-white/10 flex items-center gap-2 bg-black/80 backdrop-blur-xl p-4">
         <Bot className="w-5 h-5 text-filmeja-purple" />
-        <h3 className="text-lg font-semibold text-white flex-1">Filmin.AI te ajuda</h3>
+        <h3 className="text-lg font-semibold text-white flex-1">
+          Filmin.AI te ajuda
+        </h3>
         <DialogClose asChild>
-        <Button
-          variant="ghost"
-          className="ml-auto text-white hover:bg-white/10"
-        >
-          <span className="sr-only">Fechar</span>
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M6 6L14 14M14 6L6 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </Button>
+          <Button
+            variant="ghost"
+            className="ml-auto text-white hover:bg-white/10"
+          >
+            <span className="sr-only">Fechar</span>
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 20 20"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M6 6L14 14M14 6L6 14"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </Button>
         </DialogClose>
       </div>
 
@@ -481,12 +580,16 @@ return `https://api.dicebear.com/7.x/${randomStyle}/svg?seed=${randomSeed}`;
                   }`}
                 >
                   {message.sender === "user" ? (
-                    <img src={userAvatar} alt="User Avatar" className="w-full h-full object-cover" />
+                    <img
+                      src={userAvatar}
+                      alt="User Avatar"
+                      className="w-full h-full object-cover"
+                    />
                   ) : (
                     <Bot className="w-5 h-5 text-white" />
                   )}
                 </div>
-                
+
                 {/* Rest of the message rendering code remains the same */}
                 <div
                   className={`p-4 rounded-xl ${
@@ -501,7 +604,8 @@ return `https://api.dicebear.com/7.x/${randomStyle}/svg?seed=${randomSeed}`;
                     <div className="mt-4 space-y-2">
                       {/* Custom layout for favorite-genres: 2 columns per row */}
                       {message.currentStep !== undefined &&
-                        chatSteps[message.currentStep]?.id === "favorite-genres" ? (
+                      chatSteps[message.currentStep]?.id ===
+                        "favorite-genres" ? (
                         <div className="grid grid-cols-2 gap-2">
                           {message.options.map((option) => {
                             const isSelected =
@@ -538,13 +642,14 @@ return `https://api.dicebear.com/7.x/${randomStyle}/svg?seed=${randomSeed}`;
                         <div className="mt-4 space-y-2">
                           {message.options
                             // Hide Google signup option
-                            .filter(option => option.value !== "google")
+                            .filter((option) => option.value !== "google")
                             .map((option) => {
                               const isSelected =
                                 message.currentStep !== undefined &&
                                 chatSteps[message.currentStep]?.multiSelect &&
                                 (
-                                  answers[chatSteps[message.currentStep].id] || []
+                                  answers[chatSteps[message.currentStep].id] ||
+                                  []
                                 ).includes(option.value);
 
                               return (
@@ -578,27 +683,42 @@ return `https://api.dicebear.com/7.x/${randomStyle}/svg?seed=${randomSeed}`;
 
                   {message.requiresInput && (
                     <div className="mt-4">
-
                       <Input
                         key={`input-${message.id}-${currentSignupStep}`}
                         type={message.isPassword ? "password" : "text"}
                         value={inputValues[message.id] || ""}
-                        onChange={(e) => setInputValues(prev => ({ ...prev, [message.id]: e.target.value }))}
+                        onChange={(e) =>
+                          setInputValues((prev) => ({
+                            ...prev,
+                            [message.id]: e.target.value,
+                          }))
+                        }
                         onKeyPress={(e) => {
-                          if (e.key === "Enter" && inputValues[message.id]?.trim()) {
+                          if (
+                            e.key === "Enter" &&
+                            inputValues[message.id]?.trim()
+                          ) {
                             handleSignupStep(inputValues[message.id]);
-                            setInputValues(prev => ({ ...prev, [message.id]: "" }));
+                            setInputValues((prev) => ({
+                              ...prev,
+                              [message.id]: "",
+                            }));
                           }
                         }}
                         className="bg-white/5 border-white/10 text-white"
-                        placeholder={message.isPassword ? "********" : "Digite aqui..."}
+                        placeholder={
+                          message.isPassword ? "********" : "Digite aqui..."
+                        }
                       />
                       <Button
                         className="mt-2 w-full bg-filmeja-purple hover:bg-filmeja-purple/90"
                         onClick={() => {
                           if (inputValues[message.id]?.trim()) {
                             handleSignupStep(inputValues[message.id]);
-                            setInputValues(prev => ({ ...prev, [message.id]: "" }));
+                            setInputValues((prev) => ({
+                              ...prev,
+                              [message.id]: "",
+                            }));
                           }
                         }}
                       >
@@ -613,6 +733,6 @@ return `https://api.dicebear.com/7.x/${randomStyle}/svg?seed=${randomSeed}`;
         </AnimatePresence>
         <div ref={chatEndRef} />
       </div>
-      </div>
+    </div>
   );
 }
