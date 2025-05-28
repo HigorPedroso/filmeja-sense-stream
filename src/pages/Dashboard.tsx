@@ -635,7 +635,7 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
 
       setMoodRecommendation(selectedContent);
 
-      //localStorage.removeItem("onboarding_data");
+      localStorage.removeItem("onboarding_data");
       setShowPremiumFilminModal(false);
     } catch (error) {
       // console.error("Error fetching recommendation:", error);
