@@ -7,6 +7,9 @@ import { AiChat } from "./AiChat/AiChat";
 import { supabase } from "@/integrations/supabase/client";
 import { ContentModal } from "@/components/ContentModal/ContentModal"; // Add this import at the top
 import PremiumPaymentModal from "@/components/PremiumPaymentModal"; // Add this import
+import { SignupPromptModal } from "./modals/SignupPromptModal";
+import { SignupModal } from "./modals/SignupModal";
+import { toast } from "@/hooks/use-toast";
 
 export function MobileSidebar() {
   const navigate = useNavigate();
@@ -19,24 +22,38 @@ export function MobileSidebar() {
   const [isLoadingRecommendation, setIsLoadingRecommendation] = useState(false);
   const [isPremium, setIsPremium] = useState<boolean>(false);
   const [showPremiumModal, setShowPremiumModal] = useState(false);
+  const [showSignupPromptModal, setShowSignupPromptModal] = useState(false);
+const [signupName, setSignupName] = useState("");
+const [signupEmail, setSignupEmail] = useState("");
+const [signupPassword, setSignupPassword] = useState("");
+const [signupError, setSignupError] = useState("");
+const [isSigningUp, setIsSigningUp] = useState(false);
+const [showSignupModal, setShowSignupModal] = useState(false);
+const [isAnonymousUser, setIsAnonymousUser] = useState(false);
 
-  useEffect(() => {
-    const fetchUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setCurrentUser(user);
+useEffect(() => {
+  const fetchUser = async () => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    setCurrentUser(user);
+
+    // Check if user is anonymous
+    if (user) {
+      const isAnon = user.is_anonymous;
+      setIsAnonymousUser(isAnon);
 
       // Check premium status
-      if (user) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("is_premium")
-          .eq("id", user.id)
-          .single();
-        setIsPremium(!!profile?.is_premium);
-      }
-    };
-    fetchUser();
-  }, []);
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("is_premium")
+        .eq("id", user.id)
+        .single();
+      setIsPremium(!!profile?.is_premium);
+    }
+  };
+  fetchUser();
+}, []);
 
   const fetchContentDetails = async (title: string, type?: "movie" | "tv") => {
     setIsLoadingRecommendation(true);
@@ -148,6 +165,37 @@ export function MobileSidebar() {
     setIsLoadingRecommendation(false);
   };
 
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSigningUp(true);
+    setSignupError("");
+  
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: signupEmail,
+        password: signupPassword,
+        options: {
+          data: {
+            name: signupName,
+          },
+        },
+      });
+  
+      if (error) throw error;
+  
+      toast({
+        title: "Conta criada com sucesso!",
+        description: "Enviamos um link de confirmação para o seu e-mail.",
+      });
+  
+      setShowSignupModal(false);
+    } catch (error: any) {
+      setSignupError(error.message);
+    } finally {
+      setIsSigningUp(false);
+    }
+  };
+
   return (
     <>
     {showAiChat && (
@@ -203,7 +251,13 @@ export function MobileSidebar() {
           variant="ghost" 
           className="text-gray-300" 
           title="Minha Lista" 
-          onClick={() => navigate('/favorites')}
+          onClick={() => {
+            if (isAnonymousUser) {
+              setShowSignupPromptModal(true);
+            } else {
+              navigate('/favorites');
+            }
+          }}
         >
           <Heart className="w-5 h-5" />
         </Button>
@@ -212,7 +266,9 @@ export function MobileSidebar() {
           className="text-gray-300"
           title="Recomendados"
           onClick={() => {
-            if (!isPremium) {
+            if (isAnonymousUser) {
+              setShowSignupPromptModal(true);
+            } else if (!isPremium) {
               setShowPremiumModal(true);
             } else {
               setShowAiChat(true);
@@ -225,7 +281,13 @@ export function MobileSidebar() {
           variant="ghost" 
           className="text-gray-300" 
           title="Minha Conta" 
-          onClick={() => navigate('/profile')}
+          onClick={() => {
+            if (isAnonymousUser) {
+              setShowSignupPromptModal(true);
+            } else {
+              navigate('/profile');
+            }
+          }}
         >
           <User className="w-5 h-5" />
         </Button>
@@ -239,6 +301,33 @@ export function MobileSidebar() {
           setShowPremiumModal(false);
         }}
       />
+
+<SignupPromptModal
+          isOpen={showSignupPromptModal}
+          onClose={() => setShowSignupPromptModal(false)}
+          onCreateAccount={() => {
+            setShowSignupPromptModal(false);
+            setShowSignupModal(true);
+          }}
+          onContinueWithoutAccount={() => {
+            setShowSignupPromptModal(false);
+            navigate("/favorites");
+          }}
+        />
+
+        <SignupModal
+          isOpen={showSignupModal}
+          onClose={() => setShowSignupModal(false)}
+          onSubmit={handleSignup}
+          signupName={signupName}
+          setSignupName={setSignupName}
+          signupEmail={signupEmail}
+          setSignupEmail={setSignupEmail}
+          signupPassword={signupPassword}
+          setSignupPassword={setSignupPassword}
+          signupError={signupError}
+          isSigningUp={isSigningUp}
+        />
     </div>
     
     </>
