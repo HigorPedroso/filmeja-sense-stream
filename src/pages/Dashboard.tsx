@@ -1148,7 +1148,7 @@ const Dashboard = () => {
         password: signupPassword,
         options: {
           data: {
-            name: signupName,
+            full_name: signupName,
             // If they were anonymous, link their preferences
             anonymous_id: isAnon ? anonymousUser?.id : null,
           },
@@ -1158,14 +1158,14 @@ const Dashboard = () => {
       if (error) throw error;
 
       // Create user profile
-      if (data.user) {
-        const { error: profileError } = await supabase.from("profiles").insert({
-          id: data.user.id,
-          full_name: signupName,
-          created_at: new Date().toISOString(),
-        });
+      // if (data.user) {
+      //   const { error: profileError } = await supabase.from("profiles").insert({
+      //     id: data.user.id,
+      //     full_name: signupName,
+      //     created_at: new Date().toISOString(),
+      //   });
 
-        if (profileError) throw profileError;
+      //   if (profileError) throw profileError;
 
         // If they had onboarding data, save it to their preferences
         //   const onboardingData = localStorage.getItem("onboarding_data");
@@ -1185,7 +1185,8 @@ const Dashboard = () => {
         //     localStorage.removeItem("onboarding_data");
         //   }
         // }
-      }
+    
+      
 
       // Show email confirmation toast
       toast({
