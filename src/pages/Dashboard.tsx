@@ -211,7 +211,7 @@ const Dashboard = () => {
     useState(false);
 
   const [userContentPreference, setUserContentPreference] = useState<
-    "movies" | "series" | null
+    "movies" | "series" | "both" | null
   >(null);
 
   useEffect(() => {

@@ -28,7 +28,7 @@ export interface MoodRecommendationParams {
       name: string;
     }>;
   }>;
-  userContentPreference: "movies" | "series" | null;
+  userContentPreference: "movies" | "series" | "both" | null;
   recommendationCount: number;
   setIsLoadingRecommendation: (value: boolean) => void;
   setShowRecommendationModal: (value: boolean) => void;
