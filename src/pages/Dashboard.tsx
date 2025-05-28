@@ -45,7 +45,7 @@ import { Onboarding } from "@/components/Onboarding/Onboarding";
 import { supabase } from "@/integrations/supabase/client";
 import { ContentModal } from "@/components/ContentModal/ContentModal";
 import { AiChat } from "@/components/AiChat/AiChat";
-import { fetchMoodRecommendation as fetchMoodRecommendationService } from "@/lib/recommendations/fetchMoodRecommendation";
+import { ContentSuggestion, fetchMoodRecommendation as fetchMoodRecommendationService, shuffleArray } from "@/lib/recommendations/fetchMoodRecommendation";
 import SpinnerWheel from "@/components/SpinnerWheel";
 import { getUserFavorites, FavoriteItem } from "@/lib/favorites";
 import StreamingServices from "@/components/StreamingServices";
@@ -489,24 +489,27 @@ const Dashboard = () => {
       const onboardingPrefs = JSON.parse(onboardingData);
 
       const prompt = `
-        Você é um assistente que responde apenas em JSON válido. 
-        
-        Preferências do usuário:
-        - Gêneros favoritos: ${onboardingPrefs.genres.join(", ")}
-        - Tipo de conteúdo preferido: ${onboardingPrefs.content_type}
-        
-        Forneça uma lista de 2 ${onboardingPrefs.content_type} que:
-        1. Apenas recomendações de conteudos que estão nos principais streamings
-        2. São muito bem avaliados (rating acima de 8)
-        3. Correspondem às preferências do usuário
-        4. Sejam acima de 2020, nenhum filme ou série antes desse ano deve ser recomendado
-        
-        
-        Responda no seguinte formato JSON:
-        [
-          { "title": "Título", "tmdbId": 12345, "description": "Descrição do filme", "tipo": "movie" }
-        ]
-      `;
+Você é um assistente de recomendação de filmes e séries. 
+Responda **apenas em JSON válido** com uma lista de 2 recomendações que **obrigatoriamente** cumpram os critérios abaixo:
+
+1. Estão disponíveis nas principais plataformas de streaming (Netflix, Prime Video, Disney+, HBO Max, Star+)
+2. Têm avaliação maior que 8 no TMDb
+3. Foram lançadas em 2020 ou depois
+4. São do tipo: ${onboardingPrefs.content_type}
+5. Devem corresponder a pelo menos UM dos seguintes gêneros: ${onboardingPrefs.genres.join(", ")}
+
+Formato obrigatório:
+[
+  {
+    "title": "Nome do título",
+    "tmdbId": 12345,
+    "description": "Breve descrição com até 250 caracteres",
+    "tipo": "movie" ou "tv"
+  }
+]
+
+A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
+`;
 
       const geminiResponse = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${
@@ -528,53 +531,111 @@ const Dashboard = () => {
       );
 
       const geminiData = await geminiResponse.json();
+
       const raw = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text;
 
       if (!raw) throw new Error("Empty response from Gemini");
 
-      const suggestions = extractJsonFromResponse(raw);
+      const parsedSuggestions = extractJsonFromResponse(raw) || [];
+    // Ensure we're working with a properly typed array of ContentSuggestion objects
+    const suggestions: ContentSuggestion[] = Array.isArray(parsedSuggestions) ? 
+      parsedSuggestions.map(suggestion => ({
+        title: String(suggestion.title || ""),
+        tmdbId: Number(suggestion.tmdbId || 0),
+        description: String(suggestion.description || ""),
+        tipo: (suggestion.tipo === "tv" ? "tv" : "movie") as "movie" | "tv"
+      })) : [];
 
       if (!suggestions || suggestions.length === 0) {
         throw new Error("No suggestions found");
       }
 
-      // Get random suggestion
-      const randomSuggestion =
-        suggestions[Math.floor(Math.random() * suggestions.length)];
+      const shuffledSuggestions = shuffleArray(suggestions);
 
-      // Fetch full details
-      const [details, videos, similar, providers] = await Promise.all([
-        fetch(
-          `https://api.themoviedb.org/3/movie/${
-            randomSuggestion.tmdbId
-          }?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=pt-BR`
-        ).then((r) => r.json()),
-        fetch(
-          `https://api.themoviedb.org/3/movie/${
-            randomSuggestion.tmdbId
-          }/videos?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=pt-BR`
-        ).then((r) => r.json()),
-        fetch(
-          `https://api.themoviedb.org/3/movie/${
-            randomSuggestion.tmdbId
-          }/similar?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=pt-BR`
-        ).then((r) => r.json()),
-        fetch(
-          `https://api.themoviedb.org/3/movie/${
-            randomSuggestion.tmdbId
-          }/watch/providers?api_key=${import.meta.env.VITE_TMDB_API_KEY}`
-        ).then((r) => r.json()),
-      ]);
+      const suggestionsWithCorrectIds = await Promise.all(
+        shuffledSuggestions.map(async (suggestion) => {
+          try {
+            const searchType = suggestion.tipo === "movie" ? "movie" : "tv";
+            const searchResponse = await fetch(
+              `https://api.themoviedb.org/3/search/${searchType}?api_key=${
+                import.meta.env.VITE_TMDB_API_KEY
+              }&query=${encodeURIComponent(suggestion.title)}&language=pt-BR`
+            );
+            const searchData = await searchResponse.json();
+            
+            if (searchData.results && searchData.results.length > 0) {
+              return {
+                ...suggestion,
+                tmdbId: searchData.results[0].id,
+              };
+            }
+            return suggestion;
+          } catch (error) {
+            console.error("Error searching TMDB:", error);
+            return suggestion;
+          }
+        })
+      );
 
-      setMoodRecommendation({
-        ...details,
-        videos: videos.results,
-        providers: providers.results?.BR,
-        similar: similar.results,
-        mediaType: "movie",
-      });
+      const availableContent = [];
 
-      localStorage.removeItem("onboarding_data");
+      for (const suggestion of suggestionsWithCorrectIds) {
+        try {
+          const [details, videos, similar, providers] = await Promise.all([
+            fetch(
+              `https://api.themoviedb.org/3/${suggestion.tipo}/${suggestion.tmdbId}?api_key=${
+                import.meta.env.VITE_TMDB_API_KEY
+              }&language=pt-BR`
+            ).then(r => r.json()),
+            fetch(
+              `https://api.themoviedb.org/3/${suggestion.tipo}/${suggestion.tmdbId}/videos?api_key=${
+                import.meta.env.VITE_TMDB_API_KEY
+              }&language=pt-BR`
+            ).then(r => r.json()),
+            fetch(
+              `https://api.themoviedb.org/3/${suggestion.tipo}/${suggestion.tmdbId}/similar?api_key=${
+                import.meta.env.VITE_TMDB_API_KEY
+              }&language=pt-BR`
+            ).then(r => r.json()),
+            fetch(
+              `https://api.themoviedb.org/3/${suggestion.tipo}/${suggestion.tmdbId}/watch/providers?api_key=${
+                import.meta.env.VITE_TMDB_API_KEY
+              }`
+            ).then(r => r.json()),
+          ]);
+  
+          if (providers.results?.BR?.flatrate) {
+            availableContent.push({
+              ...details,
+              videos: videos.results,
+              providers: providers.results?.BR,
+              similar: similar.results,
+              mediaType: suggestion.tipo,
+            });
+            
+            if (availableContent.length >= 3) {
+              const randomIndex = Math.floor(Math.random() * availableContent.length);
+              setMoodRecommendation(availableContent[randomIndex]);
+              break;
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching content details:", error);
+          continue;
+        }
+      }
+  
+      if (availableContent.length === 0) {
+        throw new Error("Nenhum conteúdo disponível encontrado");
+      }
+
+       // Select a random recommendation
+    const randomIndex = Math.floor(Math.random() * availableContent.length);
+    const selectedContent = availableContent[randomIndex];
+
+      setMoodRecommendation(selectedContent);
+
+      //localStorage.removeItem("onboarding_data");
       setShowPremiumFilminModal(false);
     } catch (error) {
       // console.error("Error fetching recommendation:", error);
@@ -1137,10 +1198,12 @@ const Dashboard = () => {
 
     try {
       // Get the anonymous user's ID if they're logged in anonymously
+
       const {
-        data: { user: anonymousUser },
+        data: { user },
       } = await supabase.auth.getUser();
-      const isAnon = anonymousUser.is_anonymous;
+
+        const isAnon = user.is_anonymous;
 
       // Sign up with email and password
       const { data, error } = await supabase.auth.signUp({
@@ -1150,7 +1213,7 @@ const Dashboard = () => {
           data: {
             full_name: signupName,
             // If they were anonymous, link their preferences
-            anonymous_id: isAnon ? anonymousUser?.id : null,
+            anonymous_id: isAnon ? user?.id : null,
           },
         },
       });

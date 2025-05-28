@@ -83,8 +83,6 @@ export function AiChat({ onShowContent, watchedContent = [], userAvatar, userId 
       setMessages((prev) => [...prev, userMessage]);
       setInput("");
       setIsTyping(true);
-
-      console.log(`Aqui é o histórico ${recentTitles}`)
   
       const response = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${
