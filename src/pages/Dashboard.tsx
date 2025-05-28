@@ -982,7 +982,7 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
         Últimas recomendações (não recomendar estes títulos também):
         ${JSON.stringify(recentTitles)}
         
-        Forneça uma lista de 50 ${
+        Forneça uma lista de 10 ${
           mediaType === "movie" ? "filmes" : "séries"
         } que são muito populares, bem avaliados e correspondem ao gênero: ${
           genre.name

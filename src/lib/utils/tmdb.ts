@@ -45,6 +45,8 @@ export async function fetchContentWithProviders(
     ]);
 
     let providers = null;
+    let isInTheaters = false;
+
     if (providersData?.results) {
       providers = providersData.results?.BR || providersData.results?.US || null;
       
@@ -60,11 +62,26 @@ export async function fetchContentWithProviders(
       }
     }
 
+    // Check if movie is in theaters when no providers are found
+    if (!providers && item.media_type === 'movie') {
+      const nowPlayingResponse = await fetch(
+        `https://api.themoviedb.org/3/movie/now_playing?api_key=${
+          import.meta.env.VITE_TMDB_API_KEY
+        }&language=pt-BR&region=BR`
+      );
+      const nowPlayingData = await nowPlayingResponse.json();
+      
+      isInTheaters = nowPlayingData.results.some(
+        (movie: { id: number }) => movie.id === item.id
+      );
+    }
+
     const contentDetails = {
       ...item,
       ...details,
       videos: videos.results,
       providers,
+      isInTheaters,
       similar: similar.results,
       mediaType: item.media_type,
     };

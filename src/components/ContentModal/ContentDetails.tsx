@@ -194,13 +194,17 @@ export const ContentDetails = ({
           )}
 
           <div className="flex flex-wrap gap-3">
-            <Button
+          <Button
               className="bg-filmeja-purple hover:bg-filmeja-purple/90"
               onClick={onWatchClick}
-              disabled={!content.providers?.flatrate?.length}
+              disabled={!content.providers?.flatrate?.length && !content.isInTheaters}
             >
               <Play className="w-4 h-4 mr-2" />
-              {content.providers?.flatrate?.length ? "Assistir Agora" : "Somente nos cinemas"}
+              {content.providers?.flatrate?.length 
+                ? "Assistir Agora" 
+                : content.isInTheaters 
+                  ? "Somente nos cinemas" 
+                  : "Assistir Agora"}
             </Button>
             <motion.div whileTap={{ scale: 0.95 }} className="relative">
               <motion.div
