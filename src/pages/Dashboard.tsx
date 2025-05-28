@@ -851,12 +851,17 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
           return; // Exit early
         }
 
-        await supabase.from("user_recommendation_views").upsert({
-          user_id: user.id,
-          view_date: today,
-          daily_views: dailyViews + 1,
-          monthly_views: monthlyViews + 1,
-        });
+        await supabase.from("user_recommendation_views").upsert(
+          {
+            user_id: user.id,
+            view_date: today,
+            daily_views: dailyViews + 1,
+            monthly_views: monthlyViews + 1,
+          },
+          {
+            onConflict: ["user_id", "view_date"], // <- define os campos únicos
+          }
+        );
       }
 
       function extractJsonFromResponse(text: string) {
