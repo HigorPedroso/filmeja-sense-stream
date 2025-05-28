@@ -98,12 +98,17 @@ export async function fetchMoodRecommendation(params: MoodRecommendationParams):
       }
 
       // Update view counts
-      await supabase.from('user_recommendation_views').upsert({
-        user_id: user.id,
-        view_date: today,
-        daily_views: dailyViews + 1,
-        monthly_views: monthlyViews + 1
-      });
+      await supabase.from("user_recommendation_views").upsert(
+        {
+          user_id: user.id,
+          view_date: today,
+          daily_views: dailyViews + 1,
+          monthly_views: monthlyViews + 1,
+        },
+        {
+          onConflict: ["user_id", "view_date"], // <- define os campos únicos
+        }
+      );
     }
 
     // Continue with existing recommendation logic
