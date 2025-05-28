@@ -195,7 +195,7 @@ export function ProfilePage() {
     fetchUserProfile();
   }, [navigate, toast]);
 
-  const handlePreferencesUpdate = async (newPreferences: { genres: string[]; moods: string[] }) => {
+  const handlePreferencesUpdate = async (newPreferences: { genres: string[]; moods: string[], content_type: string, watch_duration: string, watch_time: string }) => {
     try {
       const { error } = await supabase
         .from('user_preferences')
