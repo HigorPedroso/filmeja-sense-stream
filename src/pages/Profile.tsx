@@ -219,7 +219,11 @@ export function ProfilePage() {
         preferences: {
           ...prev.preferences,
           genres: newPreferences.genres,
-          moods: newPreferences.moods
+          moods: newPreferences.moods,
+          languages: newPreferences.moods,
+          content_type: newPreferences.content_type,
+          watch_duration: newPreferences.watch_duration,
+          watch_time: newPreferences.watch_time,
         }
       } : null);
   
