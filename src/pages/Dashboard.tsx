@@ -579,12 +579,12 @@ const Dashboard = () => {
       localStorage.removeItem("onboarding_data");
       setShowPremiumFilminModal(false);
     } catch (error) {
-      console.error("Error fetching recommendation:", error);
-      toast({
-        title: "Erro",
-        description: "Você já visualizou essa recomendação",
-        variant: "destructive",
-      });
+      // console.error("Error fetching recommendation:", error);
+      // toast({
+      //   title: "Erro",
+      //   description: "Você já visualizou essa recomendação",
+      //   variant: "destructive",
+      // });
       setShowRecommendationModal(false);
     } finally {
       setIsLoadingRecommendation(false);
