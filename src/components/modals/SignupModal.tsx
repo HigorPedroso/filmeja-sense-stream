@@ -8,7 +8,10 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Sparkles } from "lucide-react";
+import { useState } from "react";
 
 interface SignupModalProps {
   isOpen: boolean;
@@ -37,6 +40,39 @@ export function SignupModal({
   signupError,
   isSigningUp,
 }: SignupModalProps) {
+
+    const [loading, setLoading] = useState(false);
+
+    const handleGoogleLogin = async () => {
+        setLoading(true);
+        try {
+          const { error } = await supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: {
+              queryParams: {
+                access_type: 'offline',
+                prompt: 'consent',
+              },
+              redirectTo: `${window.location.origin}/dashboard`
+            }
+          });
+    
+          if (error) throw error;
+    
+          // Fix: Don't try to access user data from OAuth response
+          // The OAuth flow redirects the user, so we don't get the user object here
+          // User data will be handled by onAuthStateChange after redirect
+          
+        } catch (error) {
+          toast({
+            title: 'Erro!',
+            description: error.message || 'Ocorreu um erro ao conectar com Google.',
+            variant: 'destructive',
+          });
+          setLoading(false);
+        }
+      };    
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="bg-gradient-to-br from-filmeja-dark to-black border-white/10 text-white max-w-md w-full p-0 overflow-hidden">
@@ -56,6 +92,17 @@ export function SignupModal({
             </DialogHeader>
 
             <form onSubmit={onSubmit} className="space-y-4">
+            <Button 
+              variant="outline" 
+              className="w-full bg-white/5 border-white/10 text-white hover:bg-white/10"
+              onClick={handleGoogleLogin}
+              type="button"
+              disabled={loading}
+            >
+              <img src="/google.png" alt="Google" className="w-5 h-5 mr-2" />
+              Continuar com Google
+            </Button>
+
               <div className="space-y-2">
                 <Label htmlFor="name" className="text-sm font-medium text-gray-200">
                   Nome
