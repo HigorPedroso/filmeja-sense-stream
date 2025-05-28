@@ -203,9 +203,9 @@ export function ProfilePage() {
           user_id: profile?.id,
           genres: newPreferences.genres,
           languages: newPreferences.moods,
-          content_type: profile?.preferences?.content_type || '',
-          watch_duration: profile?.preferences?.watch_duration || '',
-          watch_time: profile?.preferences?.watch_time || '',
+          content_type: newPreferences.content_type,
+          watch_duration: newPreferences.watch_duration || '',
+          watch_time: newPreferences.watch_time || '',
           updated_at: new Date().toISOString(),
           created_at: new Date().toISOString(),
         }, {
