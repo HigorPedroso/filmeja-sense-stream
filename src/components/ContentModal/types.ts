@@ -11,6 +11,7 @@ export interface ContentModalProps {
 }
 
 export interface ContentType {
+  isInTheaters: any;
   id: number;
   title?: string;
   name?: string;
