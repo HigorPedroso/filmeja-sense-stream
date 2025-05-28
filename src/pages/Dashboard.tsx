@@ -495,13 +495,11 @@ const Dashboard = () => {
         - Gêneros favoritos: ${onboardingPrefs.genres.join(", ")}
         - Tipo de conteúdo preferido: ${onboardingPrefs.content_type}
         
-        Forneça uma lista de 20 filmes premiados que:
+        Forneça uma lista de 2 ${onboardingPrefs.content_type} que:
         1. Apenas recomendações de conteudos que estão nos principais streamings
         2. São muito bem avaliados (rating acima de 8)
         3. Correspondem às preferências do usuário
-        4. São adequados para o horário preferido do usuário
-        5. Ganharam prêmios importantes (Oscar, Globo de Ouro, etc)
-        6. Sejam acima de 2020, nenhum filme ou série antes desse ano deve ser recomendado
+        4. Sejam acima de 2020, nenhum filme ou série antes desse ano deve ser recomendado
         
         
         Responda no seguinte formato JSON:
