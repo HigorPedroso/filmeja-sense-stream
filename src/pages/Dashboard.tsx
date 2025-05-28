@@ -494,8 +494,6 @@ const Dashboard = () => {
         Preferências do usuário:
         - Gêneros favoritos: ${onboardingPrefs.genres.join(", ")}
         - Tipo de conteúdo preferido: ${onboardingPrefs.content_type}
-        - Duração preferida: ${onboardingPrefs.watch_duration}
-        - Horário preferido: ${onboardingPrefs.watch_time}
         
         Forneça uma lista de 20 filmes premiados que:
         1. Apenas recomendações de conteudos que estão nos principais streamings
