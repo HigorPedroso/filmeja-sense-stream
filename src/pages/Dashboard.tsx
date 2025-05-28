@@ -45,7 +45,11 @@ import { Onboarding } from "@/components/Onboarding/Onboarding";
 import { supabase } from "@/integrations/supabase/client";
 import { ContentModal } from "@/components/ContentModal/ContentModal";
 import { AiChat } from "@/components/AiChat/AiChat";
-import { ContentSuggestion, fetchMoodRecommendation as fetchMoodRecommendationService, shuffleArray } from "@/lib/recommendations/fetchMoodRecommendation";
+import {
+  ContentSuggestion,
+  fetchMoodRecommendation as fetchMoodRecommendationService,
+  shuffleArray,
+} from "@/lib/recommendations/fetchMoodRecommendation";
 import SpinnerWheel from "@/components/SpinnerWheel";
 import { getUserFavorites, FavoriteItem } from "@/lib/favorites";
 import StreamingServices from "@/components/StreamingServices";
@@ -61,6 +65,8 @@ import { fetchContentWithProviders } from "@/lib/utils/tmdb";
 import { extractJsonFromResponse } from "@/utils/jsonParser";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { SignupPromptModal } from "@/components/modals/SignupPromptModal";
+import { SignupModal } from "@/components/modals/SignupModal";
 
 // Mock user data - in a real app, this would come from authentication
 const mockUser = {
@@ -496,7 +502,9 @@ Responda **apenas em JSON válido** com uma lista de 2 recomendações que **obr
 2. Têm avaliação maior que 8 no TMDb
 3. Foram lançadas em 2020 ou depois
 4. São do tipo: ${onboardingPrefs.content_type}
-5. Devem corresponder a pelo menos UM dos seguintes gêneros: ${onboardingPrefs.genres.join(", ")}
+5. Devem corresponder a pelo menos UM dos seguintes gêneros: ${onboardingPrefs.genres.join(
+        ", "
+      )}
 
 Formato obrigatório:
 [
@@ -537,14 +545,15 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
       if (!raw) throw new Error("Empty response from Gemini");
 
       const parsedSuggestions = extractJsonFromResponse(raw) || [];
-    // Ensure we're working with a properly typed array of ContentSuggestion objects
-    const suggestions: ContentSuggestion[] = Array.isArray(parsedSuggestions) ? 
-      parsedSuggestions.map(suggestion => ({
-        title: String(suggestion.title || ""),
-        tmdbId: Number(suggestion.tmdbId || 0),
-        description: String(suggestion.description || ""),
-        tipo: (suggestion.tipo === "tv" ? "tv" : "movie") as "movie" | "tv"
-      })) : [];
+      // Ensure we're working with a properly typed array of ContentSuggestion objects
+      const suggestions: ContentSuggestion[] = Array.isArray(parsedSuggestions)
+        ? parsedSuggestions.map((suggestion) => ({
+            title: String(suggestion.title || ""),
+            tmdbId: Number(suggestion.tmdbId || 0),
+            description: String(suggestion.description || ""),
+            tipo: (suggestion.tipo === "tv" ? "tv" : "movie") as "movie" | "tv",
+          }))
+        : [];
 
       if (!suggestions || suggestions.length === 0) {
         throw new Error("No suggestions found");
@@ -562,7 +571,7 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
               }&query=${encodeURIComponent(suggestion.title)}&language=pt-BR`
             );
             const searchData = await searchResponse.json();
-            
+
             if (searchData.results && searchData.results.length > 0) {
               return {
                 ...suggestion,
@@ -583,27 +592,31 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
         try {
           const [details, videos, similar, providers] = await Promise.all([
             fetch(
-              `https://api.themoviedb.org/3/${suggestion.tipo}/${suggestion.tmdbId}?api_key=${
+              `https://api.themoviedb.org/3/${suggestion.tipo}/${
+                suggestion.tmdbId
+              }?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=pt-BR`
+            ).then((r) => r.json()),
+            fetch(
+              `https://api.themoviedb.org/3/${suggestion.tipo}/${
+                suggestion.tmdbId
+              }/videos?api_key=${
                 import.meta.env.VITE_TMDB_API_KEY
               }&language=pt-BR`
-            ).then(r => r.json()),
+            ).then((r) => r.json()),
             fetch(
-              `https://api.themoviedb.org/3/${suggestion.tipo}/${suggestion.tmdbId}/videos?api_key=${
+              `https://api.themoviedb.org/3/${suggestion.tipo}/${
+                suggestion.tmdbId
+              }/similar?api_key=${
                 import.meta.env.VITE_TMDB_API_KEY
               }&language=pt-BR`
-            ).then(r => r.json()),
+            ).then((r) => r.json()),
             fetch(
-              `https://api.themoviedb.org/3/${suggestion.tipo}/${suggestion.tmdbId}/similar?api_key=${
-                import.meta.env.VITE_TMDB_API_KEY
-              }&language=pt-BR`
-            ).then(r => r.json()),
-            fetch(
-              `https://api.themoviedb.org/3/${suggestion.tipo}/${suggestion.tmdbId}/watch/providers?api_key=${
-                import.meta.env.VITE_TMDB_API_KEY
-              }`
-            ).then(r => r.json()),
+              `https://api.themoviedb.org/3/${suggestion.tipo}/${
+                suggestion.tmdbId
+              }/watch/providers?api_key=${import.meta.env.VITE_TMDB_API_KEY}`
+            ).then((r) => r.json()),
           ]);
-  
+
           if (providers.results?.BR?.flatrate) {
             availableContent.push({
               ...details,
@@ -612,9 +625,11 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
               similar: similar.results,
               mediaType: suggestion.tipo,
             });
-            
+
             if (availableContent.length >= 3) {
-              const randomIndex = Math.floor(Math.random() * availableContent.length);
+              const randomIndex = Math.floor(
+                Math.random() * availableContent.length
+              );
               setMoodRecommendation(availableContent[randomIndex]);
               break;
             }
@@ -624,14 +639,14 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
           continue;
         }
       }
-  
+
       if (availableContent.length === 0) {
         throw new Error("Nenhum conteúdo disponível encontrado");
       }
 
-       // Select a random recommendation
-    const randomIndex = Math.floor(Math.random() * availableContent.length);
-    const selectedContent = availableContent[randomIndex];
+      // Select a random recommendation
+      const randomIndex = Math.floor(Math.random() * availableContent.length);
+      const selectedContent = availableContent[randomIndex];
 
       setMoodRecommendation(selectedContent);
 
@@ -1203,7 +1218,7 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
         data: { user },
       } = await supabase.auth.getUser();
 
-        const isAnon = user.is_anonymous;
+      const isAnon = user.is_anonymous;
 
       // Sign up with email and password
       const { data, error } = await supabase.auth.signUp({
@@ -1230,26 +1245,24 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
 
       //   if (profileError) throw profileError;
 
-        // If they had onboarding data, save it to their preferences
-        //   const onboardingData = localStorage.getItem("onboarding_data");
-        //   if (onboardingData) {
-        //     const prefs = JSON.parse(onboardingData);
-        //     const { error: prefError } = await supabase
-        //       .from('user_preferences')
-        //       .insert({
-        //         user_id: data.user.id,
-        //         genres: prefs.genres || [],
-        //         content_type: prefs.content_type || "both",
-        //         watch_duration: prefs.watch_duration || "1h+",
-        //         watch_time: prefs.watch_time || "night",
-        //       });
+      // If they had onboarding data, save it to their preferences
+      //   const onboardingData = localStorage.getItem("onboarding_data");
+      //   if (onboardingData) {
+      //     const prefs = JSON.parse(onboardingData);
+      //     const { error: prefError } = await supabase
+      //       .from('user_preferences')
+      //       .insert({
+      //         user_id: data.user.id,
+      //         genres: prefs.genres || [],
+      //         content_type: prefs.content_type || "both",
+      //         watch_duration: prefs.watch_duration || "1h+",
+      //         watch_time: prefs.watch_time || "night",
+      //       });
 
-        //     if (prefError) console.error("Error saving preferences:", prefError);
-        //     localStorage.removeItem("onboarding_data");
-        //   }
-        // }
-    
-      
+      //     if (prefError) console.error("Error saving preferences:", prefError);
+      //     localStorage.removeItem("onboarding_data");
+      //   }
+      // }
 
       // Show email confirmation toast
       toast({
@@ -1619,195 +1632,32 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
           onClose={() => setShowSuccessModal(false)}
         />
 
-        <Dialog
-          open={showSignupPromptModal}
-          onOpenChange={setShowSignupPromptModal}
-        >
-          <DialogContent className="bg-filmeja-dark/95 border-white/10 text-white">
-            <DialogHeader>
-              <DialogTitle className="text-2xl font-bold mb-2 flex items-center gap-2">
-                <Heart className="w-6 h-6 text-filmeja-purple" />
-                Está gostando do FilmeJá?
-              </DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <p className="text-lg">
-                Crie sua conta agora mesmo de graça e aproveite mais
-                recomendações personalizadas!
-              </p>
-              <ul className="space-y-2">
-                <li className="flex items-center gap-2">
-                  <Check className="w-5 h-5 text-green-500" />
-                  Salve suas preferências e histórico
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="w-5 h-5 text-green-500" />
-                  Receba recomendações mais precisas
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="w-5 h-5 text-green-500" />
-                  Crie sua lista de favoritos
-                </li>
-              </ul>
-            </div>
-            <div className="flex flex-col sm:flex-row gap-3 mt-4">
-              <Button
-                onClick={() => {
-                  setShowSignupPromptModal(false);
-                  setShowSignupModal(true);
-                }}
-                className="flex-1 bg-filmeja-purple hover:bg-filmeja-purple/90"
-              >
-                Criar conta
-              </Button>
-              <Button
-                onClick={() => {
-                  setShowSignupPromptModal(false);
-                  setShowMoodOverlay(false);
-                }}
-                variant="outline"
-                className="flex-1 border-white/20 text-white hover:bg-white/10"
-              >
-                Continuar sem conta
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <SignupPromptModal
+          isOpen={showSignupPromptModal}
+          onClose={() => setShowSignupPromptModal(false)}
+          onCreateAccount={() => {
+            setShowSignupPromptModal(false);
+            setShowSignupModal(true);
+          }}
+          onContinueWithoutAccount={() => {
+            setShowSignupPromptModal(false);
+            setShowMoodOverlay(false);
+          }}
+        />
 
-        <Dialog open={showSignupModal} onOpenChange={setShowSignupModal}>
-          <DialogContent className="bg-gradient-to-br from-filmeja-dark to-black border-white/10 text-white max-w-md w-full p-0 overflow-hidden">
-            <div className="relative">
-              {/* Background decoration */}
-              <div className="absolute top-0 right-0 w-32 h-32 bg-filmeja-purple/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
-              <div className="absolute bottom-0 left-0 w-32 h-32 bg-filmeja-blue/20 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2"></div>
-
-              <div className="p-6 relative z-10">
-                <DialogHeader className="mb-6">
-                  <DialogTitle className="text-2xl font-bold flex items-center gap-2">
-                    <Sparkles className="w-6 h-6 text-filmeja-purple" />
-                    Crie sua conta
-                  </DialogTitle>
-                  <DialogDescription className="text-gray-300">
-                    Junte-se ao FilmeJá e descubra filmes e séries perfeitos
-                    para você.
-                  </DialogDescription>
-                </DialogHeader>
-
-                <form onSubmit={handleSignup} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label
-                      htmlFor="name"
-                      className="text-sm font-medium text-gray-200"
-                    >
-                      Nome
-                    </Label>
-                    <Input
-                      id="name"
-                      placeholder="Como podemos te chamar?"
-                      value={signupName}
-                      onChange={(e) => setSignupName(e.target.value)}
-                      required
-                      className="bg-white/5 border-white/10 text-white placeholder:text-gray-400"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label
-                      htmlFor="email"
-                      className="text-sm font-medium text-gray-200"
-                    >
-                      E-mail
-                    </Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="seu@email.com"
-                      value={signupEmail}
-                      onChange={(e) => setSignupEmail(e.target.value)}
-                      required
-                      className="bg-white/5 border-white/10 text-white placeholder:text-gray-400"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label
-                      htmlFor="password"
-                      className="text-sm font-medium text-gray-200"
-                    >
-                      Senha
-                    </Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      placeholder="Crie uma senha segura"
-                      value={signupPassword}
-                      onChange={(e) => setSignupPassword(e.target.value)}
-                      required
-                      minLength={6}
-                      className="bg-white/5 border-white/10 text-white placeholder:text-gray-400"
-                    />
-                  </div>
-
-                  {signupError && (
-                    <div className="p-3 bg-red-500/20 border border-red-500/30 rounded-md text-sm text-red-200">
-                      {signupError}
-                    </div>
-                  )}
-
-                  <Button
-                    type="submit"
-                    disabled={isSigningUp}
-                    className="w-full bg-gradient-to-r from-filmeja-purple to-filmeja-blue hover:opacity-90 transition-all py-2 h-11"
-                  >
-                    {isSigningUp ? (
-                      <div className="flex items-center justify-center">
-                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                        Criando conta...
-                      </div>
-                    ) : (
-                      "Criar minha conta"
-                    )}
-                  </Button>
-
-                  <div className="text-center text-sm text-gray-400 mt-4">
-                    Ao criar uma conta, você concorda com nossos{" "}
-                    <a
-                      href="https://filmesja.com.br/termos"
-                      target="_blank"
-                      className="text-filmeja-purple hover:underline"
-                    >
-                      Termos de Serviço
-                    </a>{" "}
-                    e{" "}
-                    <a
-                      href="https://filmesja.com.br/privacidade"
-                      target="_blank"
-                      className="text-filmeja-purple hover:underline"
-                    >
-                      Política de Privacidade
-                    </a>
-                  </div>
-                </form>
-
-                {/* <div className="mt-6 pt-6 border-t border-white/10 text-center">
-            <p className="text-sm text-gray-400">
-              Já tem uma conta?{" "}
-              <Button
-                variant="link"
-                className="text-filmeja-purple p-0 h-auto"
-                onClick={() => {
-                  setShowSignupModal(false);
-                  navigate("/login");
-                }}
-              >
-                Entrar
-              </Button>
-            </p>
-          </div> */}
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <SignupModal
+          isOpen={showSignupModal}
+          onClose={() => setShowSignupModal(false)}
+          onSubmit={handleSignup}
+          signupName={signupName}
+          setSignupName={setSignupName}
+          signupEmail={signupEmail}
+          setSignupEmail={setSignupEmail}
+          signupPassword={signupPassword}
+          setSignupPassword={setSignupPassword}
+          signupError={signupError}
+          isSigningUp={isSigningUp}
+        />
       </ImageBackground>
 
       {/* Main content */}
@@ -1828,17 +1678,17 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
               if (isAnonymousUser) {
                 setShowSignupPromptModal(true);
               } else {
-              setShowRecommendationModal(true);
+                setShowRecommendationModal(true);
 
-              try {
-                await fetchContentWithProviders(item, {
-                  onLoadingChange: setIsLoadingRecommendation,
-                  onContentFetched: setMoodRecommendation,
-                });
-              } catch {
-                setShowRecommendationModal(false);
+                try {
+                  await fetchContentWithProviders(item, {
+                    onLoadingChange: setIsLoadingRecommendation,
+                    onContentFetched: setMoodRecommendation,
+                  });
+                } catch {
+                  setShowRecommendationModal(false);
+                }
               }
-            }
             }}
           />
 
@@ -1852,17 +1702,17 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
               if (isAnonymousUser) {
                 setShowSignupPromptModal(true);
               } else {
-              setShowRecommendationModal(true);
+                setShowRecommendationModal(true);
 
-              try {
-                await fetchContentWithProviders(item, {
-                  onLoadingChange: setIsLoadingRecommendation,
-                  onContentFetched: setMoodRecommendation,
-                });
-              } catch {
-                setShowRecommendationModal(false);
+                try {
+                  await fetchContentWithProviders(item, {
+                    onLoadingChange: setIsLoadingRecommendation,
+                    onContentFetched: setMoodRecommendation,
+                  });
+                } catch {
+                  setShowRecommendationModal(false);
+                }
               }
-            }
             }}
           />
 
