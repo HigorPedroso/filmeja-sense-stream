@@ -208,7 +208,6 @@ export function ProfilePage() {
         .upsert({
           user_id: profile?.id,
           genres: newPreferences.genres,
-          moods: newPreferences.moods,
           content_type: newPreferences.contentType,
           watch_duration: newPreferences.watchDuration,
           watch_time: newPreferences.watchTime,
@@ -225,8 +224,6 @@ export function ProfilePage() {
         preferences: {
           ...prev.preferences,
           genres: newPreferences.genres,
-          moods: newPreferences.moods,
-          languages: newPreferences.moods,
           content_type: newPreferences.contentType,
           watch_duration: newPreferences.watchDuration,
           watch_time: newPreferences.watchTime,
