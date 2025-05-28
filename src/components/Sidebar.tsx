@@ -189,7 +189,7 @@ export function Sidebar({ isExpanded, setIsExpanded, onLogout }: SidebarProps) {
   const handleLogoutOrSignup = async () => {
     if (isAnonymousUser) {
       // Show signup modal for anonymous users
-      setShowSignupModal(true);
+      setShowSignupPromptModal(true);
     } else {
       // Regular logout for normal users
       onLogout();
