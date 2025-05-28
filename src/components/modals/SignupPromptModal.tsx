@@ -1,11 +1,12 @@
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Check, Heart } from "lucide-react";
+import { Check, Heart, X } from "lucide-react";
 
 interface SignupPromptModalProps {
   isOpen: boolean;
@@ -20,10 +21,13 @@ export function SignupPromptModal({
   onCreateAccount,
   onContinueWithoutAccount,
 }: SignupPromptModalProps) {
-    
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="bg-filmeja-dark/95 border-white/10 text-white">
+        <DialogClose className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+          <X className="h-4 w-4 text-white" />
+          <span className="sr-only">Close</span>
+        </DialogClose>
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold mb-2 flex items-center gap-2">
             <Heart className="w-6 h-6 text-filmeja-purple" />

@@ -1033,6 +1033,13 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
           tipo: string;
         }[] = extractJsonFromResponse(raw) || [];
 
+        if (suggestions.length > 0) {
+          const randomSuggestion = suggestions[Math.floor(Math.random() * suggestions.length)];
+          await fetchContentDetails(randomSuggestion.title, randomSuggestion.tipo as "movie" | "tv");
+        } else {
+          throw new Error("No suggestions found");
+        }
+
         console.log("Sugestões geradas:", suggestions);
       } catch (error) {
         console.error("Erro ao buscar recomendação:", error);
