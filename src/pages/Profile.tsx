@@ -195,17 +195,23 @@ export function ProfilePage() {
     fetchUserProfile();
   }, [navigate, toast]);
 
-  const handlePreferencesUpdate = async (newPreferences: { genres: string[]; moods: string[], content_type: string, watch_duration: string, watch_time: string }) => {
+  const handlePreferencesUpdate = async (newPreferences: { 
+    genres: string[]; 
+    moods: string[]; 
+    contentType: string; 
+    watchDuration: string; 
+    watchTime: string; 
+  }) => {
     try {
       const { error } = await supabase
         .from('user_preferences')
         .upsert({
           user_id: profile?.id,
           genres: newPreferences.genres,
-          languages: newPreferences.moods,
-          content_type: newPreferences.content_type,
-          watch_duration: newPreferences.watch_duration || '',
-          watch_time: newPreferences.watch_time || '',
+          moods: newPreferences.moods,
+          content_type: newPreferences.contentType,
+          watch_duration: newPreferences.watchDuration,
+          watch_time: newPreferences.watchTime,
           updated_at: new Date().toISOString(),
           created_at: new Date().toISOString(),
         }, {
@@ -221,9 +227,9 @@ export function ProfilePage() {
           genres: newPreferences.genres,
           moods: newPreferences.moods,
           languages: newPreferences.moods,
-          content_type: newPreferences.content_type,
-          watch_duration: newPreferences.watch_duration,
-          watch_time: newPreferences.watch_time,
+          content_type: newPreferences.contentType,
+          watch_duration: newPreferences.watchDuration,
+          watch_time: newPreferences.watchTime,
         }
       } : null);
   
