@@ -12,9 +12,17 @@ import { fetchContentWithProviders } from "@/lib/utils/tmdb";
 import { getContentDetails } from "../lib/tmdb";
 import { toast } from "@/hooks/use-toast";
 import PremiumPaymentModal from "@/components/PremiumPaymentModal"; // Import the modal
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Check, Sparkles } from "lucide-react";
-
+import { SignupPromptModal } from "./modals/SignupPromptModal";
+import { SignupModal } from "./modals/SignupModal";
 
 interface SidebarProps {
   isExpanded: boolean;
@@ -37,17 +45,25 @@ export function Sidebar({ isExpanded, setIsExpanded, onLogout }: SidebarProps) {
   const [showPremiumModal, setShowPremiumModal] = useState(false);
   const [showSignupModal, setShowSignupModal] = useState(false);
   const [isAnonymousUser, setIsAnonymousUser] = useState(false);
+  const [showSignupPromptModal, setShowSignupPromptModal] = useState(false);
+  const [signupName, setSignupName] = useState("");
+  const [signupEmail, setSignupEmail] = useState("");
+  const [signupPassword, setSignupPassword] = useState("");
+  const [signupError, setSignupError] = useState("");
+  const [isSigningUp, setIsSigningUp] = useState(false);
 
   useEffect(() => {
     const fetchUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       setCurrentUser(user);
 
       // Check if user is anonymous
       if (user) {
         const isAnon = user.is_anonymous;
         setIsAnonymousUser(isAnon);
-        
+
         // Check premium status
         const { data: profile } = await supabase
           .from("profiles")
@@ -180,54 +196,86 @@ export function Sidebar({ isExpanded, setIsExpanded, onLogout }: SidebarProps) {
     }
   };
 
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSigningUp(true);
+    setSignupError("");
+
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: signupEmail,
+        password: signupPassword,
+        options: {
+          data: {
+            name: signupName,
+          },
+        },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Conta criada com sucesso!",
+        description: "Enviamos um link de confirmação para o seu e-mail.",
+      });
+
+      setShowSignupModal(false);
+    } catch (error: any) {
+      setSignupError(error.message);
+    } finally {
+      setIsSigningUp(false);
+    }
+  };
+
   return (
     <>
-      <div className={`fixed top-0 left-0 h-full transition-all duration-300 z-50 
+      <div
+        className={`fixed top-0 left-0 h-full transition-all duration-300 z-50 
         bg-gradient-to-b from-black via-filmeja-dark/95 to-black/95
         before:absolute before:inset-0 before:bg-[radial-gradient(circle_at_100%_0%,rgba(120,0,255,0.15),transparent_50%)]
         after:absolute after:inset-0 after:bg-[radial-gradient(circle_at_0%_100%,rgba(0,70,255,0.15),transparent_50%)]
         backdrop-blur-xl border-r border-white/[0.02]
         hidden md:block
         ${isExpanded ? "w-[280px]" : "w-[70px]"}`}
-    >
-      <div className="flex flex-col h-full px-4 relative z-10">
-        <div className="flex flex-col h-full px-2 relative z-10">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="absolute -right-3 top-6 w-6 h-6 rounded-full bg-filmeja-purple/20 hover:bg-filmeja-purple/30 p-1"
-          >
-            {isExpanded ? "←" : "→"}
-          </Button>
-          
-          <div className="py-8 flex justify-center">
-            {isExpanded ? (
-              <h1 className="text-3xl font-bold text-white bg-gradient-to-r from-filmeja-purple to-filmeja-blue bg-clip-text text-transparent">
-                FilmeJá
-              </h1>
-            ) : (
-              <Film className="w-6 h-6 text-filmeja-purple" />
-            )}
+      >
+        <div className="flex flex-col h-full px-4 relative z-10">
+          <div className="flex flex-col h-full px-2 relative z-10">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="absolute -right-3 top-6 w-6 h-6 rounded-full bg-filmeja-purple/20 hover:bg-filmeja-purple/30 p-1"
+            >
+              {isExpanded ? "←" : "→"}
+            </Button>
+
+            <div className="py-8 flex justify-center">
+              {isExpanded ? (
+                <h1 className="text-3xl font-bold text-white bg-gradient-to-r from-filmeja-purple to-filmeja-blue bg-clip-text text-transparent">
+                  FilmeJá
+                </h1>
+              ) : (
+                <Film className="w-6 h-6 text-filmeja-purple" />
+              )}
+            </div>
           </div>
-        </div>
 
-        <div className="flex-1">
-          <nav className="space-y-1">
-            <div className="pb-4">
-              <Button
-                variant="ghost"
-                className="w-full justify-center py-3 text-gray-300 hover:bg-white/10 hover:text-white transition-colors"
-                title="Início"
-                onClick={() => navigate('/dashboard')}
-              >
-                <Home className="w-5 h-5" />
-                {isExpanded && (
-                  <span className="ml-3 text-sm font-medium">Início</span>
-                )}
-              </Button>
+          <div className="flex-1">
+            <nav className="space-y-1">
+              <div className="pb-4">
+                <Button
+                  variant="ghost"
+                  className="w-full justify-center py-3 text-gray-300 hover:bg-white/10 hover:text-white transition-colors"
+                  title="Início"
+                  onClick={() => navigate("/dashboard")}
+                >
+                  <Home className="w-5 h-5" />
+                  {isExpanded && (
+                    <span className="ml-3 text-sm font-medium">Início</span>
+                  )}
+                </Button>
 
-              {/* <Button
+                {/* <Button
                 variant="ghost"
                 className="w-full justify-center py-3 text-gray-300 hover:bg-white/10 hover:text-white transition-colors"
                 title="Novidades"
@@ -237,146 +285,182 @@ export function Sidebar({ isExpanded, setIsExpanded, onLogout }: SidebarProps) {
                   <span className="text-sm font-medium">Novidades</span>
                 )}
               </Button> */}
-            </div>
+              </div>
 
-            <div className="pb-4">
-              <Button
-                variant="ghost"
-                className="w-full justify-center py-3 text-gray-300 hover:bg-white/10 hover:text-white transition-colors"
-                title="Minha Lista"
-                onClick={() => navigate('/favorites')}
-              >
-                <Heart className="w-5 h-5" />
-                {isExpanded && (
-                  <span className="text-sm font-medium">Minha Lista</span>
-                )}
-              </Button>
+              <div className="pb-4">
+                <Button
+                  variant="ghost"
+                  className="w-full justify-center py-3 text-gray-300 hover:bg-white/10 hover:text-white transition-colors"
+                  title="Minha Lista"
+                  onClick={() => {
+                    if (isAnonymousUser) {
+                      setShowSignupPromptModal(true);
+                    } else {
+                      navigate("/favorites");
+                    }
+                  }}
+                >
+                  <Heart className="w-5 h-5" />
+                  {isExpanded && (
+                    <span className="text-sm font-medium">Minha Lista</span>
+                  )}
+                </Button>
 
-              <Button
-                variant="ghost"
-                className="w-full justify-center py-3 text-gray-300 hover:bg-white/10 hover:text-white transition-colors"
-                title="Chat com IA"
-                onClick={() => {
-                  if (!isPremium) {
-                    setShowPremiumModal(true);
-                  } else {
-                    setShowAiChat(true);
-                  }
+                <Button
+                  variant="ghost"
+                  className="w-full justify-center py-3 text-gray-300 hover:bg-white/10 hover:text-white transition-colors"
+                  title="Chat com IA"
+                  onClick={() => {
+                    if (!isPremium) {
+                      setShowPremiumModal(true);
+                    } else {
+                      setShowAiChat(true);
+                    }
+                  }}
+                >
+                  <MessageSquare className="w-5 h-5" />
+                  {isExpanded && (
+                    <span className="text-sm font-medium">
+                      Converse com Filmin.AI
+                    </span>
+                  )}
+                </Button>
+              </div>
+
+              {/* Premium Modal */}
+              <PremiumPaymentModal
+                isOpen={showPremiumModal}
+                onClose={() => setShowPremiumModal(false)}
+                onSuccess={() => {
+                  setIsPremium(true);
+                  setShowPremiumModal(false);
                 }}
-              >
-                <MessageSquare className="w-5 h-5" />
-                {isExpanded && (
-                  <span className="text-sm font-medium">Converse com Filmin.AI</span>
-                )}
-              </Button>
+              />
+            </nav>
+          </div>
+
+          <div className="pb-8 pt-4 border-t border-white/10">
+            <Button
+              variant="ghost"
+              className="w-full justify-center py-3 text-gray-300 hover:bg-white/10 hover:text-white transition-colors"
+              title="Minha Conta"
+              onClick={() => navigate("/profile")}
+            >
+              <User className="w-5 h-5" />
+              {isExpanded && (
+                <span className="text-sm font-medium">Minha Conta</span>
+              )}
+            </Button>
+
+            <Button
+              variant="ghost"
+              className="w-full justify-center py-3 text-gray-300 hover:bg-white/10 hover:text-white transition-colors"
+              onClick={handleLogoutOrSignup}
+            >
+              {isAnonymousUser ? (
+                <>
+                  <LogOut className="w-5 h-5 group-hover:text-filmeja-purple transition-colors" />
+                  {isExpanded && (
+                    <span className="text-sm font-medium group-hover:text-filmeja-purple transition-colors">
+                      Criar Conta
+                    </span>
+                  )}
+                </>
+              ) : (
+                <>
+                  <LogOut className="w-5 h-5 group-hover:text-filmeja-purple transition-colors" />
+                  {isExpanded && (
+                    <span className="text-sm font-medium group-hover:text-filmeja-purple transition-colors">
+                      Sair
+                    </span>
+                  )}
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+        <Dialog open={showSignupModal} onOpenChange={setShowSignupModal}>
+          <DialogContent className="bg-gradient-to-br from-filmeja-dark to-black border-white/10 text-white max-w-md">
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-bold flex items-center gap-2">
+                <Sparkles className="w-6 h-6 text-filmeja-purple" />
+                Crie sua conta
+              </DialogTitle>
+              <DialogDescription className="text-gray-300">
+                Salve suas preferências e continue descobrindo filmes e séries
+                incríveis!
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-2">
+              <p>
+                Você está usando uma conta temporária. Crie uma conta permanente
+                para:
+              </p>
+              <ul className="space-y-2">
+                <li className="flex items-center gap-2">
+                  <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
+                  <span>Salvar suas preferências e histórico</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
+                  <span>Criar sua lista de favoritos</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
+                  <span>Receber recomendações personalizadas</span>
+                </li>
+              </ul>
             </div>
 
-            {/* Premium Modal */}
-            <PremiumPaymentModal
-              isOpen={showPremiumModal}
-              onClose={() => setShowPremiumModal(false)}
-              onSuccess={() => {
-                setIsPremium(true);
-                setShowPremiumModal(false);
-              }}
-            />
-          </nav>
-        </div>
+            <DialogFooter className="flex flex-col sm:flex-row gap-3">
+              <Button
+                onClick={() => {
+                  setShowSignupModal(false);
+                  navigate("/signup");
+                }}
+                className="flex-1 bg-gradient-to-r from-filmeja-purple to-filmeja-blue"
+              >
+                Criar minha conta
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setShowSignupModal(false)}
+                className="flex-1 border-white/20 text-white hover:bg-white/10"
+              >
+                Continuar como visitante
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
-        <div className="pb-8 pt-4 border-t border-white/10">
-          <Button
-            variant="ghost"
-            className="w-full justify-center py-3 text-gray-300 hover:bg-white/10 hover:text-white transition-colors"
-            title="Minha Conta"
-            onClick={() => navigate('/profile')}
-          >
-            <User className="w-5 h-5" />
-            {isExpanded && (
-              <span className="text-sm font-medium">Minha Conta</span>
-            )}
-          </Button>
+        <SignupPromptModal
+          isOpen={showSignupPromptModal}
+          onClose={() => setShowSignupPromptModal(false)}
+          onCreateAccount={() => {
+            setShowSignupPromptModal(false);
+            setShowSignupModal(true);
+          }}
+          onContinueWithoutAccount={() => {
+            setShowSignupPromptModal(false);
+            navigate("/favorites");
+          }}
+        />
 
-          <Button
-          variant="ghost"
-          className="w-full justify-center py-3 text-gray-300 hover:bg-white/10 hover:text-white transition-colors"
-          onClick={handleLogoutOrSignup}
-        >
-          
-          {isAnonymousUser ? (
-            <>
-              <LogOut className="w-5 h-5 group-hover:text-filmeja-purple transition-colors" />
-              {isExpanded && (
-                <span className="text-sm font-medium group-hover:text-filmeja-purple transition-colors">
-                  Criar Conta
-                </span>
-              )}
-            </>
-          ) : (
-            <>
-              <LogOut className="w-5 h-5 group-hover:text-filmeja-purple transition-colors" />
-              {isExpanded && (
-                <span className="text-sm font-medium group-hover:text-filmeja-purple transition-colors">
-                  Sair
-                </span>
-              )}
-            </>
-          )}
-        </Button>
-        </div>
+        <SignupModal
+          isOpen={showSignupModal}
+          onClose={() => setShowSignupModal(false)}
+          onSubmit={handleSignup}
+          signupName={signupName}
+          setSignupName={setSignupName}
+          signupEmail={signupEmail}
+          setSignupEmail={setSignupEmail}
+          signupPassword={signupPassword}
+          setSignupPassword={setSignupPassword}
+          signupError={signupError}
+          isSigningUp={isSigningUp}
+        />
       </div>
-      <Dialog open={showSignupModal} onOpenChange={setShowSignupModal}>
-        <DialogContent className="bg-gradient-to-br from-filmeja-dark to-black border-white/10 text-white max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-bold flex items-center gap-2">
-              <Sparkles className="w-6 h-6 text-filmeja-purple" />
-              Crie sua conta
-            </DialogTitle>
-            <DialogDescription className="text-gray-300">
-              Salve suas preferências e continue descobrindo filmes e séries incríveis!
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4 py-2">
-            <p>
-              Você está usando uma conta temporária. Crie uma conta permanente para:
-            </p>
-            <ul className="space-y-2">
-              <li className="flex items-center gap-2">
-                <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
-                <span>Salvar suas preferências e histórico</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
-                <span>Criar sua lista de favoritos</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
-                <span>Receber recomendações personalizadas</span>
-              </li>
-            </ul>
-          </div>
-          
-          <DialogFooter className="flex flex-col sm:flex-row gap-3">
-            <Button 
-              onClick={() => {
-                setShowSignupModal(false);
-                navigate("/signup");
-              }}
-              className="flex-1 bg-gradient-to-r from-filmeja-purple to-filmeja-blue"
-            >
-              Criar minha conta
-            </Button>
-            <Button 
-              variant="outline"
-              onClick={() => setShowSignupModal(false)}
-              className="flex-1 border-white/20 text-white hover:bg-white/10"
-            >
-              Continuar como visitante
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
 
       {showAiChat && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">

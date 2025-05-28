@@ -20,6 +20,7 @@ export function SignupPromptModal({
   onCreateAccount,
   onContinueWithoutAccount,
 }: SignupPromptModalProps) {
+    
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="bg-filmeja-dark/95 border-white/10 text-white">
