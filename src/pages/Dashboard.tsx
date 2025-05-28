@@ -1300,7 +1300,7 @@ const Dashboard = () => {
 
           {/* Updated container classes for better centering */}
           <div className="flex flex-col md:flex-row items-center justify-center w-full max-w-sm md:max-w-3xl gap-4 md:gap-6">
-            {onBoardingData && (
+            {/* {onBoardingData && (
               <Button
                 onClick={() => handleFirst()}
                 className="w-full md:w-auto bg-pink-500/20 hover:bg-pink-500/40 border-2 border-pink-500 text-white px-6 md:px-8 py-4 rounded-xl backdrop-blur-sm transition-all active:scale-95 touch-manipulation hover:shadow-lg hover:shadow-pink-500/20"
@@ -1308,7 +1308,7 @@ const Dashboard = () => {
                 <Crown className="w-5 h-5 mr-2 md:mr-3 text-pink-300" />
                 Ver recomendação premiada
               </Button>
-            )}
+            )} */}
 
             <Button
               onClick={() => {
