@@ -311,7 +311,9 @@ export function Sidebar({ isExpanded, setIsExpanded, onLogout }: SidebarProps) {
                   className="w-full justify-center py-3 text-gray-300 hover:bg-white/10 hover:text-white transition-colors"
                   title="Chat com IA"
                   onClick={() => {
-                    if (!isPremium) {
+                    if (isAnonymousUser) {
+                      setShowSignupPromptModal(true);
+                    } else if (!isPremium) {
                       setShowPremiumModal(true);
                     } else {
                       setShowAiChat(true);
