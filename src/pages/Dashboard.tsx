@@ -67,6 +67,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { SignupPromptModal } from "@/components/modals/SignupPromptModal";
 import { SignupModal } from "@/components/modals/SignupModal";
+import { useGoogleAdsPageView } from "@/hooks/useGoogleAds";
 
 // Mock user data - in a real app, this would come from authentication
 const mockUser = {
@@ -207,6 +208,7 @@ const Dashboard = () => {
   const [signupName, setSignupName] = useState("");
   const [isSigningUp, setIsSigningUp] = useState(false);
   const [signupError, setSignupError] = useState("");
+  const { trackConversion } = useGoogleAdsPageView();
   const [showEmailConfirmationDialog, setShowEmailConfirmationDialog] =
     useState(false);
 
@@ -336,6 +338,10 @@ const Dashboard = () => {
     const favorites = await getUserFavorites();
     setUserFavorites(favorites);
   };
+
+  useEffect(() => {
+    trackConversion('NejPCIvNgswaELyn48kD');
+  })
 
   // Fetch trending content on mount
   useEffect(() => {

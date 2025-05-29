@@ -12,3 +12,15 @@ export const useGoogleAds = () => {
     }
   }, [location]);
 };
+
+export const useGoogleAdsPageView = () => {
+  const trackConversion = (conversionId: string) => {
+    if (window.gtag) {
+      window.gtag('event', 'conversion', {
+        'send_to': `AW-960025532/${conversionId}`
+      });
+    }
+  };
+
+  return { trackConversion };
+};
