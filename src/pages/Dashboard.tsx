@@ -340,8 +340,8 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
-    trackConversion('NejPCIvNgswaELyn48kD');
-  })
+    trackConversion("NejPCIvNgswaELyn48kD");
+  });
 
   // Fetch trending content on mount
   useEffect(() => {
@@ -841,6 +841,7 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
         const dailyViews = viewStats?.daily_views || 0;
         const monthlyViews = viewStats?.monthly_views || 0;
 
+        // Só realiza o bloqueio se o usuário NÃO for premium
         if (dailyViews >= 1 || monthlyViews >= 5) {
           setShowPremiumModal(true);
           setDailyViews(dailyViews);
@@ -1045,8 +1046,12 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
         }[] = extractJsonFromResponse(raw) || [];
 
         if (suggestions.length > 0) {
-          const randomSuggestion = suggestions[Math.floor(Math.random() * suggestions.length)];
-          await fetchContentDetails(randomSuggestion.title, randomSuggestion.tipo as "movie" | "tv");
+          const randomSuggestion =
+            suggestions[Math.floor(Math.random() * suggestions.length)];
+          await fetchContentDetails(
+            randomSuggestion.title,
+            randomSuggestion.tipo as "movie" | "tv"
+          );
         } else {
           throw new Error("No suggestions found");
         }
@@ -1401,7 +1406,7 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
                 <Crown className="w-5 h-5 mr-2 md:mr-3 text-pink-300" />
                 Ver recomendação premiada
               </Button>
-            )} */}
+            }*/}
 
             <Button
               onClick={() => {
