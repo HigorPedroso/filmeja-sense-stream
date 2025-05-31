@@ -835,10 +835,18 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
         .in("subscription_status", ["active", "canceling"])
         .single();
 
-      const isPremium =
-        subscriber &&
-        (!subscriber.current_period_end ||
-          new Date(subscriber.current_period_end) > new Date());
+      let isPremium = false;
+      if (subscriber) {
+        if (subscriber.subscription_status === "active") {
+          isPremium = true;
+        } else if (
+          subscriber.subscription_status === "canceling" &&
+          subscriber.current_period_end &&
+          new Date(subscriber.current_period_end) > new Date()
+        ) {
+          isPremium = true;
+        }
+      }
 
       if (!isPremium) {
         const today = new Date().toISOString().split("T")[0];
