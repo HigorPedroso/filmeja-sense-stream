@@ -278,16 +278,14 @@ const Dashboard = () => {
 
           for (const item of watchedContent) {
             const response = await fetch(
-              `https://api.themoviedb.org/3/${item.media_type}/${
-                item.tmdb_id
-              }?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=pt-BR`
+              `https://api.themoviedb.org/3/${item.media_type}/${item.tmdb_id}?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=pt-BR`
             );
             const details = await response.json();
 
             if (item.media_type === "movie") {
-              movies.push(details);
+              movies.push({ ...details, media_type: "movie", id: item.tmdb_id });
             } else {
-              series.push(details);
+              series.push({ ...details, media_type: "tv", id: item.tmdb_id });
             }
           }
 
