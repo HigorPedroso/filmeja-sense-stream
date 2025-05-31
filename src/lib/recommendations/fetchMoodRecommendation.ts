@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { MoodType } from "@/types/movie";
 import { extractJsonFromResponse } from "@/utils/jsonParser";
@@ -65,14 +64,37 @@ export async function fetchMoodRecommendation(params: MoodRecommendationParams):
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("User not authenticated");
 
-    // Check user subscription status
-    const { data: userProfile } = await supabase
-      .from('profiles')
-      .select('is_premium')
-      .eq('id', user.id)
+    // Busca o profile para garantir o id correto
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("id", user.id)
       .single();
 
-    if (!userProfile?.is_premium) {
+    if (!profile?.id) throw new Error("Profile not found");
+
+    // Agora verifica na tabela subscribers se é premium
+    const { data: subscriber } = await supabase
+      .from("subscribers")
+      .select("subscription_status, current_period_end")
+      .eq("user_id", profile.id)
+      .in("subscription_status", ["active", "canceling"])
+      .single();
+
+    let isPremium = false;
+    if (subscriber) {
+      if (subscriber.subscription_status === "active") {
+        isPremium = true;
+      } else if (
+        subscriber.subscription_status === "canceling" &&
+        subscriber.current_period_end &&
+        new Date(subscriber.current_period_end) > new Date()
+      ) {
+        isPremium = true;
+      }
+    }
+
+    if (!isPremium) {
       // Check view limits for free users
       const today = new Date().toISOString().split('T')[0];
       const monthStart = new Date(today.slice(0, 7) + '-01').toISOString();
