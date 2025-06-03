@@ -28,6 +28,14 @@ import { HelmetProvider } from "react-helmet-async";
 import { getUserFavorites } from "./lib/favorites";
 import { useGoogleAds } from './hooks/useGoogleAds';
 
+// Extend the Window interface to include fbq and _fbq
+declare global {
+  interface Window {
+    fbq?: (...args: any[]) => void;
+    _fbq?: any;
+  }
+}
+
 
 const queryClient = new QueryClient();
 
@@ -43,20 +51,63 @@ const App = () => {
     fetchFavorites();
   }, []);
 
+  useEffect(() => {
+    // Facebook Pixel Script
+    !(function(f, b, e, v, n, t, s) {
+      if (f.fbq) return;
+      n = f.fbq = function() {
+        n.callMethod
+          ? n.callMethod.apply(n, arguments)
+          : n.queue.push(arguments);
+      };
+      if (!f._fbq) f._fbq = n;
+      n.push = n;
+      n.loaded = !0;
+      n.version = "2.0";
+      n.queue = [];
+      t = b.createElement(e);
+      t.async = !0;
+      t.src = v;
+      s = b.getElementsByTagName(e)[0];
+      s.parentNode.insertBefore(t, s);
+    })(
+      window,
+      document,
+      "script",
+      "https://connect.facebook.net/en_US/fbevents.js"
+    );
+    // @ts-ignore
+    window.fbq && window.fbq("init", "1282172123633625");
+    // @ts-ignore
+    window.fbq && window.fbq("track", "PageView");
+  }, []);
+
   return (
-    <HelmetProvider>
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <AppContent favoriteItems={favoriteItems} />
-            </BrowserRouter>
-          </TooltipProvider>
-        </AuthProvider>
-      </QueryClientProvider>
-    </HelmetProvider>
+    <>
+      <HelmetProvider>
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
+                <AppContent favoriteItems={favoriteItems} />
+              </BrowserRouter>
+            </TooltipProvider>
+          </AuthProvider>
+        </QueryClientProvider>
+      </HelmetProvider>
+      {/* Facebook Pixel noscript fallback */}
+      <noscript>
+        <img
+          height="1"
+          width="1"
+          style={{ display: "none" }}
+          src="https://www.facebook.com/tr?id=1282172123633625&ev=PageView&noscript=1"
+          alt=""
+        />
+      </noscript>
+    </>
   );
 };
 
