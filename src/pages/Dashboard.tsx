@@ -863,7 +863,7 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
         const monthlyViews = viewStats?.monthly_views || 0;
 
         // Só realiza o bloqueio se o usuário NÃO for premium
-        if (dailyViews >= 1 || monthlyViews >= 5) {
+        if (dailyViews >= 2 || monthlyViews >= 10) {
           setShowPremiumModal(true);
           setDailyViews(dailyViews);
           setMonthlyViews(monthlyViews);
