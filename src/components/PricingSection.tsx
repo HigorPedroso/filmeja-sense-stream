@@ -6,8 +6,8 @@ import { Link } from 'react-router-dom';
 
 const features = {
   free: [
-    '1 recomendação por dia',
-    'Até 5 recomendações por mês',
+    '10 recomendações por dia',
+    'Até 50 recomendações por mês',
     'Detalhes essenciais sobre filmes e séries',
     'Onde assistir (links para streamings)',
   ],
