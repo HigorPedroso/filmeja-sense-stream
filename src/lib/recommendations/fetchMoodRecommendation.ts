@@ -111,7 +111,7 @@ export async function fetchMoodRecommendation(params: MoodRecommendationParams):
       const dailyViews = viewStats?.daily_views || 0;
       const monthlyViews = viewStats?.monthly_views || 0;
 
-      if (dailyViews >= 2 || monthlyViews >= 10) {
+      if (dailyViews >= 10 || monthlyViews >= 50) {
         setShowRecommendationModal(false);
         throw {
           type: 'PREMIUM_REQUIRED',
