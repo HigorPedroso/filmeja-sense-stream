@@ -77,7 +77,7 @@ const App = () => {
       "https://connect.facebook.net/en_US/fbevents.js"
     );
     // @ts-ignore
-    window.fbq && window.fbq("init", "1282172123633625");
+    window.fbq && window.fbq("init", "1904038070390906");
     // @ts-ignore
     window.fbq && window.fbq("track", "PageView");
   }, []);
