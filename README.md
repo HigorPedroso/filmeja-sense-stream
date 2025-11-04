@@ -1,73 +1,36 @@
-# Welcome to your Lovable project
+# 🎬 Filmes Já
 
-## Project info
+Filmes Já é uma aplicação web que utiliza Inteligência Artificial para recomendar filmes de forma personalizada.
+A proposta do projeto é oferecer sugestões rápidas e inteligentes baseadas nas preferências do usuário — ajudando cinéfilos a descobrir novos títulos sem perder tempo procurando.
 
-**URL**: https://lovable.dev/projects/9bcf5c22-ee1c-4e55-be53-0a8ddbff21a6
+# 🚀 Funcionalidades
 
-## How can I edit this code?
+🔍 Recomendações automáticas de filmes com base em preferências ou histórico do usuário.
 
-There are several ways of editing your application.
+🎞️ Exibição de detalhes do filme (sinopse, elenco, nota, gênero, trailer).
 
-**Use Lovable**
+💬 Sistema interativo para refinar as recomendações (“quero algo mais de ação”, “filme parecido com X” etc.).
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/9bcf5c22-ee1c-4e55-be53-0a8ddbff21a6) and start prompting.
+🌙 Modo escuro e design responsivo.
 
-Changes made via Lovable will be committed automatically to this repo.
+⚡ Interface rápida e intuitiva.
 
-**Use your preferred IDE**
+# 🧠 Tecnologias utilizadas
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+Frontend: HTML5, CSS3, React, Typescript
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+Backend: Node.js / Supabase
 
-Follow these steps:
+IA / API: integração com OpenAI e Gemini API e API de recomendação de filmes (TMDB, IMDb API, etc.)
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+Hospedagem: Vercel
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+# 💡 Como funciona
 
-# Step 3: Install the necessary dependencies.
-npm i
+O usuário acessa o site e informa o tipo de filme que deseja assistir.
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+A IA analisa a solicitação (por exemplo: “quero um filme de ação parecido com John Wick”).
 
-**Edit a file directly in GitHub**
+O sistema retorna recomendações relevantes, com informações e links para onde assistir.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/9bcf5c22-ee1c-4e55-be53-0a8ddbff21a6) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+O usuário pode salvar ou compartilhar suas recomendações favoritas
