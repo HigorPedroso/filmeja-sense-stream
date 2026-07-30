@@ -18,20 +18,20 @@ export const ContentModal = ({
   const isMobile = useIsMobile();
   const navigate = useNavigate();
 
-  // On mobile, once the result is ready, push a dedicated screen instead of
-  // showing it inside a small dialog. While it's still loading, we keep
-  // showing the (small) loading dialog below, same as on desktop.
-  const readyToOpenScreen = isMobile && isOpen && !isLoading && !!content;
+  // On mobile, push the dedicated result screen right away instead of
+  // showing a loading dialog first. The screen reads isOpen/isLoading/content
+  // from the same shared RecommendationResult context, so it keeps updating
+  // live even after this component (and whatever page rendered it) unmounts.
+  const shouldUseFullScreen = isMobile && isOpen;
 
   useEffect(() => {
-    if (readyToOpenScreen) {
-      onOpenChange(false);
-      navigate("/recomendacao", { state: { content } });
+    if (shouldUseFullScreen) {
+      navigate("/recomendacao");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [readyToOpenScreen]);
+  }, [shouldUseFullScreen]);
 
-  if (readyToOpenScreen) return null;
+  if (shouldUseFullScreen) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>

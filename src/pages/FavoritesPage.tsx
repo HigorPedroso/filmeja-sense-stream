@@ -9,6 +9,7 @@ import { ContentModal } from "@/components/ContentModal/ContentModal";
 import { fetchContentWithProviders } from "@/lib/utils/tmdb";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useRecommendationResult } from "@/hooks/useRecommendationResult";
 
 interface ContentItem {
   id: number;
@@ -65,8 +66,12 @@ interface FavoritesPageProps {
 export function FavoritesPage({ title, items }: FavoritesPageProps) {
     const [currentBgIndex, setCurrentBgIndex] = useState(0);
     const [isExpanded, setIsExpanded] = useState(false);
-  const [selectedContent, setSelectedContent] = useState<ContentItem | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const {
+    moodRecommendation: selectedContent,
+    setMoodRecommendation: setSelectedContent,
+    showRecommendationModal: isModalOpen,
+    setShowRecommendationModal: setIsModalOpen,
+  } = useRecommendationResult();
   const getTitle = (item: ContentItem) => item.title || item.name || "Sem título";
   const getYear = (item: ContentItem) => {
     const date = item.release_date || item.first_air_date;
@@ -213,11 +218,11 @@ export function FavoritesPage({ title, items }: FavoritesPageProps) {
                             };
                             
                             console.log('Content with providers:', updatedContent);
-                            setSelectedContent(updatedContent);
+                            setSelectedContent(updatedContent as any);
                             setIsModalOpen(true);
                           } catch (error) {
                             console.error('Error fetching content details:', error);
-                            setSelectedContent(item);
+                            setSelectedContent(item as any);
                             setIsModalOpen(true);
                           }
                         }}

@@ -11,6 +11,7 @@ import ContentDetails from "./pages/ContentDetails";
 import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
 import RecommendationResult from "./pages/RecommendationResult";
+import { RecommendationResultProvider } from "./hooks/useRecommendationResult";
 import { AuthProvider } from "./hooks/useAuth";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { FavoritesPage } from "./pages/FavoritesPage";
@@ -105,7 +106,9 @@ const App = () => {
               <Toaster />
               <Sonner />
               <BrowserRouter>
-                <AppContent favoriteItems={favoriteItems} />
+                <RecommendationResultProvider>
+                  <AppContent favoriteItems={favoriteItems} />
+                </RecommendationResultProvider>
               </BrowserRouter>
             </TooltipProvider>
           </AuthProvider>

@@ -68,6 +68,7 @@ import { Input } from "@/components/ui/input";
 import { SignupPromptModal } from "@/components/modals/SignupPromptModal";
 import { SignupModal } from "@/components/modals/SignupModal";
 import { useGoogleAdsPageView } from "@/hooks/useGoogleAds";
+import { useRecommendationResult } from "@/hooks/useRecommendationResult";
 
 // Mock user data - in a real app, this would come from authentication
 const mockUser = {
@@ -165,9 +166,14 @@ const Dashboard = () => {
   const [moodRecommendations, setMoodRecommendations] = useState<ContentItem[]>(
     []
   );
-  const [showRecommendationModal, setShowRecommendationModal] = useState(false);
-  const [moodRecommendation, setMoodRecommendation] = useState<any>(null);
-  const [isLoadingRecommendation, setIsLoadingRecommendation] = useState(false);
+  const {
+    showRecommendationModal,
+    setShowRecommendationModal,
+    moodRecommendation,
+    setMoodRecommendation,
+    isLoadingRecommendation,
+    setIsLoadingRecommendation,
+  } = useRecommendationResult();
   const [selectedMood, setSelectedMood] = useState<MoodType | null>(null);
   const [isPremium, setIsPremium] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);

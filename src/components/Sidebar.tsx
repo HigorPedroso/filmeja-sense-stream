@@ -23,6 +23,7 @@ import {
 import { Check, Sparkles } from "lucide-react";
 import { SignupPromptModal } from "./modals/SignupPromptModal";
 import { SignupModal } from "./modals/SignupModal";
+import { useRecommendationResult } from "@/hooks/useRecommendationResult";
 
 interface SidebarProps {
   isExpanded: boolean;
@@ -38,9 +39,14 @@ export function Sidebar({ isExpanded, setIsExpanded, onLogout }: SidebarProps) {
   const [userWatchedSeries, setUserWatchedSeries] = useState([]);
   const [selectedContent, setSelectedContent] = useState<any>(null);
   const [showContentModal, setShowContentModal] = useState(false);
-  const [moodRecommendation, setMoodRecommendation] = useState<any>(null);
-  const [showRecommendationModal, setShowRecommendationModal] = useState(false);
-  const [isLoadingRecommendation, setIsLoadingRecommendation] = useState(false);
+  const {
+    moodRecommendation,
+    setMoodRecommendation,
+    showRecommendationModal,
+    setShowRecommendationModal,
+    isLoadingRecommendation,
+    setIsLoadingRecommendation,
+  } = useRecommendationResult();
   const [isPremium, setIsPremium] = useState<boolean>(false);
   const [showPremiumModal, setShowPremiumModal] = useState(false);
   const [showSignupModal, setShowSignupModal] = useState(false);

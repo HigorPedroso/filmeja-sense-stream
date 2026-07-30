@@ -26,6 +26,7 @@ import ImageBackground from "@/components/ImageBackground";
 import { fetchContentWithProviders } from "@/lib/utils/tmdb";
 import { ContentModal } from "@/components/ContentModal/ContentModal";
 import { Onboarding } from "@/components/Onboarding/Onboarding";
+import { useRecommendationResult } from "@/hooks/useRecommendationResult";
 
 interface WatchHistory {
   id: number;
@@ -63,9 +64,14 @@ export function ProfilePage() {
   const [isExpanded, setIsExpanded] = useState(false);
   const [watchHistory, setWatchHistory] = useState<WatchHistory[]>([]);
   // Add these states inside the component
-  const [showContentModal, setShowContentModal] = useState(false);
-  const [selectedContent, setSelectedContent] = useState(null);
-  const [isLoadingContent, setIsLoadingContent] = useState(false);
+  const {
+    showRecommendationModal: showContentModal,
+    setShowRecommendationModal: setShowContentModal,
+    moodRecommendation: selectedContent,
+    setMoodRecommendation: setSelectedContent,
+    isLoadingRecommendation: isLoadingContent,
+    setIsLoadingRecommendation: setIsLoadingContent,
+  } = useRecommendationResult();
   const [showPreferencesModal, setShowPreferencesModal] = useState(false);
 
   const handleContentSelect = async (item: WatchHistory) => {

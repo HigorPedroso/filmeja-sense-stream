@@ -11,6 +11,7 @@ import { SignupPromptModal } from "./modals/SignupPromptModal";
 import { SignupModal } from "./modals/SignupModal";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { useRecommendationResult } from "@/hooks/useRecommendationResult";
 
 export function MobileSidebar() {
   const navigate = useNavigate();
@@ -20,9 +21,14 @@ export function MobileSidebar() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [userWatchedMovies, setUserWatchedMovies] = useState([]);
   const [userWatchedSeries, setUserWatchedSeries] = useState([]);
-  const [moodRecommendation, setMoodRecommendation] = useState<any>(null);
-  const [showRecommendationModal, setShowRecommendationModal] = useState(false);
-  const [isLoadingRecommendation, setIsLoadingRecommendation] = useState(false);
+  const {
+    moodRecommendation,
+    setMoodRecommendation,
+    showRecommendationModal,
+    setShowRecommendationModal,
+    isLoadingRecommendation,
+    setIsLoadingRecommendation,
+  } = useRecommendationResult();
   const [isPremium, setIsPremium] = useState<boolean>(false);
   const [showPremiumModal, setShowPremiumModal] = useState(false);
   const [showSignupPromptModal, setShowSignupPromptModal] = useState(false);

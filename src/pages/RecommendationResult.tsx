@@ -1,22 +1,33 @@
 import { useEffect } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { ContentResultView } from "@/components/ContentModal/ContentResultView";
-import { ContentType } from "@/components/ContentModal/types";
+import { ContentModalSkeleton } from "@/components/ContentModal/ContentModalSkeleton";
+import { useRecommendationResult } from "@/hooks/useRecommendationResult";
 
 const RecommendationResult = () => {
-  const location = useLocation();
   const navigate = useNavigate();
-  const content = (location.state as { content?: ContentType } | null)?.content;
+  const { showRecommendationModal, isLoadingRecommendation, moodRecommendation, setShowRecommendationModal } =
+    useRecommendationResult();
 
   useEffect(() => {
-    // Reached directly (deep link, refresh, back/forward) without the
-    // in-memory result — nothing to show, so bounce back to the dashboard.
-    if (!content) {
+    // Reached directly (deep link, refresh) without anything in flight —
+    // nothing to show, so bounce back to the dashboard.
+    if (!showRecommendationModal) {
       navigate("/dashboard", { replace: true });
     }
-  }, [content, navigate]);
+  }, [showRecommendationModal, navigate]);
 
-  if (!content) return null;
+  useEffect(() => {
+    // Covers leaving via the hardware back button too, not just handleClose.
+    return () => setShowRecommendationModal(false);
+  }, [setShowRecommendationModal]);
+
+  if (!showRecommendationModal) return null;
+
+  const handleClose = () => {
+    setShowRecommendationModal(false);
+    navigate(-1);
+  };
 
   return (
     <div
@@ -26,7 +37,11 @@ const RecommendationResult = () => {
         paddingBottom: "max(1rem, env(safe-area-inset-bottom))",
       }}
     >
-      <ContentResultView content={content} onClose={() => navigate(-1)} />
+      {isLoadingRecommendation || !moodRecommendation ? (
+        <ContentModalSkeleton />
+      ) : (
+        <ContentResultView content={moodRecommendation} onClose={handleClose} />
+      )}
     </div>
   );
 };
