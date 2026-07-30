@@ -1,7 +1,3 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
-const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
-
 interface WatchedContent {
   title?: string;
   name?: string;
@@ -16,8 +12,6 @@ interface AIRecommendation {
 export async function getRecommendationsFromGemini(
   watchedContent: WatchedContent[]
 ): Promise<AIRecommendation[]> {
-  const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-
   const watchedTitles = watchedContent
     .map((item) => `${item.title || item.name} (${item.media_type})`)
     .join(", ");
@@ -32,7 +26,7 @@ Format the response as a JSON array with objects containing:
 Only return the JSON array, no additional text.`;
 
 const geminiResponse = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${
       import.meta.env.VITE_GEMINI_API_KEY
     }`,
     {
@@ -54,7 +48,8 @@ const geminiResponse = await fetch(
           temperature: 0.7,
           topK: 40,
           topP: 0.95,
-          maxOutputTokens: 1024,
+          maxOutputTokens: 2048,
+          thinkingConfig: { thinkingBudget: 0 },
         },
       }),
     }

@@ -24,9 +24,12 @@ function ensureGoogleAuthInitialized() {
 async function loginWithGoogleNative() {
   await ensureGoogleAuthInitialized();
 
+  // Don't pass custom `scopes` here: the Android provider rejects any custom
+  // scope unless MainActivity implements ModifiedMainActivityForSocialLoginPlugin.
+  // The default scopes (openid, email, profile) are enough for Supabase's idToken sign-in.
   const { result } = await SocialLogin.login({
     provider: "google",
-    options: { scopes: ["email", "profile"] },
+    options: {},
   });
 
   const idToken = "idToken" in result ? result.idToken : undefined;

@@ -524,7 +524,7 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
 `;
 
       const geminiResponse = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${
           import.meta.env.VITE_GEMINI_API_KEY
         }`,
         {
@@ -536,7 +536,8 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
               temperature: 0.7,
               topK: 40,
               topP: 0.95,
-              maxOutputTokens: 1024,
+              maxOutputTokens: 2048,
+              thinkingConfig: { thinkingBudget: 0 },
             },
           }),
         }
@@ -1025,7 +1026,7 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
         `;
 
         const geminiResponse = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${
             import.meta.env.VITE_GEMINI_API_KEY
           }`,
           {
@@ -1047,7 +1048,8 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
                 temperature: 0.7,
                 topK: 40,
                 topP: 0.95,
-                maxOutputTokens: 1024,
+                maxOutputTokens: 2048,
+                thinkingConfig: { thinkingBudget: 0 },
               },
             }),
           }
@@ -1711,7 +1713,7 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
         }`}
       >
         {/* Main content area */}
-        <main className="p-6">
+        <main className="p-6 pb-[max(6rem,calc(4rem+env(safe-area-inset-bottom)))] md:pb-6">
           <TopTrendingList
             type="movie"
             title="Top 10 Filmes da Semana"

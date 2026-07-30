@@ -1,3 +1,5 @@
+/// <reference types="@capacitor-community/safe-area" />
+
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
@@ -14,9 +16,13 @@ const config: CapacitorConfig = {
       androidSplashResourceName: 'splash',
       showSpinner: false,
     },
-    StatusBar: {
-      style: 'DARK',
-      backgroundColor: '#0f0f0f',
+    SafeArea: {
+      statusBarStyle: 'DARK',
+      navigationBarStyle: 'DARK',
+    },
+    // Required alongside @capacitor-community/safe-area on Capacitor v8, per its setup docs.
+    SystemBars: {
+      insetsHandling: 'disable',
     },
     SocialLogin: {
       providers: {

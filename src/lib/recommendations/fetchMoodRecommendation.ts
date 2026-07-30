@@ -202,7 +202,7 @@ export async function fetchMoodRecommendation(params: MoodRecommendationParams):
     `;
 
     const geminiResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${
         import.meta.env.VITE_GEMINI_API_KEY
       }`,
       {
@@ -218,7 +218,8 @@ export async function fetchMoodRecommendation(params: MoodRecommendationParams):
             temperature: 0.7,
             topK: 40,
             topP: 0.95,
-            maxOutputTokens: 1024,
+            maxOutputTokens: 2048,
+            thinkingConfig: { thinkingBudget: 0 },
           },
         }),
       }

@@ -11,16 +11,15 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@capacitor-community/safe-area": "^8.0.1",
     "@capacitor/android": "^8.4.2",
     "@capacitor/app": "^8.1.1",
     "@capacitor/cli": "^8.4.2",
     "@capacitor/core": "^8.4.2",
     "@capacitor/ios": "^8.4.2",
     "@capacitor/splash-screen": "^8.0.2",
-    "@capacitor/status-bar": "^8.0.3",
     "@capgo/capacitor-social-login": "^8.3.39",
     "@emailjs/browser": "^4.4.1",
-    "@google/generative-ai": "^0.24.1",
     "@hookform/resolvers": "^3.9.0",
     "@radix-ui/react-accordion": "^1.2.0",
     "@radix-ui/react-alert-dialog": "^1.1.1",

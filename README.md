@@ -23,7 +23,7 @@ Backend: Node.js / Supabase
 
 IA / API: integração com OpenAI e Gemini API e API de recomendação de filmes (TMDB, IMDb API, etc.)
 
-Hospedagem: Vercel
+Hospedagem: Netlify (https://filmeja.netlify.app)
 
 # 💡 Como funciona
 

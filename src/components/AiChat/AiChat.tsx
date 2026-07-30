@@ -85,7 +85,7 @@ export function AiChat({ onShowContent, watchedContent = [], userAvatar, userId 
       setIsTyping(true);
   
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${
           import.meta.env.VITE_GEMINI_API_KEY
         }`,
         {
@@ -110,6 +110,13 @@ export function AiChat({ onShowContent, watchedContent = [], userAvatar, userId 
                 ],
               },
             ],
+            generationConfig: {
+              temperature: 0.7,
+              topK: 40,
+              topP: 0.95,
+              maxOutputTokens: 1024,
+              thinkingConfig: { thinkingBudget: 0 },
+            },
           }),
         }
       );

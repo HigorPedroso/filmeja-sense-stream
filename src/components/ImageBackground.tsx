@@ -3,17 +3,19 @@ import HeroCarousel from './HeroCarousel';
 import { getTrending } from '@/lib/tmdb';
 
 interface VideoBackgroundProps {
-  videoSrc?: string; 
+  videoSrc?: string;
   fallbackImage?: string;
   children?: React.ReactNode;
   useSlideshow?: boolean;
+  heightClassName?: string;
 }
 
-const ImageBackground: React.FC<VideoBackgroundProps> = ({ 
-  videoSrc = "https://assets.nflxext.com/ffe/siteui/acquisition/home/hero-background-desktop.mp4", 
+const ImageBackground: React.FC<VideoBackgroundProps> = ({
+  videoSrc = "https://assets.nflxext.com/ffe/siteui/acquisition/home/hero-background-desktop.mp4",
   fallbackImage = "https://assets.nflxext.com/ffe/siteui/vlv3/b8eb602d-55f0-4b9f-a58d-b32a5ce4dd80/e0b42fc2-d3e4-4071-9ae3-371f0e825131/BR-pt-20240318-popsignuptwoweeks-perspective_alpha_website_medium.jpg",
   children,
-  useSlideshow = false
+  useSlideshow = false,
+  heightClassName = "h-[80vh] min-h-[600px]"
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [videoLoaded, setVideoLoaded] = useState(false);
@@ -73,7 +75,7 @@ const ImageBackground: React.FC<VideoBackgroundProps> = ({
   }, [useSlideshow]);
 
   return (
-    <div className="relative w-full h-[80vh] min-h-[600px] overflow-hidden">
+    <div className={`relative w-full overflow-hidden ${heightClassName}`}>
       {useSlideshow ? (
         <div className="absolute inset-0 z-0">
           {backgrounds.length > 0 && (

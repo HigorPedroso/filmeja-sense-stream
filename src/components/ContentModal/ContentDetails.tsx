@@ -16,6 +16,7 @@ interface ContentDetailsProps {
   onTrailerClick: () => void;
   onWatchClick: () => void;
   onNextSuggestion: (() => Promise<void>) | undefined;
+  onClose: () => void;
 }
 
 export const ContentDetails = ({

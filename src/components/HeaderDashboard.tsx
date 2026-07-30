@@ -188,8 +188,15 @@ const HeaderDashboard = () => {
 
   return (
     <>
-      <header className="p-4 sticky top-0 z-10">
-        <div className="flex justify-end items-center">
+      <header
+        className="sticky top-0 z-10 px-4"
+        style={{ paddingTop: "max(1rem, env(safe-area-inset-top))" }}
+      >
+        <div className="flex justify-between md:justify-end items-center">
+          <span className="text-white font-bold text-lg drop-shadow-md md:hidden">
+            <span className="text-filmeja-purple">Filme</span>Já
+          </span>
+
           <div className="flex items-center space-x-3">
             <div className="flex flex-col items-end">
               <span className="text-white text-sm md:text-base">
@@ -221,7 +228,7 @@ const HeaderDashboard = () => {
             </div>
 
             <div
-              className="w-8 h-8 md:w-10 md:h-10 rounded-full overflow-hidden bg-filmeja-purple/10 
+              className="w-8 h-8 md:w-10 md:h-10 rounded-full overflow-hidden bg-filmeja-purple/10
                 cursor-pointer transform hover:scale-105 transition-all duration-300
                 hover:ring-2 hover:ring-filmeja-purple hover:ring-offset-2 hover:ring-offset-filmeja-dark"
               onClick={() => setIsAvatarModalOpen(true)}

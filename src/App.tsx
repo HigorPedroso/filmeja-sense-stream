@@ -10,6 +10,7 @@ import MoodSelection from "./pages/MoodSelection";
 import ContentDetails from "./pages/ContentDetails";
 import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
+import RecommendationResult from "./pages/RecommendationResult";
 import { AuthProvider } from "./hooks/useAuth";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { FavoritesPage } from "./pages/FavoritesPage";
@@ -31,7 +32,7 @@ import { StoriesIndex } from "./pages/StoriesIndex";
 import { AmpStoryPage } from "./pages/AmpStoryPage";
 import { useCapacitorBackButton } from "./hooks/useCapacitorBackButton";
 import { Capacitor } from "@capacitor/core";
-import { StatusBar, Style } from "@capacitor/status-bar";
+import { SafeArea } from "@capacitor-community/safe-area";
 import { SplashScreen } from "@capacitor/splash-screen";
 
 // Extend the Window interface to include fbq and _fbq
@@ -60,10 +61,7 @@ const App = () => {
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
 
-    StatusBar.setStyle({ style: Style.Dark }).catch(() => {});
-    if (Capacitor.getPlatform() === "android") {
-      StatusBar.setBackgroundColor({ color: "#0f0f0f" }).catch(() => {});
-    }
+    SafeArea.setSystemBarsStyle({ style: "DARK" }).catch(() => {});
     SplashScreen.hide().catch(() => {});
   }, []);
 
@@ -157,6 +155,14 @@ const AppContent = ({ favoriteItems }) => {
         element={
           <ProtectedRoute>
             <Dashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/recomendacao"
+        element={
+          <ProtectedRoute>
+            <RecommendationResult />
           </ProtectedRoute>
         }
       />

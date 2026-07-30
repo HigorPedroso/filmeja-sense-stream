@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Home, Heart, Star, User, MessageSquare, X } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -10,9 +10,12 @@ import PremiumPaymentModal from "@/components/PremiumPaymentModal"; // Add this 
 import { SignupPromptModal } from "./modals/SignupPromptModal";
 import { SignupModal } from "./modals/SignupModal";
 import { toast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 export function MobileSidebar() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const isActive = (path: string) => location.pathname === path;
   const [showAiChat, setShowAiChat] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [userWatchedMovies, setUserWatchedMovies] = useState([]);
@@ -241,57 +244,87 @@ useEffect(() => {
         />
       )}
 
-      <div className="fixed bottom-0 left-0 right-0 bg-filmeja-dark/95 border-t border-white/[0.02] backdrop-blur-xl md:hidden z-50">
-      
-      <nav className="flex justify-around items-center py-3 px-4">
-        <Button variant="ghost" className="text-gray-300" title="Início" onClick={() => navigate('/dashboard')}>
-          <Home className="w-5 h-5" />
-        </Button>
-        <Button 
-          variant="ghost" 
-          className="text-gray-300" 
-          title="Minha Lista" 
-          onClick={() => {
-            if (isAnonymousUser) {
-              setShowSignupPromptModal(true);
-            } else {
-              navigate('/favorites');
-            }
-          }}
-        >
-          <Heart className="w-5 h-5" />
-        </Button>
-        <Button
-          variant="ghost"
-          className="text-gray-300"
-          title="Recomendados"
-          onClick={() => {
-            if (isAnonymousUser) {
-              setShowSignupPromptModal(true);
-            } else if (!isPremium) {
-              setShowPremiumModal(true);
-            } else {
-              setShowAiChat(true);
-            }
-          }}
-        >
-          <MessageSquare className="w-5 h-5" />
-        </Button>
-        <Button 
-          variant="ghost" 
-          className="text-gray-300" 
-          title="Minha Conta" 
-          onClick={() => {
-            if (isAnonymousUser) {
-              setShowSignupPromptModal(true);
-            } else {
-              navigate('/profile');
-            }
-          }}
-        >
-          <User className="w-5 h-5" />
-        </Button>
-      </nav>
+      <div
+        className="fixed bottom-0 left-0 right-0 bg-filmeja-dark/90 border-t border-white/10 backdrop-blur-xl md:hidden z-50"
+        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      >
+        <nav className="flex items-stretch justify-around">
+          {[
+            {
+              key: "home",
+              label: "Início",
+              icon: Home,
+              active: isActive("/dashboard"),
+              onClick: () => navigate("/dashboard"),
+            },
+            {
+              key: "favorites",
+              label: "Minha Lista",
+              icon: Heart,
+              active: isActive("/favorites"),
+              onClick: () => {
+                if (isAnonymousUser) {
+                  setShowSignupPromptModal(true);
+                } else {
+                  navigate("/favorites");
+                }
+              },
+            },
+            {
+              key: "ai",
+              label: "Filmin.IA",
+              icon: MessageSquare,
+              active: showAiChat,
+              onClick: () => {
+                if (isAnonymousUser) {
+                  setShowSignupPromptModal(true);
+                } else if (!isPremium) {
+                  setShowPremiumModal(true);
+                } else {
+                  setShowAiChat(true);
+                }
+              },
+            },
+            {
+              key: "profile",
+              label: "Perfil",
+              icon: User,
+              active: isActive("/profile"),
+              onClick: () => {
+                if (isAnonymousUser) {
+                  setShowSignupPromptModal(true);
+                } else {
+                  navigate("/profile");
+                }
+              },
+            },
+          ].map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={tab.onClick}
+              className={cn(
+                "flex flex-1 flex-col items-center justify-center gap-1 py-2.5 transition-colors active:scale-95",
+                tab.active ? "text-filmeja-purple" : "text-gray-400"
+              )}
+            >
+              <tab.icon
+                className="h-5 w-5"
+                strokeWidth={tab.active ? 2.5 : 2}
+                fill={tab.active && tab.key === "favorites" ? "currentColor" : "none"}
+              />
+              <span
+                className={cn(
+                  "text-[10px] leading-none",
+                  tab.active ? "font-semibold" : "font-medium"
+                )}
+              >
+                {tab.label}
+              </span>
+            </button>
+          ))}
+        </nav>
+      </div>
 
       <PremiumPaymentModal
         isOpen={showPremiumModal}
@@ -328,9 +361,6 @@ useEffect(() => {
           signupError={signupError}
           isSigningUp={isSigningUp}
         />
-    </div>
-    
     </>
-    
   );
 }

@@ -1,23 +1,27 @@
 
 import React, { useState, useEffect } from 'react';
-import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, User } from 'lucide-react';
-import VideoBackground from '@/components/VideoBackground';
+import { Mail, Lock, User, Eye, EyeOff, Film, Loader2, ChevronLeft } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { loginWithGoogle } from '@/lib/googleAuth';
+import { Capacitor } from '@capacitor/core';
+import { cn } from '@/lib/utils';
+
+const isNative = Capacitor.isNativePlatform();
 
 const Signup = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [session, setSession] = useState(null);
-  
+
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -89,7 +93,7 @@ const Signup = () => {
   };
 
   const handleGoogleLogin = async () => {
-    setLoading(true);
+    setGoogleLoading(true);
     try {
       await loginWithGoogle();
 
@@ -101,127 +105,185 @@ const Signup = () => {
         description: error.message || 'Ocorreu um erro ao conectar com Google.',
         variant: 'destructive',
       });
-      setLoading(false);
+      setGoogleLoading(false);
     }
   };
 
+  const busy = loading || googleLoading;
+
   return (
-    <>
-    <div className="min-h-screen bg-filmeja-dark relative">
-      <VideoBackground />
-      <Navbar transparent />
-      
-      <div className="container mx-auto min-h-screen flex items-center justify-center px-4">
-        <div className="max-w-md w-full bg-black/40 backdrop-blur-sm border border-white/10 rounded-lg p-8">
-          <h1 className="text-2xl font-bold text-white mb-2 text-center">
-            {isLogin ? 'Bem-vindo de volta!' : 'Crie sua conta'}
+    <div className="min-h-[100dvh] relative bg-filmeja-dark overflow-hidden">
+      {/* Decorative glow orbs */}
+      <div className="pointer-events-none absolute -top-24 -left-16 w-72 h-72 bg-filmeja-purple/25 rounded-full blur-3xl" />
+      <div className="pointer-events-none absolute top-1/3 -right-20 w-80 h-80 bg-filmeja-blue/20 rounded-full blur-3xl" />
+      <div className="pointer-events-none absolute bottom-0 left-1/4 w-64 h-64 bg-filmeja-purple-dark/20 rounded-full blur-3xl" />
+
+      {!isNative && (
+        <Link
+          to="/"
+          className="absolute top-[max(1rem,env(safe-area-inset-top))] left-4 z-10 inline-flex items-center gap-1 text-sm text-gray-400 hover:text-white transition-colors"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          Voltar ao site
+        </Link>
+      )}
+
+      <div
+        className="relative z-0 min-h-[100dvh] flex flex-col items-center justify-center px-5 py-10"
+        style={{
+          paddingTop: 'max(2.5rem, env(safe-area-inset-top))',
+          paddingBottom: 'max(2rem, env(safe-area-inset-bottom))',
+        }}
+      >
+        <div className="w-full max-w-sm flex flex-col items-center mb-8">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-filmeja-purple to-filmeja-blue flex items-center justify-center shadow-lg shadow-filmeja-purple/30 mb-4">
+            <Film className="h-7 w-7 text-white" />
+          </div>
+          <h1 className="text-xl font-bold text-white text-center">
+            <span className="text-filmeja-purple">Filme</span>Já
           </h1>
-          
-          <p className="text-gray-300 text-center mb-6">
-            {isLogin 
-              ? 'Entre para continuar sua jornada cinematográfica' 
+        </div>
+
+        <div className="w-full max-w-sm bg-white/[0.04] backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl p-6">
+          {/* Segmented tabs */}
+          <div className="grid grid-cols-2 gap-1 bg-black/30 rounded-xl p-1 mb-6">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => setIsLogin(true)}
+              className={cn(
+                'py-2 rounded-lg text-sm font-semibold transition-colors',
+                isLogin ? 'bg-filmeja-purple text-white shadow' : 'text-gray-400 hover:text-white'
+              )}
+            >
+              Entrar
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => setIsLogin(false)}
+              className={cn(
+                'py-2 rounded-lg text-sm font-semibold transition-colors',
+                !isLogin ? 'bg-filmeja-purple text-white shadow' : 'text-gray-400 hover:text-white'
+              )}
+            >
+              Criar conta
+            </button>
+          </div>
+
+          <h2 className="text-lg font-bold text-white text-center mb-1">
+            {isLogin ? 'Bem-vindo de volta!' : 'Crie sua conta'}
+          </h2>
+          <p className="text-sm text-gray-400 text-center mb-6">
+            {isLogin
+              ? 'Entre para continuar sua jornada cinematográfica'
               : 'Comece sua jornada por apenas R$9,99/mês'}
           </p>
-          
-          <form onSubmit={handleAuthentication} className="space-y-4">
-            <Button 
-              variant="outline" 
-              className="w-full bg-white/5 border-white/10 text-white hover:bg-white/10"
-              onClick={handleGoogleLogin}
-              type="button"
-              disabled={loading}
-            >
-              <img src="/google.png" alt="Google" className="w-5 h-5 mr-2" />
-              Continuar com Google
-            </Button>
 
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-white/10" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-filmeja-dark px-2 text-gray-400">ou continue com email</span>
-              </div>
+          <Button
+            variant="outline"
+            className="w-full h-12 rounded-xl bg-white text-gray-900 border-transparent hover:bg-gray-100 font-medium"
+            onClick={handleGoogleLogin}
+            type="button"
+            disabled={busy}
+          >
+            {googleLoading ? (
+              <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+            ) : (
+              <img src="/google.png" alt="" className="w-5 h-5 mr-2" />
+            )}
+            Continuar com Google
+          </Button>
+
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-white/10" />
             </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-[#17131f] px-2 text-gray-500">ou continue com email</span>
+            </div>
+          </div>
 
+          <form onSubmit={handleAuthentication} className="space-y-3">
             {!isLogin && (
               <div className="relative">
-                <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
                   placeholder="Nome completo"
-                  className="pl-10 bg-white/5 border-white/10 text-white"
+                  className="h-12 pl-10 rounded-xl bg-white/5 border-white/10 text-white"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   required={!isLogin}
-                  disabled={loading}
+                  disabled={busy}
                 />
               </div>
             )}
 
             <div className="relative">
-              <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
                 type="email"
                 placeholder="Email"
-                className="pl-10 bg-white/5 border-white/10 text-white"
+                className="h-12 pl-10 rounded-xl bg-white/5 border-white/10 text-white"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                disabled={loading}
+                disabled={busy}
+                autoComplete="email"
               />
             </div>
 
             <div className="relative">
-              <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 placeholder="Senha"
-                className="pl-10 bg-white/5 border-white/10 text-white"
+                className="h-12 pl-10 pr-10 rounded-xl bg-white/5 border-white/10 text-white"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                disabled={loading}
+                disabled={busy}
+                autoComplete={isLogin ? 'current-password' : 'new-password'}
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
             </div>
 
-            <Button 
-              className="w-full bg-filmeja-purple hover:bg-filmeja-purple/90 text-white"
+            <Button
+              className="w-full h-12 rounded-xl bg-filmeja-purple hover:bg-filmeja-purple/90 text-white font-semibold mt-2"
               type="submit"
-              disabled={loading}
+              disabled={busy}
             >
-              {loading ? 'Carregando...' : isLogin ? 'Entrar' : 'Criar conta'}
+              {loading ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : isLogin ? (
+                'Entrar'
+              ) : (
+                'Criar conta'
+              )}
             </Button>
           </form>
-
-          <div className="text-center mt-6">
-            <p className="text-gray-400">
-              {isLogin ? 'Ainda não tem uma conta?' : 'Já tem uma conta?'}
-              <button
-                onClick={() => setIsLogin(!isLogin)}
-                className="text-filmeja-purple hover:underline ml-2"
-                type="button"
-                disabled={loading}
-              >
-                {isLogin ? 'Criar conta' : 'Fazer login'}
-              </button>
-            </p>
-          </div>
-          
-          <p className="text-xs text-gray-400 text-center mt-6">
-            Ao continuar, você concorda com nossos{' '}
-            <Link to="/termos" className="text-filmeja-purple hover:underline">
-              Termos de Uso
-            </Link>{' '}
-            e{' '}
-            <Link to="/privacidade" className="text-filmeja-purple hover:underline">
-              Política de Privacidade
-            </Link>
-            .
-          </p>
         </div>
+
+        <p className="text-xs text-gray-500 text-center mt-6 max-w-sm">
+          Ao continuar, você concorda com nossos{' '}
+          <Link to="/termos" className="text-filmeja-purple hover:underline">
+            Termos de Uso
+          </Link>{' '}
+          e{' '}
+          <Link to="/privacidade" className="text-filmeja-purple hover:underline">
+            Política de Privacidade
+          </Link>
+          .
+        </p>
       </div>
     </div>
-    </>
   );
 };
 
