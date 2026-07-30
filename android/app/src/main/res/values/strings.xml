@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">FilmeJá</string>
+    <string name="title_activity_main">FilmeJá</string>
+    <string name="package_name">com.filmeja.app</string>
+    <string name="custom_url_scheme">com.filmeja.app</string>
+</resources>

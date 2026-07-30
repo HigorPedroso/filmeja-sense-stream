@@ -27,6 +27,12 @@ import BlogPage from "./pages/BlogPage";
 import { HelmetProvider } from "react-helmet-async";
 import { getUserFavorites } from "./lib/favorites";
 import { useGoogleAds } from './hooks/useGoogleAds';
+import { StoriesIndex } from "./pages/StoriesIndex";
+import { AmpStoryPage } from "./pages/AmpStoryPage";
+import { useCapacitorBackButton } from "./hooks/useCapacitorBackButton";
+import { Capacitor } from "@capacitor/core";
+import { StatusBar, Style } from "@capacitor/status-bar";
+import { SplashScreen } from "@capacitor/splash-screen";
 
 // Extend the Window interface to include fbq and _fbq
 declare global {
@@ -49,6 +55,16 @@ const App = () => {
     };
 
     fetchFavorites();
+  }, []);
+
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+
+    StatusBar.setStyle({ style: Style.Dark }).catch(() => {});
+    if (Capacitor.getPlatform() === "android") {
+      StatusBar.setBackgroundColor({ color: "#0f0f0f" }).catch(() => {});
+    }
+    SplashScreen.hide().catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -113,10 +129,20 @@ const App = () => {
 
 const AppContent = ({ favoriteItems }) => {
   useGoogleAds(); // Move the hook here, inside Router context
+  useCapacitorBackButton();
+
+  // On the native app, open straight into the user's dashboard instead of the marketing landing page.
+  const homeElement = Capacitor.isNativePlatform() ? (
+    <ProtectedRoute>
+      <Dashboard />
+    </ProtectedRoute>
+  ) : (
+    <Index />
+  );
 
   return (
     <Routes>
-      <Route path="/" element={<Index />} />
+      <Route path="/" element={homeElement} />
       <Route path="/explore" element={<Explore />} />
       <Route path="/mood" element={<MoodSelection />} />
       <Route path="/details/:type/:id" element={<ContentDetails />} />
@@ -236,6 +262,8 @@ const AppContent = ({ favoriteItems }) => {
       />
 
       <Route path="/blog/:slug" element={<BlogPostView />} />
+      <Route path="/stories" element={<StoriesIndex />} />
+      <Route path="/stories/:slug" element={<AmpStoryPage />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

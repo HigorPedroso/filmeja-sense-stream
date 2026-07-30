@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { BlogEditor } from '@/components/AdminDashboard/BlogEditor/BlogEditor';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Helmet } from 'react-helmet';
 
 export const BlogPost = () => {
   const { id } = useParams();
@@ -132,6 +133,9 @@ export const BlogPost = () => {
 
   return (
     <div className="p-6 md:p-8">
+      <Helmet>
+        <link rel="amphtml" href={`${import.meta.env.VITE_SUPABASE_FUNCTIONS_URL}/amp-story/${post.slug}`} />
+      </Helmet>
       <div className="space-y-6 mb-6">
         <div>
           <label className="block text-sm font-medium mb-2">
@@ -171,6 +175,15 @@ export const BlogPost = () => {
         initialData={post} 
         onSave={handleSave}
       />
+
+      {/* Botão para o Web Story */}
+      <Link 
+        to={`/stories/${post.slug}`}
+        className="inline-flex items-center gap-2 bg-filmeja-primary text-white px-4 py-2 rounded-full font-medium"
+      >
+        <span>Ver Web Story</span>
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14"></path></svg>
+      </Link>
     </div>
   );
 };
