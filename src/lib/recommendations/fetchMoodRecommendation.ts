@@ -1,6 +1,13 @@
 import { supabase } from "@/integrations/supabase/client";
 import { MoodType } from "@/types/movie";
 import { extractJsonFromResponse } from "@/utils/jsonParser";
+import { pickBestTitleMatch } from "@/lib/utils/tmdb";
+import { showInterstitialAd } from "@/lib/ads";
+import { refundDailyView } from "@/lib/recommendations/refundDailyView";
+
+// Combined daily cap for free (non-premium) users across mood + genre
+// recommendations. Query 1 is ad-free; queries 2 and 3 show an interstitial.
+export const DAILY_FREE_LIMIT = 3;
 
 export interface WatchedContent {
   tmdb_id: number;
@@ -64,75 +71,84 @@ export async function fetchMoodRecommendation(params: MoodRecommendationParams):
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("User not authenticated");
 
-    // Busca o profile para garantir o id correto
+    // Same source of truth as usePremiumStatus: profiles.is_premium.
     const { data: profile } = await supabase
       .from("profiles")
-      .select("id")
+      .select("id, is_premium")
       .eq("id", user.id)
       .single();
 
     if (!profile?.id) throw new Error("Profile not found");
 
-    // Agora verifica na tabela subscribers se é premium
-    const { data: subscriber } = await supabase
-      .from("subscribers")
-      .select("subscription_status, current_period_end")
-      .eq("user_id", profile.id)
-      .in("subscription_status", ["active", "canceling"])
-      .single();
+    const isPremium = !!profile.is_premium;
 
-    let isPremium = false;
-    if (subscriber) {
-      if (subscriber.subscription_status === "active") {
-        isPremium = true;
-      } else if (
-        subscriber.subscription_status === "canceling" &&
-        subscriber.current_period_end &&
-        new Date(subscriber.current_period_end) > new Date()
-      ) {
-        isPremium = true;
-      }
-    }
+    // Coin bookkeeping: if a coin is spent below but the fetch fails
+    // afterward, we refund it in the catch block so the user doesn't lose a
+    // free query for a recommendation that never loaded.
+    const today = new Date().toISOString().split('T')[0];
+    let coinSpent = false;
+    let dailyViewsBeforeSpend = 0;
+    let monthlyViewsBeforeSpend = 0;
 
     if (!isPremium) {
-      // Check view limits for free users
-      const today = new Date().toISOString().split('T')[0];
-      const monthStart = new Date(today.slice(0, 7) + '-01').toISOString();
-
+      // Free users get DAILY_FREE_LIMIT combined mood+genre recommendations
+      // per day (shared with fetchGenreRecommendation via the same table).
       const { data: viewStats } = await supabase
         .from('user_recommendation_views')
-        .select('daily_views, monthly_views')
+        .select('daily_views, monthly_views, view_date')
         .eq('user_id', user.id)
-        .gte('view_date', monthStart)
         .order('view_date', { ascending: false })
         .limit(1)
         .single();
 
-      const dailyViews = viewStats?.daily_views || 0;
+      // Only carry the count over if the last recorded view was today —
+      // otherwise it's a new day and the free quota resets.
+      const dailyViews = viewStats?.view_date === today ? (viewStats?.daily_views || 0) : 0;
       const monthlyViews = viewStats?.monthly_views || 0;
 
-      if (dailyViews >= 10 || monthlyViews >= 50) {
+      if (dailyViews >= DAILY_FREE_LIMIT) {
         setShowRecommendationModal(false);
         throw {
           type: 'PREMIUM_REQUIRED',
-          message: 'Você atingiu o limite de recomendações gratuitas. Assine o plano premium para continuar recebendo recomendações ilimitadas!'
+          message: `Você atingiu o limite de ${DAILY_FREE_LIMIT} recomendações gratuitas por dia. Assine o plano premium para continuar recebendo recomendações ilimitadas!`
         };
       }
+
+      dailyViewsBeforeSpend = dailyViews;
+      monthlyViewsBeforeSpend = monthlyViews;
+      const newDailyViews = dailyViews + 1;
 
       // Update view counts
       await supabase.from("user_recommendation_views").upsert(
         {
           user_id: user.id,
           view_date: today,
-          daily_views: dailyViews + 1,
+          daily_views: newDailyViews,
           monthly_views: monthlyViews + 1,
         },
         {
           onConflict: ["user_id", "view_date"], // <- define os campos únicos
         }
       );
+      coinSpent = true;
+
+      // 1st free query of the day is ad-free; 2nd and 3rd show an
+      // interstitial ad before the recommendation loads.
+      if (newDailyViews >= 2) {
+        await showInterstitialAd();
+      }
     }
 
+    try {
+      await fetchAndDeliverRecommendation();
+    } catch (fetchError) {
+      if (coinSpent) {
+        await refundDailyView(user.id, today, dailyViewsBeforeSpend, monthlyViewsBeforeSpend);
+      }
+      throw fetchError;
+    }
+
+    async function fetchAndDeliverRecommendation() {
     // Continue with existing recommendation logic
     const { data: recentRecommendations, error: historyError } = await supabase
     .from('watch_history')
@@ -182,8 +198,11 @@ export async function fetchMoodRecommendation(params: MoodRecommendationParams):
       genreCategories.flatMap(cat => cat.genres).find(g => g.id === id)?.name
     ).filter(Boolean);
 
+    const currentYear = new Date().getFullYear();
+    const minReleaseYear = currentYear - 5;
+
     const prompt = `
-      Você é um assistente que responde apenas em JSON válido. 
+      Você é um assistente que responde apenas em JSON válido.
       O usuário está se sentindo "${moodNames[mood as MoodType]}" e gosta dos seguintes gêneros: ${genreNames.join(", ")}.
       O usuário já assistiu os seguintes títulos:
       ${JSON.stringify(validWatchedContent)}
@@ -191,13 +210,14 @@ export async function fetchMoodRecommendation(params: MoodRecommendationParams):
       Últimas recomendações (não recomendar estes títulos também):
       ${JSON.stringify(recentTitles)}
 
-      Forneça uma lista de 10 ${mediaType === "movie" ? "filmes" : "séries"} que são muito populares, bem avaliados e correspondem ao humor do usuário.
+      Forneça uma lista de 10 ${mediaType === "movie" ? "filmes" : "séries"} bem avaliados que correspondem ao humor do usuário.
+      IMPORTANTE: priorize lançamentos recentes — de ${minReleaseYear} até ${currentYear}. Evite indicar clássicos antigos ou títulos muito batidos; a lista deve parecer atual, não uma seleção de "os mais famosos de sempre".
       NÃO INCLUA os títulos que o usuário já assistiu ou que foram recomendados recentemente.
-      Tem que estar presente nos principais streamings: Netflix, Max, Amazon Prime Video, Disney, etc. 
-      
+      Tem que estar presente nos principais streamings: Netflix, Max, Amazon Prime Video, Disney, etc.
+
       Responda no seguinte formato JSON:
       [
-        { "title": "Título", "tmdbId": 12345, "description": "Descrição do filme ou série", "imgUrl": "url da imagem", "tipo": "movie ou tv" }
+        { "title": "Título", "tmdbId": 12345, "description": "Descrição do filme ou série", "imgUrl": "url da imagem", "tipo": "movie ou tv", "releaseYear": 2024 }
       ]
     `;
 
@@ -214,6 +234,7 @@ export async function fetchMoodRecommendation(params: MoodRecommendationParams):
               text: prompt + "\nResponda apenas com o JSON, sem texto adicional." 
             }] 
           }],
+          tools: [{ google_search: {} }],
           generationConfig: {
             temperature: 0.7,
             topK: 40,
@@ -253,11 +274,12 @@ export async function fetchMoodRecommendation(params: MoodRecommendationParams):
             }&query=${encodeURIComponent(suggestion.title)}&language=pt-BR`
           );
           const searchData = await searchResponse.json();
-          
-          if (searchData.results && searchData.results.length > 0) {
+
+          const bestMatch = pickBestTitleMatch(searchData.results || [], suggestion.title);
+          if (bestMatch) {
             return {
               ...suggestion,
-              tmdbId: searchData.results[0].id,
+              tmdbId: bestMatch.id,
             };
           }
           return suggestion;
@@ -345,6 +367,7 @@ export async function fetchMoodRecommendation(params: MoodRecommendationParams):
 
     // Set the recommendation
     setMoodRecommendation(selectedContent);
+    }
 
   } catch (error) {
     console.error("Error fetching recommendation:", error);

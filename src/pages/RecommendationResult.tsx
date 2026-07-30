@@ -25,16 +25,19 @@ const RecommendationResult = () => {
   if (!showRecommendationModal) return null;
 
   const handleClose = () => {
+    // Don't also call navigate() here: flipping this to false is enough —
+    // the effect above reacts to it and does the (single) navigation.
+    // Calling navigate() from both places raced against each other and
+    // could pop the history stack twice, landing on a blank screen.
     setShowRecommendationModal(false);
-    navigate(-1);
   };
 
   return (
     <div
       className="min-h-[100dvh] bg-filmeja-dark overflow-y-auto px-4"
       style={{
-        paddingTop: "max(1rem, env(safe-area-inset-top))",
-        paddingBottom: "max(1rem, env(safe-area-inset-bottom))",
+        paddingTop: "max(2rem, calc(1rem + env(safe-area-inset-top)))",
+        paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))",
       }}
     >
       {isLoadingRecommendation || !moodRecommendation ? (

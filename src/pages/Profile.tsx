@@ -122,20 +122,16 @@ export function ProfilePage() {
         }
 
         // Fetch all data in parallel
-        // Update the fetchUserProfile function's subscription check
-        const [profileResponse, preferencesResponse, subscriptionResponse] = await Promise.all([
+        const [profileResponse, preferencesResponse] = await Promise.all([
           supabase.from('profiles').select('*').eq('id', user.id).single(),
           supabase.from('user_preferences').select('*').eq('user_id', user.id).single(),
-          supabase.from('subscribers').select('*').eq('user_id', user.id).eq('subscription_status', 'active').maybeSingle()
         ]);
 
         const { data: profileData, error: profileError } = profileResponse;
         const { data: preferencesData, error: preferencesError } = preferencesResponse;
-        const { data: subscriptionData, error: subscriptionError } = subscriptionResponse;
 
         if (profileError) throw profileError;
         if (preferencesError && preferencesError.code !== 'PGRST116') throw preferencesError;
-        if (subscriptionError && subscriptionError.code !== 'PGRST116') throw subscriptionError;
 
         // Now set the profile with all data available
         setProfile({
@@ -143,7 +139,8 @@ export function ProfilePage() {
           email: user.email!,
           full_name: profileData?.full_name || user.user_metadata?.full_name || 'Usuário',
           avatar_url: profileData?.avatar_url || user.user_metadata?.avatar_url,
-          isPremium: !!subscriptionData, // Update this line
+          // Same source of truth as usePremiumStatus: profiles.is_premium.
+          isPremium: !!profileData?.is_premium,
           preferences: {
             genres: preferencesData?.genres || [],
             moods: preferencesData?.languages || [],
@@ -293,18 +290,14 @@ export function ProfilePage() {
   
   const handleUpgradeSubscription = async () => {
     try {
-      // First, insert into subscribers table
-      const { error: insertError } = await supabase
-        .from('subscribers')
-        .upsert({
-          user_id: profile?.id,
-          status: 'active',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        });
-  
-      if (insertError) throw insertError;
-  
+      // Same source of truth as usePremiumStatus: profiles.is_premium.
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ is_premium: true })
+        .eq('id', profile?.id);
+
+      if (updateError) throw updateError;
+
       // Then update the profile state
       setProfile(prev => prev ? { ...prev, isPremium: true } : null);
       setShowSubscriptionModal(false);
@@ -353,7 +346,7 @@ export function ProfilePage() {
       />
 
     <MobileSidebar />
-      <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="max-w-4xl mx-auto px-4 pb-8 pt-[max(2rem,env(safe-area-inset-top))]">
         {/* Profile Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}

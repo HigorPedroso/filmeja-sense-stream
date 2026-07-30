@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Send, Bot, User } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -22,10 +22,19 @@ interface AiChatProps {
   watchedContent?: Array<{ title?: string; name?: string; type?: "movie" | "tv" }>;
   userAvatar?: string;
   userId: string; // Add this line
+  fullScreen?: boolean;
+  headerLeft?: ReactNode;
 }
 
 // Update the component parameters
-export function AiChat({ onShowContent, watchedContent = [], userAvatar, userId }: AiChatProps) {
+export function AiChat({
+  onShowContent,
+  watchedContent = [],
+  userAvatar,
+  userId,
+  fullScreen = false,
+  headerLeft,
+}: AiChatProps) {
   const [messages, setMessages] = useState<Message[]>(() => {
     const savedMessages = localStorage.getItem('chat_messages');
     return savedMessages ? JSON.parse(savedMessages) : [];
@@ -50,40 +59,68 @@ export function AiChat({ onShowContent, watchedContent = [], userAvatar, userId 
 
   const handleSend = async () => {
     if (!input.trim()) return;
-  
+
     try {
       // Fetch last 10 recommendations from watch_history
-      const { data: recentRecommendations, error: historyError} = await supabase
+      const { data: recentRecommendations, error: historyError } = await supabase
         .from('watch_history')
         .select('title')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
         .limit(10);
-  
+
       if (historyError) {
         console.error("Error fetching watch history:", historyError);
       }
-  
+
       // Format watched content and recent recommendations
       const watchedTitles = watchedContent
         .map(item => `${item.title || item.name} (${item.type})`)
         .join(", ");
-  
+
       const recentTitles = recentRecommendations
         ?.map(item => `${item.title}`)
         .join(", ");
-  
+
+      // Last turns of the actual conversation, so the model has real context
+      // instead of treating every message as a fresh, isolated request.
+      const conversationHistory = messages
+        .slice(-12)
+        .map((m) => `${m.sender === "user" ? "Usuário" : "Filmin.IA"}: ${m.text}`)
+        .join("\n");
+
       const userMessage: Message = {
         id: Date.now().toString(),
         text: input,
         sender: "user",
         timestamp: new Date(),
       };
-  
+
       setMessages((prev) => [...prev, userMessage]);
       setInput("");
       setIsTyping(true);
-  
+
+      const prompt = `Você é o Filmin.IA, um assistente de descoberta de filmes e séries. Converse de forma natural e simpática, como um amigo cinéfilo — não como um robô que só cospe recomendações.
+
+Regras:
+- Se a pessoa só cumprimentou ou ainda não deu nenhuma pista do que quer assistir, pode fazer UMA pergunta pra entender o gosto dela (humor, gênero, tempo disponível, etc.) antes de recomendar.
+- Assim que a pessoa der qualquer preferência (humor, gênero, duração, "algo tenso", "uma comédia", etc.), já é o suficiente — recomende um título específico nessa mesma resposta. Não fique encadeando perguntas de esclarecimento; no máximo UMA pergunta de acompanhamento na conversa inteira antes de recomendar.
+- Nunca recomende títulos que a pessoa já assistiu ou que já foram recomendados antes (listas abaixo), nem repita um título já sugerido nesta conversa.
+- Seja breve (2-4 frases) e use emojis com moderação.
+
+Títulos que a pessoa já assistiu: ${watchedTitles || "nenhum"}.
+Últimas recomendações já feitas (não repetir): ${recentTitles || "nenhuma"}.
+
+Conversa até agora:
+${conversationHistory || "(início da conversa)"}
+Usuário: "${input}"
+
+Responda SEMPRE em JSON válido, sem nenhum texto fora do JSON, neste formato exato:
+{
+  "chat": "sua resposta para a pessoa, em português",
+  "recommendation": { "title": "Nome exato do título", "type": "movie" } ou null se não estiver recomendando nada agora
+}`;
+
       const response = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${
           import.meta.env.VITE_GEMINI_API_KEY
@@ -92,29 +129,13 @@ export function AiChat({ onShowContent, watchedContent = [], userAvatar, userId 
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            contents: [
-              {
-                parts: [
-                  {
-                    text: `Você é um assistente amigável que recomenda filmes e séries. 
-                    Histórico do usuário: ${watchedTitles || "Nenhum título assistido ainda"}.
-                    Últimas recomendações (não recomendar estes): ${recentTitles || "Nenhuma recomendação recente"}.
-                    Com base nesta descrição: "${input}" e no histórico do usuário, recomende UM título específico que seja diferente dos já assistidos e das últimas recomendações.
-                    Retorne APENAS um JSON no seguinte formato, sem texto adicional:
-                    {
-                      "title": "Nome do Título",
-                      "type": "movie ou tv",
-                      "chat": "Sua mensagem amigável explicando a recomendação (use emojis)",
-                    }`,
-                  },
-                ],
-              },
-            ],
+            contents: [{ parts: [{ text: prompt }] }],
+            tools: [{ google_search: {} }],
             generationConfig: {
-              temperature: 0.7,
+              temperature: 0.8,
               topK: 40,
               topP: 0.95,
-              maxOutputTokens: 1024,
+              maxOutputTokens: 1536,
               thinkingConfig: { thinkingBudget: 0 },
             },
           }),
@@ -129,38 +150,41 @@ export function AiChat({ onShowContent, watchedContent = [], userAvatar, userId 
           // Extrai apenas o JSON do texto retornado
           const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
           if (!jsonMatch) throw new Error("JSON not found in AI response.");
-      
-          const jsonResponse = JSON.parse(jsonMatch[0]);
-          const validType = jsonResponse.type === "tv" ? "tv" : "movie";
 
-          // Add this: Save to watch history
-          await addToWatchHistory({
-            id: Date.now(), // Temporary ID until we get the real one
-            media_type: validType,
-            title: jsonResponse.title,
-            name: jsonResponse.title, // For TV shows
-            poster_path: null // We'll update this when we get the real content details
-          }, userId);
-      
-          setTimeout(() => {
-            setMessages((prev) => [
-              ...prev,
-              {
-                id: Date.now().toString(),
-                text: jsonResponse.chat,
-                sender: "ai",
-                timestamp: new Date(),
-                recommendation: {
-                  title: jsonResponse.title,
-                  type: validType,
-                },
-              },
-            ]);
-            setIsTyping(false);
-          }, 1000);
+          const jsonResponse = JSON.parse(jsonMatch[0]);
+          const rawRecommendation = jsonResponse.recommendation;
+          const recommendation =
+            rawRecommendation && rawRecommendation.title
+              ? {
+                  title: rawRecommendation.title as string,
+                  type: (rawRecommendation.type === "tv" ? "tv" : "movie") as "movie" | "tv",
+                }
+              : null;
+
+          if (recommendation) {
+            await addToWatchHistory({
+              id: Date.now(), // Temporary ID until we get the real one
+              media_type: recommendation.type,
+              title: recommendation.title,
+              name: recommendation.title, // For TV shows
+              poster_path: null // We'll update this when we get the real content details
+            }, userId);
+          }
+
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: Date.now().toString(),
+              text: jsonResponse.chat,
+              sender: "ai",
+              timestamp: new Date(),
+              recommendation,
+            },
+          ]);
+          setIsTyping(false);
         } catch (error) {
           console.error("Error parsing AI response:", error);
-      
+
           // Fallback se o JSON falhar
           const recommendation = extractRecommendation(aiResponse);
           setMessages((prev) => [
@@ -194,11 +218,18 @@ export function AiChat({ onShowContent, watchedContent = [], userAvatar, userId 
   };
 
   return (
-    <div className="flex flex-col h-[90vh] md:h-[600px] max-h-[400px] bg-filmeja-dark/50 backdrop-blur-sm rounded-xl border border-white/10 mx-auto my-auto w-full max-w-[95vw] md:max-w-none">
-      <div className="p-3 md:p-4 border-b border-white/10 flex justify-between items-center">
-        <h3 className="text-base md:text-lg font-semibold text-white flex items-center gap-2">
-          <Bot className="w-5 h-5 text-filmeja-purple" />
-          Filmin.AI te ajuda
+    <div
+      className={
+        fullScreen
+          ? "flex flex-col h-full w-full bg-transparent"
+          : "flex flex-col h-[90vh] md:h-[600px] max-h-[400px] bg-filmeja-dark/50 backdrop-blur-sm rounded-xl border border-white/10 mx-auto my-auto w-full max-w-[95vw] md:max-w-none"
+      }
+    >
+      <div className="p-3 md:p-4 border-b border-white/10 flex justify-between items-center gap-2">
+        <h3 className="text-base md:text-lg font-semibold text-white flex items-center gap-2 min-w-0">
+          {headerLeft}
+          <Bot className="w-5 h-5 text-filmeja-purple flex-shrink-0" />
+          <span className="truncate">Filmin.AI te ajuda</span>
         </h3>
         {messages.length > 0 && (
           <Button

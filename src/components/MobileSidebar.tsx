@@ -1,9 +1,6 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Home, Heart, Star, User, MessageSquare, X } from "lucide-react";
+import { Home, Heart, Star, User, MessageSquare } from "lucide-react";
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
-import { AiChat } from "./AiChat/AiChat";
 import { supabase } from "@/integrations/supabase/client";
 import { ContentModal } from "@/components/ContentModal/ContentModal"; // Add this import at the top
 import PremiumPaymentModal from "@/components/PremiumPaymentModal"; // Add this import
@@ -12,15 +9,13 @@ import { SignupModal } from "./modals/SignupModal";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { useRecommendationResult } from "@/hooks/useRecommendationResult";
+import { usePremiumStatus } from "@/hooks/usePremiumStatus";
 
 export function MobileSidebar() {
   const navigate = useNavigate();
   const location = useLocation();
   const isActive = (path: string) => location.pathname === path;
-  const [showAiChat, setShowAiChat] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
-  const [userWatchedMovies, setUserWatchedMovies] = useState([]);
-  const [userWatchedSeries, setUserWatchedSeries] = useState([]);
   const {
     moodRecommendation,
     setMoodRecommendation,
@@ -29,7 +24,7 @@ export function MobileSidebar() {
     isLoadingRecommendation,
     setIsLoadingRecommendation,
   } = useRecommendationResult();
-  const [isPremium, setIsPremium] = useState<boolean>(false);
+  const isPremium = usePremiumStatus();
   const [showPremiumModal, setShowPremiumModal] = useState(false);
   const [showSignupPromptModal, setShowSignupPromptModal] = useState(false);
 const [signupName, setSignupName] = useState("");
@@ -51,128 +46,10 @@ useEffect(() => {
     if (user) {
       const isAnon = user.is_anonymous;
       setIsAnonymousUser(isAnon);
-
-      // Check premium status
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("is_premium")
-        .eq("id", user.id)
-        .single();
-      setIsPremium(!!profile?.is_premium);
     }
   };
   fetchUser();
 }, []);
-
-  const fetchContentDetails = async (title: string, type?: "movie" | "tv") => {
-    setIsLoadingRecommendation(true);
-    setShowRecommendationModal(true);
-
-    try {
-      // Try searching in both movies and TV shows if type is not specified
-      const cleanTitle = title
-        .replace(/^("|'|`)|("|'|`)$/g, "") // Remove quotes
-        .replace(/^.*?recomendo\s+/i, "") // Remove "recomendo" and text before it
-        .replace(/^.*?sugiro\s+/i, "") // Remove "sugiro" and text before it
-        .split(".")[0] // Take only the first sentence
-        .split("(")[0] // Remove anything in parentheses
-        .trim();
-
-      console.log("Searching for title:", cleanTitle);
-
-      let searchResults = [];
-
-      if (!type) {
-        // Search in both movies and TV shows
-        const [movieSearch, tvSearch] = await Promise.all([
-          fetch(
-            `https://api.themoviedb.org/3/search/movie?api_key=${
-              import.meta.env.VITE_TMDB_API_KEY
-            }&query=${encodeURIComponent(title)}&language=pt-BR`
-          ).then((r) => r.json()),
-          fetch(
-            `https://api.themoviedb.org/3/search/tv?api_key=${
-              import.meta.env.VITE_TMDB_API_KEY
-            }&query=${encodeURIComponent(title)}&language=pt-BR`
-          ).then((r) => r.json()),
-        ]);
-
-        searchResults = [
-          ...(movieSearch.results || []).map((r) => ({
-            ...r,
-            mediaType: "movie",
-          })),
-          ...(tvSearch.results || []).map((r) => ({ ...r, mediaType: "tv" })),
-        ];
-      } else {
-        // Search in specified type only
-        const searchResponse = await fetch(
-          `https://api.themoviedb.org/3/search/${type}?api_key=${
-            import.meta.env.VITE_TMDB_API_KEY
-          }&query=${encodeURIComponent(title)}&language=pt-BR`
-        );
-        const searchData = await searchResponse.json();
-        searchResults = (searchData.results || []).map((r) => ({
-          ...r,
-          mediaType: type,
-        }));
-      }
-
-      // Sort by popularity and get the most relevant result
-      const content = searchResults.sort(
-        (a, b) => b.popularity - a.popularity
-      )[0];
-
-      if (!content) {
-        throw new Error(`No results found for: ${title}`);
-      }
-
-      const contentType = content.mediaType || type || "movie";
-      const contentId = content.id;
-
-      // Fetch additional details
-      const [details, videos, similar, providers] = await Promise.all([
-        fetch(
-          `https://api.themoviedb.org/3/${contentType}/${contentId}?api_key=${
-            import.meta.env.VITE_TMDB_API_KEY
-          }&language=pt-BR`
-        ).then((r) => r.json()),
-        fetch(
-          `https://api.themoviedb.org/3/${contentType}/${contentId}/videos?api_key=${
-            import.meta.env.VITE_TMDB_API_KEY
-          }&language=pt-BR`
-        ).then((r) => r.json()),
-        fetch(
-          `https://api.themoviedb.org/3/${contentType}/${contentId}/similar?api_key=${
-            import.meta.env.VITE_TMDB_API_KEY
-          }&language=pt-BR`
-        ).then((r) => r.json()),
-        fetch(
-          `https://api.themoviedb.org/3/${contentType}/${contentId}/watch/providers?api_key=${
-            import.meta.env.VITE_TMDB_API_KEY
-          }`
-        ).then((r) => r.json()),
-      ]);
-
-      setMoodRecommendation({
-        ...details,
-        videos: videos.results,
-        providers: providers.results?.BR,
-        similar: similar.results,
-        mediaType: contentType,
-      });
-    } catch (error) {
-      console.error("Error fetching content details:", error);
-      toast({
-        title: "Conteúdo não encontrado",
-        description: "Não foi possível encontrar o título especificado",
-        variant: "destructive",
-      });
-      setShowRecommendationModal(false);
-    }
-
-    setIsLoadingRecommendation(false);
-  };
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -207,36 +84,6 @@ useEffect(() => {
 
   return (
     <>
-    {showAiChat && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.9, opacity: 0 }}
-            className="w-full max-w-2xl"
-          >
-            <div className="flex justify-end mb-4">
-              <Button
-                variant="ghost"
-                onClick={() => setShowAiChat(false)}
-                className="text-white hover:bg-white/10"
-              >
-                <X className="w-6 h-6" />
-              </Button>
-            </div>
-            <AiChat
-              onShowContent={async (title, type) => {
-                setShowAiChat(false);
-                fetchContentDetails(title, type);
-              }}
-              watchedContent={[...userWatchedMovies, ...userWatchedSeries]}
-              userAvatar={currentUser?.user_metadata?.avatar_url}
-              userId={currentUser?.id}
-            />
-          </motion.div>
-        </div>
-      )}
-
       {moodRecommendation && (
         <ContentModal
           isOpen={showRecommendationModal}
@@ -260,7 +107,9 @@ useEffect(() => {
               key: "home",
               label: "Início",
               icon: Home,
-              active: isActive("/dashboard"),
+              // On native, the app opens at "/" which renders the same
+              // Dashboard as "/dashboard" — both count as the home tab.
+              active: isActive("/dashboard") || isActive("/"),
               onClick: () => navigate("/dashboard"),
             },
             {
@@ -280,14 +129,14 @@ useEffect(() => {
               key: "ai",
               label: "Filmin.IA",
               icon: MessageSquare,
-              active: showAiChat,
+              active: isActive("/filmin-ia"),
               onClick: () => {
                 if (isAnonymousUser) {
                   setShowSignupPromptModal(true);
                 } else if (!isPremium) {
                   setShowPremiumModal(true);
                 } else {
-                  setShowAiChat(true);
+                  navigate("/filmin-ia");
                 }
               },
             },
@@ -336,7 +185,6 @@ useEffect(() => {
         isOpen={showPremiumModal}
         onClose={() => setShowPremiumModal(false)}
         onSuccess={() => {
-          setIsPremium(true);
           setShowPremiumModal(false);
         }}
       />

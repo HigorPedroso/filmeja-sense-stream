@@ -1,12 +1,9 @@
-
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { motion, AnimatePresence } from "framer-motion";
-import { useState } from "react";
-import { useToast } from "@/components/ui/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { Button } from "./ui/button";
-import { Check, Crown, X } from "lucide-react";
-import { trackConversion } from "@/utils/analytics";
+import { X } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { PremiumPaywallContent } from "@/components/Premium/PremiumPaywallContent";
 
 interface PremiumPaymentModalProps {
   isOpen: boolean;
@@ -14,120 +11,32 @@ interface PremiumPaymentModalProps {
   onSuccess: () => void;
 }
 
-const PremiumPaymentModal = ({ isOpen, onClose, onSuccess }: PremiumPaymentModalProps) => {
-  const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
+// Real checkout is paused (Stripe removed, Google Play Billing pending) —
+// PremiumPaywallContent still just shows the "Em breve" messaging either way.
+// On mobile this hands off to the dedicated /premium screen instead of a
+// boxed dialog, matching the Filmin.IA chat and recommendation-result
+// full-screen conventions already used elsewhere in the app.
+const PremiumPaymentModal = ({ isOpen, onClose }: PremiumPaymentModalProps) => {
+  const isMobile = useIsMobile();
+  const navigate = useNavigate();
 
-  const handlePayment = async () => {
-    try {
-      setIsLoading(true);
-      
-      // Track conversion before payment
-      trackConversion();
-
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session?.user) {
-        throw new Error("Usuário não autenticado");
-      }
-
-      const { data, error } = await supabase.functions.invoke('create-checkout-session', {
-        body: {}  // The function will extract user details from the auth token
-      });
-
-      if (error) {
-        console.error("Payment error:", error);
-        throw new Error(error.message || "Erro ao processar pagamento");
-      }
-      
-      if (!data?.url) {
-        throw new Error('URL de checkout não recebida');
-      }
-
-      // Redirect to Stripe checkout
-      window.location.href = data.url;
-      
-    } catch (error) {
-      console.error("Payment error:", error);
-      toast({
-        title: "Erro no pagamento",
-        description: "Não foi possível processar o pagamento. Tente novamente.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
+  useEffect(() => {
+    if (isMobile && isOpen) {
+      navigate("/premium");
+      onClose();
     }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMobile, isOpen]);
+
+  if (isMobile) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md bg-black/95 border-white/10 text-white">
-        <AnimatePresence>
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            className="p-6"
-          >
-            <div className="absolute top-4 right-4">
-              <Button
-                variant="ghost"
-                onClick={onClose}
-                className="text-gray-400 hover:text-white"
-              >
-                <X className="w-5 h-5" />
-              </Button>
-            </div>
-
-            <div className="text-center mb-8">
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                className="w-16 h-16 bg-filmeja-purple/20 rounded-full flex items-center justify-center mx-auto mb-4"
-              >
-                <Crown className="w-8 h-8 text-filmeja-purple" />
-              </motion.div>
-              <h2 className="text-2xl font-bold mb-2">Upgrade para Premium</h2>
-              <p className="text-gray-400"> Você tem acesso a tudo isso, por apenas</p>
-              <div className="text-3xl font-bold text-filmeja-purple mt-2">
-                R$9,99<span className="text-sm text-gray-400">/mês</span>
-              </div>
-            </div>
-
-            <div className="space-y-4 mb-8">
-              {[
-                "Recomendações ultra-personalizadas com IA",
-                "Descubra filmes e séries perfeitos para você",
-                "Recursos premium liberados",
-                "Funcionalidades exclusivas para explorar",
-                "Suporte prioritário, atenção especial para você"
-              ].map((feature, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  className="flex items-center space-x-3"
-                >
-                  <Check className="w-5 h-5 text-filmeja-purple" />
-                  <span>{feature}</span>
-                </motion.div>
-              ))}
-            </div>
-
-            <Button
-              onClick={handlePayment}
-              disabled={isLoading}
-              className="w-full bg-gradient-to-r from-filmeja-purple to-filmeja-blue hover:opacity-90 transition-all"
-            >
-              {isLoading ? "Processando..." : "Começar agora"}
-            </Button>
-
-            <p className="text-xs text-gray-400 text-center mt-4">
-              Pagamento seguro via Stripe
-            </p>
-          </motion.div>
-        </AnimatePresence>
+      <DialogContent className="sm:max-w-md bg-filmeja-dark/95 border-white/10 text-white max-h-[90vh] overflow-y-auto">
+        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white">
+          <X className="w-5 h-5" />
+        </button>
+        <PremiumPaywallContent onClose={onClose} />
       </DialogContent>
     </Dialog>
   );

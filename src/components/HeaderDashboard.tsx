@@ -8,13 +8,15 @@ import PremiumPaymentModal from "./PremiumPaymentModal";
 import PaymentSuccessModal from "./PaymentSuccessModal";
 import { useToast } from "@/components/ui/use-toast";
 import { useLocation } from "react-router-dom";
+import { usePremiumStatus } from "@/hooks/usePremiumStatus";
+import { DAILY_FREE_LIMIT } from "@/lib/recommendations/fetchMoodRecommendation";
 
 const HeaderDashboard = () => {
   const { user } = useAuth();
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
   const [isPremiumModalOpen, setIsPremiumModalOpen] = useState(false);
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
-  const [isPremium, setIsPremium] = useState(false);
+  const isPremium = usePremiumStatus();
   const [isCheckingStatus, setIsCheckingStatus] = useState(false);
   const { toast } = useToast();
   const location = useLocation();
@@ -34,8 +36,7 @@ const HeaderDashboard = () => {
       const newUrl = window.location.pathname;
       window.history.replaceState({}, "", newUrl);
 
-      // Force refresh subscription status
-      checkPremiumStatus();
+      checkCredits();
     } else if (paymentStatus === "canceled") {
       toast({
         title: "Pagamento cancelado",
@@ -52,23 +53,14 @@ const HeaderDashboard = () => {
 
   // Add these new states at the top with other states
   const [dailyCredits, setDailyCredits] = useState<number | null>(null);
-  const [monthlyCredits, setMonthlyCredits] = useState<number | null>(null);
 
-  // Update the checkPremiumStatus function
-  const checkPremiumStatus = async () => {
+  // Free-tier usage credits shown next to the "Assinar Premium" CTA.
+  // Premium status itself now comes from usePremiumStatus (profiles.is_premium).
+  const checkCredits = async () => {
     if (user && !isCheckingStatus) {
       setIsCheckingStatus(true);
       try {
-        const accessToken = (await supabase.auth.getSession()).data.session
-          ?.access_token;
-
-        if (!accessToken) {
-          console.error("No access token available");
-          setIsCheckingStatus(false);
-          return;
-        }
-
-        // Get premium status and credits
+        // Get remaining recommendation credits
         const { data: viewStats } = await supabase
           .from("user_recommendation_views")
           .select("daily_views, monthly_views, view_date")
@@ -109,27 +101,9 @@ const HeaderDashboard = () => {
           );
         }
 
-        const dailyRemaining = 1 - dailyViews;
-        const monthlyRemaining = 5 - monthlyViews;
+        const dailyRemaining = DAILY_FREE_LIMIT - dailyViews;
 
         setDailyCredits(Math.max(0, dailyRemaining));
-        setMonthlyCredits(Math.max(0, monthlyRemaining));
-
-        // Check premium status
-        const response = await fetch(
-          "https://yynlzhfibeozrwrtrjbs.supabase.co/functions/v1/check-subscription",
-          {
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-              "Content-Type": "application/json",
-            },
-          }
-        );
-
-        if (!response.ok) throw new Error(`Error: ${response.statusText}`);
-
-        const data = await response.json();
-        setIsPremium(data.isPremium);
       } catch (error) {
         console.error("Error checking status:", error);
       } finally {
@@ -138,34 +112,9 @@ const HeaderDashboard = () => {
     }
   };
 
-  // Update the premium badge/button section
-  {
-    isPremium ? (
-      <Badge className="bg-filmeja-purple text-white flex items-center gap-1 text-xs">
-        <Crown className="w-3 h-3" />
-        Premium
-      </Badge>
-    ) : (
-      <div className="flex flex-col items-end">
-        <button
-          onClick={() => setIsPremiumModalOpen(true)}
-          className="text-xs text-filmeja-purple hover:underline flex items-center gap-1"
-        >
-          <Crown className="w-3 h-3" />
-          Assinar Premium
-        </button>
-        <span className="text-xs text-gray-400">
-          {dailyCredits !== null &&
-            monthlyCredits !== null &&
-            `${dailyCredits} hoje • ${monthlyCredits} este mês`}
-        </span>
-      </div>
-    );
-  }
-
-  // Check premium status on mount and when user changes
+  // Fetch remaining free-tier credits on mount and when user changes.
   useEffect(() => {
-    checkPremiumStatus();
+    checkCredits();
   }, [user]);
 
   const handleAvatarUpdate = (newAvatarUrl: string) => {
@@ -174,14 +123,12 @@ const HeaderDashboard = () => {
   };
 
   const handlePremiumSuccess = () => {
-    setIsPremium(true);
     setIsPremiumModalOpen(false);
   };
 
   const handleSuccessModalClose = () => {
     setIsSuccessModalOpen(false);
-    // Force refresh subscription status after closing the success modal
-    checkPremiumStatus();
+    checkCredits();
   };
 
   if (!user) return null;
@@ -190,7 +137,7 @@ const HeaderDashboard = () => {
     <>
       <header
         className="sticky top-0 z-10 px-4"
-        style={{ paddingTop: "max(1rem, env(safe-area-inset-top))" }}
+        style={{ paddingTop: "max(1.75rem, calc(0.75rem + env(safe-area-inset-top)))" }}
       >
         <div className="flex justify-between md:justify-end items-center">
           <span className="text-white font-bold text-lg drop-shadow-md md:hidden">
@@ -219,9 +166,7 @@ const HeaderDashboard = () => {
                   </button>
                   <span className="text-xs text-gray-400 flex items-center gap-1">
                     <Coins className="w-3 h-3 text-yellow-500" />
-                    {dailyCredits !== null &&
-                      monthlyCredits !== null &&
-                      `${dailyCredits} hoje • ${monthlyCredits} este mês`}
+                    {dailyCredits !== null && `${dailyCredits} de ${DAILY_FREE_LIMIT} hoje`}
                   </span>
                 </div>
               )}

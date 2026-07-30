@@ -44,6 +44,7 @@ const geminiResponse = await fetch(
             ],
           },
         ],
+        tools: [{ google_search: {} }],
         generationConfig: {
           temperature: 0.7,
           topK: 40,

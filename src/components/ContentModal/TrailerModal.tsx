@@ -145,78 +145,63 @@ export const TrailerModal = ({
             <motion.div
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="md:hidden px-4 py-3 flex justify-end"
+              className="md:hidden px-4 pb-3 flex-shrink-0 flex items-center justify-between gap-3"
+              style={{ paddingTop: "max(0.75rem, env(safe-area-inset-top))" }}
             >
+              <h3 className="text-white font-medium text-base truncate">
+                {content.title || content.name}
+              </h3>
               <Button
                 variant="ghost"
                 size="icon"
-                className="text-white/80 hover:text-white"
+                className="text-white/80 hover:text-white flex-shrink-0"
                 onClick={onClose}
               >
                 <X className="w-5 h-5" />
               </Button>
             </motion.div>
 
-            {/* Mobile Content Info */}
-            <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="md:hidden flex-1 flex flex-col items-center justify-center px-4 text-center"
-            >
-              <img
-                src={`https://image.tmdb.org/t/p/w92${content.poster_path}`}
-                alt={content.title || content.name}
-                className="w-20 h-20 rounded-lg object-cover mb-4"
-              />
-              <h3 className="text-white font-semibold text-xl mb-2">
-                {content.title || content.name}
-              </h3>
-              <p className="text-gray-400 text-sm mb-4">{content.tagline}</p>
-              <div className="flex items-center gap-2 mb-2">
-                {content.genres?.slice(0, 2).map((genre) => (
-                  <span
-                    key={genre.id}
-                    className="text-xs px-2 py-1 rounded-full bg-white/10 text-white/80"
-                  >
-                    {genre.name}
-                  </span>
-                ))}
-              </div>
-            </motion.div>
-
-            {/* Video Container for Mobile */}
-            <div className="relative w-full md:max-w-4xl aspect-video mt-auto">
-              <AnimatePresence mode="wait">
-                {isTransitioning ? (
-                  <motion.div
-                    key="loading"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="absolute inset-0 flex items-center justify-center bg-black/60"
-                  >
-                    <div className="text-white text-center">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-filmeja-purple mx-auto mb-2" />
-                      <p className="text-sm">Buscando trailer...</p>
-                    </div>
-                  </motion.div>
-                ) : (
-                  <motion.div
-                    key="player"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="w-full h-full"
-                  >
-                    <iframe
+            {/* Video Container for Mobile, vertically centered in the remaining space */}
+            <div className="flex-1 flex items-center justify-center px-4">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ type: "spring", damping: 20 }}
+                className="relative w-full aspect-video rounded-xl overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.3)]"
+              >
+                <AnimatePresence mode="wait">
+                  {isTransitioning ? (
+                    <motion.div
+                      key="loading"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="absolute inset-0 flex items-center justify-center bg-black/60"
+                    >
+                      <div className="text-white text-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-filmeja-purple mx-auto mb-2" />
+                        <p className="text-sm">Buscando trailer...</p>
+                      </div>
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key="player"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
                       className="w-full h-full"
-                      src={trailerUrl}
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                    />
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                    >
+                      <iframe
+                        className="w-full h-full"
+                        src={trailerUrl}
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
             </div>
           </div>
         </>

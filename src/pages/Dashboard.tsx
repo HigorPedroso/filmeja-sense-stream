@@ -14,11 +14,11 @@ import {
   X,
   Play,
   Lock,
-  Check,
   Crown,
   Loader2,
   Info,
   Mail, // Add this
+  ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ContentCarousel from "@/components/ContentCarousel";
@@ -49,7 +49,10 @@ import {
   ContentSuggestion,
   fetchMoodRecommendation as fetchMoodRecommendationService,
   shuffleArray,
+  DAILY_FREE_LIMIT,
 } from "@/lib/recommendations/fetchMoodRecommendation";
+import { showInterstitialAd } from "@/lib/ads";
+import { refundDailyView } from "@/lib/recommendations/refundDailyView";
 import SpinnerWheel from "@/components/SpinnerWheel";
 import { getUserFavorites, FavoriteItem } from "@/lib/favorites";
 import StreamingServices from "@/components/StreamingServices";
@@ -61,7 +64,7 @@ import { useSearchParams } from "react-router-dom";
 import PaymentSuccessModal from "@/components/PaymentSuccessModal";
 import { Sidebar } from "@/components/Sidebar";
 import { MobileSidebar } from "@/components/MobileSidebar";
-import { fetchContentWithProviders } from "@/lib/utils/tmdb";
+import { fetchContentWithProviders, searchContentByTitle, pickBestTitleMatch } from "@/lib/utils/tmdb";
 import { extractJsonFromResponse } from "@/utils/jsonParser";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -69,6 +72,8 @@ import { SignupPromptModal } from "@/components/modals/SignupPromptModal";
 import { SignupModal } from "@/components/modals/SignupModal";
 import { useGoogleAdsPageView } from "@/hooks/useGoogleAds";
 import { useRecommendationResult } from "@/hooks/useRecommendationResult";
+import { usePremiumStatus } from "@/hooks/usePremiumStatus";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 // Mock user data - in a real app, this would come from authentication
 const mockUser = {
@@ -159,8 +164,14 @@ const moodEmojis: Record<string, string> = {
   mysterious: "🔍",
 };
 
+// Cached at module scope so the onboarding check only runs once per app
+// launch (right after the splash screen), not every time Dashboard remounts
+// from navigating back to it. Resets naturally when the app is restarted.
+let onboardingCheckCache: { hasCompletedOnboarding: boolean } | null = null;
+
 const Dashboard = () => {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const { toast } = useToast();
   const [trendingContent, setTrendingContent] = useState<ContentItem[]>([]);
   const [moodRecommendations, setMoodRecommendations] = useState<ContentItem[]>(
@@ -175,14 +186,16 @@ const Dashboard = () => {
     setIsLoadingRecommendation,
   } = useRecommendationResult();
   const [selectedMood, setSelectedMood] = useState<MoodType | null>(null);
-  const [isPremium, setIsPremium] = useState(false);
+  const isPremium = usePremiumStatus();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isExpanded, setIsExpanded] = useState(false);
   const [showTrailerModal, setShowTrailerModal] = useState(false);
   const [showMoodOverlay, setShowMoodOverlay] = useState(false);
   const [isTrailerAnimating, setIsTrailerAnimating] = useState(false);
-  const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
-  const [isCheckingOnboarding, setIsCheckingOnboarding] = useState(true);
+  const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(
+    onboardingCheckCache?.hasCompletedOnboarding ?? false
+  );
+  const [isCheckingOnboarding, setIsCheckingOnboarding] = useState(onboardingCheckCache === null);
   const getMoodName = (mood: MoodType): string => {
     return moodNames[mood] || mood;
   };
@@ -201,8 +214,6 @@ const Dashboard = () => {
   const [searchParams] = useSearchParams();
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
-  const [showPremiumModal, setShowPremiumModal] = useState(false);
-  const [showPremiumFilminModal, setShowPremiumFilminModal] = useState(false);
   const [onBoardingData, setOnBoardingData] = useState(false);
   const [dailyViews, setDailyViews] = useState(0);
   const [monthlyViews, setMonthlyViews] = useState(0);
@@ -405,61 +416,6 @@ const Dashboard = () => {
     fetchUser();
   }, []);
 
-  useEffect(() => {
-    const checkPremiumStatus = async () => {
-      try {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        if (!user) return;
-
-        const { data: subscriber, error } = await supabase
-          .from("subscribers")
-          .select("*")
-          .eq("user_id", user.id)
-          .in("subscription_status", ["active", "canceling"])
-          .single();
-
-        if (error) {
-          console.error("Error fetching subscriber status:", error);
-          setIsPremium(false);
-          return;
-        }
-
-        // Check if subscription exists and is active
-        const isActive =
-          subscriber &&
-          (!subscriber.current_period_end ||
-            new Date(subscriber.current_period_end) > new Date());
-
-        setIsPremium(isActive);
-      } catch (error) {
-        console.error("Error checking premium status:", error);
-        setIsPremium(false);
-      }
-    };
-
-    checkPremiumStatus();
-
-    // Set up real-time subscription for status changes
-    const subscription = supabase
-      .channel("subscription-status")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "subscribers",
-        },
-        checkPremiumStatus
-      )
-      .subscribe();
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
-
   const handleMoodSelect = (mood: string) => {
     setGenre(null);
     fetchMoodRecommendationService({
@@ -475,7 +431,7 @@ const Dashboard = () => {
       setMoodRecommendation,
     }).catch((error) => {
       if (error.type === "PREMIUM_REQUIRED") {
-        setShowPremiumModal(true); // Show premium upgrade modal
+        setShowPaymentModal(true); // Go straight to the premium paywall
         setDailyViews(error.dailyViews);
         setMonthlyViews(error.monthlyViews);
         toast({
@@ -538,6 +494,7 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             contents: [{ parts: [{ text: prompt }] }],
+            tools: [{ google_search: {} }],
             generationConfig: {
               temperature: 0.7,
               topK: 40,
@@ -583,10 +540,11 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
             );
             const searchData = await searchResponse.json();
 
-            if (searchData.results && searchData.results.length > 0) {
+            const bestMatch = pickBestTitleMatch(searchData.results || [], suggestion.title);
+            if (bestMatch) {
               return {
                 ...suggestion,
-                tmdbId: searchData.results[0].id,
+                tmdbId: bestMatch.id,
               };
             }
             return suggestion;
@@ -662,7 +620,6 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
       setMoodRecommendation(selectedContent);
 
       localStorage.removeItem("onboarding_data");
-      setShowPremiumFilminModal(false);
     } catch (error) {
       // console.error("Error fetching recommendation:", error);
       // toast({
@@ -735,14 +692,21 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
   }, []);
 
   useEffect(() => {
-    const checkOnboardingStatus = async () => {
+    // Already checked earlier this app launch — skip re-running it (and
+    // re-showing the loading spinner) just because Dashboard remounted.
+    if (onboardingCheckCache !== null) {
+      setHasCompletedOnboarding(onboardingCheckCache.hasCompletedOnboarding);
+      setIsCheckingOnboarding(false);
+      return;
+    }
+
+    const checkOnboardingStatus = async (): Promise<boolean> => {
       try {
         const {
           data: { user },
         } = await supabase.auth.getUser();
         if (!user) {
-          setHasCompletedOnboarding(false);
-          return;
+          return false;
         }
 
         // Check if user has visited before
@@ -765,12 +729,10 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
 
           if (insertError) {
             console.error("Error creating visit record:", insertError);
-            return;
+            return false;
           }
 
-          setHasCompletedOnboarding(true); // Skip onboarding on first visit
-          setIsCheckingOnboarding(false);
-          return;
+          return true; // Skip onboarding on first visit
         }
 
         // Update existing visit count
@@ -795,19 +757,21 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
             .eq("user_id", user.id)
             .maybeSingle();
 
-          setHasCompletedOnboarding(!!preferences);
-        } else {
-          setHasCompletedOnboarding(true);
+          return !!preferences;
         }
+
+        return true;
       } catch (error) {
         console.error("Error checking onboarding status:", error);
-        setHasCompletedOnboarding(false);
-      } finally {
-        setIsCheckingOnboarding(false);
+        return false;
       }
     };
 
-    checkOnboardingStatus();
+    checkOnboardingStatus().then((completed) => {
+      onboardingCheckCache = { hasCompletedOnboarding: completed };
+      setHasCompletedOnboarding(completed);
+      setIsCheckingOnboarding(false);
+    });
   }, []);
 
   const fetchGenreRecommendation = async (genre: {
@@ -823,55 +787,41 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
       } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
-      // Busca o profile para garantir o id correto
+      // Same source of truth as usePremiumStatus: profiles.is_premium.
       const { data: profile } = await supabase
         .from("profiles")
-        .select("id")
+        .select("id, is_premium")
         .eq("id", user.id)
         .single();
 
       if (!profile?.id) throw new Error("Profile not found");
 
-      // Agora verifica na tabela subscribers se é premium
-      const { data: subscriber } = await supabase
-        .from("subscribers")
-        .select("subscription_status, current_period_end")
-        .eq("user_id", profile.id)
-        .in("subscription_status", ["active", "canceling"])
-        .single();
+      const isPremium = !!profile.is_premium;
 
-      let isPremium = false;
-      if (subscriber) {
-        if (subscriber.subscription_status === "active") {
-          isPremium = true;
-        } else if (
-          subscriber.subscription_status === "canceling" &&
-          subscriber.current_period_end &&
-          new Date(subscriber.current_period_end) > new Date()
-        ) {
-          isPremium = true;
-        }
-      }
+      // Coin bookkeeping: if a coin is spent below but the fetch fails
+      // afterward, we refund it in the catch block so a failed recommendation
+      // doesn't cost the user one of their free daily queries.
+      const today = new Date().toISOString().split("T")[0];
+      let coinSpent = false;
+      let dailyViewsBeforeSpend = 0;
+      let monthlyViewsBeforeSpend = 0;
 
       if (!isPremium) {
-        const today = new Date().toISOString().split("T")[0];
-        const monthStart = new Date(today.slice(0, 7) + "-01").toISOString();
-
         const { data: viewStats } = await supabase
           .from("user_recommendation_views")
-          .select("daily_views, monthly_views")
+          .select("daily_views, monthly_views, view_date")
           .eq("user_id", user.id)
-          .gte("view_date", monthStart)
           .order("view_date", { ascending: false })
           .limit(1)
           .single();
 
-        const dailyViews = viewStats?.daily_views || 0;
+        // Only carry the count over if the last recorded view was today.
+        const dailyViews = viewStats?.view_date === today ? (viewStats?.daily_views || 0) : 0;
         const monthlyViews = viewStats?.monthly_views || 0;
 
         // Só realiza o bloqueio se o usuário NÃO for premium
-        if (dailyViews >= 10 || monthlyViews >= 50) {
-          setShowPremiumModal(true);
+        if (dailyViews >= DAILY_FREE_LIMIT) {
+          setShowPaymentModal(true); // Go straight to the premium paywall
           setDailyViews(dailyViews);
           setMonthlyViews(monthlyViews);
           setShowRecommendationModal(false);
@@ -879,24 +829,34 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
 
           toast({
             title: "Limite Atingido",
-            description:
-              "Você atingiu o limite de recomendações gratuitas. Assine o plano premium para continuar recebendo recomendações ilimitadas!",
+            description: `Você atingiu o limite de ${DAILY_FREE_LIMIT} recomendações gratuitas por dia. Assine o plano premium para continuar recebendo recomendações ilimitadas!`,
             variant: "destructive",
           });
           return; // Exit early
         }
 
+        dailyViewsBeforeSpend = dailyViews;
+        monthlyViewsBeforeSpend = monthlyViews;
+        const newDailyViews = dailyViews + 1;
+
         await supabase.from("user_recommendation_views").upsert(
           {
             user_id: user.id,
             view_date: today,
-            daily_views: dailyViews + 1,
+            daily_views: newDailyViews,
             monthly_views: monthlyViews + 1,
           },
           {
             onConflict: ["user_id", "view_date"], // <- define os campos únicos
           }
         );
+        coinSpent = true;
+
+        // 1st free query of the day is ad-free; 2nd and 3rd show an
+        // interstitial ad before the recommendation loads.
+        if (newDailyViews >= 2) {
+          await showInterstitialAd();
+        }
       }
 
       function extractJsonFromResponse(text: string) {
@@ -1009,25 +969,27 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
             : recommendationCount >= 2;
         const mediaType = shouldFetchMovies ? "movie" : "tv";
 
+        const currentYear = new Date().getFullYear();
+        const minReleaseYear = currentYear - 5;
+
         const prompt = `
-        Você é um assistente que responde apenas em JSON válido. 
+        Você é um assistente que responde apenas em JSON válido.
         O usuário já assistiu os seguintes títulos:
         ${JSON.stringify(validWatchedContent)}
-        
+
         Últimas recomendações (não recomendar estes títulos também):
         ${JSON.stringify(recentTitles)}
-        
+
         Forneça uma lista de 10 ${
           mediaType === "movie" ? "filmes" : "séries"
-        } que são muito populares, bem avaliados e correspondem ao gênero: ${
-          genre.name
-        }. 
+        } bem avaliados que correspondem ao gênero: ${genre.name}.
+        IMPORTANTE: priorize lançamentos recentes — de ${minReleaseYear} até ${currentYear}. Evite indicar clássicos antigos ou títulos muito batidos; a lista deve parecer atual, não uma seleção de "os mais famosos de sempre".
         NÃO INCLUA os títulos que o usuário já assistiu ou que foram recomendados recentemente.
-        Tem que estar presente nos principais streamings: Netflix, Max, Amazon Prime Video, Disney, etc. 
-        
+        Tem que estar presente nos principais streamings: Netflix, Max, Amazon Prime Video, Disney, etc.
+
         Responda no seguinte formato JSON:
         [
-          { "title": "Título", "tmdbId": 12345, "description": "Descrição do filme ou série", "imgUrl": "url da imagem", "tipo": "movie ou tv" }
+          { "title": "Título", "tmdbId": 12345, "description": "Descrição do filme ou série", "imgUrl": "url da imagem", "tipo": "movie ou tv", "releaseYear": 2024 }
         ]
         `;
 
@@ -1050,6 +1012,7 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
                   ],
                 },
               ],
+              tools: [{ google_search: {} }],
               generationConfig: {
                 temperature: 0.7,
                 topK: 40,
@@ -1088,6 +1051,9 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
         console.log("Sugestões geradas:", suggestions);
       } catch (error) {
         console.error("Erro ao buscar recomendação:", error);
+        if (coinSpent) {
+          await refundDailyView(user.id, today, dailyViewsBeforeSpend, monthlyViewsBeforeSpend);
+        }
         toast({
           title: "Erro",
           description:
@@ -1109,97 +1075,10 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
     setShowRecommendationModal(true);
 
     try {
-      // Try searching in both movies and TV shows if type is not specified
-      const cleanTitle = title
-        .replace(/^("|'|`)|("|'|`)$/g, "") // Remove quotes
-        .replace(/^.*?recomendo\s+/i, "") // Remove "recomendo" and text before it
-        .replace(/^.*?sugiro\s+/i, "") // Remove "sugiro" and text before it
-        .split(".")[0] // Take only the first sentence
-        .split("(")[0] // Remove anything in parentheses
-        .trim();
-
-      console.log("Searching for title:", cleanTitle);
-
-      let searchResults = [];
-
-      if (!type) {
-        // Search in both movies and TV shows
-        const [movieSearch, tvSearch] = await Promise.all([
-          fetch(
-            `https://api.themoviedb.org/3/search/movie?api_key=${
-              import.meta.env.VITE_TMDB_API_KEY
-            }&query=${encodeURIComponent(title)}&language=pt-BR`
-          ).then((r) => r.json()),
-          fetch(
-            `https://api.themoviedb.org/3/search/tv?api_key=${
-              import.meta.env.VITE_TMDB_API_KEY
-            }&query=${encodeURIComponent(title)}&language=pt-BR`
-          ).then((r) => r.json()),
-        ]);
-
-        searchResults = [
-          ...(movieSearch.results || []).map((r) => ({
-            ...r,
-            mediaType: "movie",
-          })),
-          ...(tvSearch.results || []).map((r) => ({ ...r, mediaType: "tv" })),
-        ];
-      } else {
-        // Search in specified type only
-        const searchResponse = await fetch(
-          `https://api.themoviedb.org/3/search/${type}?api_key=${
-            import.meta.env.VITE_TMDB_API_KEY
-          }&query=${encodeURIComponent(title)}&language=pt-BR`
-        );
-        const searchData = await searchResponse.json();
-        searchResults = (searchData.results || []).map((r) => ({
-          ...r,
-          mediaType: type,
-        }));
-      }
-
-      // Sort by popularity and get the most relevant result
-      const content = searchResults.sort(
-        (a, b) => b.popularity - a.popularity
-      )[0];
-
-      if (!content) {
-        throw new Error(`No results found for: ${title}`);
-      }
-
-      const contentType = content.mediaType || type || "movie";
-      const contentId = content.id;
-
-      // Fetch additional details
-      const [details, videos, similar, providers] = await Promise.all([
-        fetch(
-          `https://api.themoviedb.org/3/${contentType}/${contentId}?api_key=${
-            import.meta.env.VITE_TMDB_API_KEY
-          }&language=pt-BR`
-        ).then((r) => r.json()),
-        fetch(
-          `https://api.themoviedb.org/3/${contentType}/${contentId}/videos?api_key=${
-            import.meta.env.VITE_TMDB_API_KEY
-          }&language=pt-BR`
-        ).then((r) => r.json()),
-        fetch(
-          `https://api.themoviedb.org/3/${contentType}/${contentId}/similar?api_key=${
-            import.meta.env.VITE_TMDB_API_KEY
-          }&language=pt-BR`
-        ).then((r) => r.json()),
-        fetch(
-          `https://api.themoviedb.org/3/${contentType}/${contentId}/watch/providers?api_key=${
-            import.meta.env.VITE_TMDB_API_KEY
-          }`
-        ).then((r) => r.json()),
-      ]);
-
-      setMoodRecommendation({
-        ...details,
-        videos: videos.results,
-        providers: providers.results?.BR,
-        similar: similar.results,
-        mediaType: contentType,
+      const item = await searchContentByTitle(title, type);
+      await fetchContentWithProviders(item, {
+        showToast: false,
+        onContentFetched: setMoodRecommendation,
       });
     } catch (error) {
       console.error("Error fetching content details:", error);
@@ -1414,77 +1293,116 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
 
       <MobileSidebar />
 
-      <ImageBackground useSlideshow={true}>
-        <HeaderDashboard user={mockUser} />
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4 py-8 md:py-0">
-          <h1 className="text-3xl md:text-5xl font-bold text-white mb-4 md:mb-6 drop-shadow-lg leading-tight">
-            Como você quer descobrir seu próximo filme ou série?
-          </h1>
-          <p className="text-lg md:text-xl text-gray-200 mb-8 md:mb-12 max-w-2xl drop-shadow-md px-2">
-            Escolha uma das opções abaixo e deixe-nos guiar você até o
-            entretenimento perfeito
-          </p>
+      <ImageBackground
+        useSlideshow={true}
+        heightClassName="h-[70vh] min-h-[560px] md:h-[80vh] md:min-h-[600px]"
+      >
+        <div className="flex flex-col h-full">
+          <HeaderDashboard user={mockUser} />
+          <div className="flex-1 flex flex-col items-center justify-center text-center px-4 py-6 md:absolute md:inset-0 md:py-0">
+            <h1 className="text-3xl md:text-5xl font-bold text-white mb-8 md:mb-12 drop-shadow-lg leading-tight">
+              Como você quer descobrir seu próximo filme ou série?
+            </h1>
 
-          {/* Updated container classes for better centering */}
-          <div className="flex flex-col md:flex-row items-center justify-center w-full max-w-sm md:max-w-3xl gap-4 md:gap-6">
-            {/* {onBoardingData && (
-              <Button
-                onClick={() => handleFirst()}
-                className="w-full md:w-auto bg-pink-500/20 hover:bg-pink-500/40 border-2 border-pink-500 text-white px-6 md:px-8 py-4 rounded-xl backdrop-blur-sm transition-all active:scale-95 touch-manipulation hover:shadow-lg hover:shadow-pink-500/20"
+          <div className="flex flex-col gap-3 w-full max-w-sm md:max-w-3xl md:grid md:grid-cols-3 md:gap-4">
+            {[
+              {
+                key: "mood",
+                icon: Heart,
+                title: "Por Humor",
+                subtitle: "Deixe seu clima guiar a escolha",
+                color: "purple" as const,
+                locked: false,
+                onClick: () => {
+                  if (isAnonymousUser) {
+                    setShowSignupPromptModal(true);
+                  } else {
+                    setShowMoodOverlay(true);
+                  }
+                },
+              },
+              {
+                key: "genre",
+                icon: Film,
+                title: "Por Gênero",
+                subtitle: "Explore por categoria favorita",
+                color: "blue" as const,
+                locked: false,
+                onClick: () => {
+                  if (isAnonymousUser) {
+                    setShowSignupPromptModal(true);
+                  } else {
+                    setShowGenreModal(true);
+                  }
+                },
+              },
+              {
+                key: "ai",
+                icon: Sparkles,
+                title: "Filmin.IA",
+                subtitle: "Converse e receba sugestões na hora",
+                color: "gradient" as const,
+                locked: !isPremium,
+                onClick: () => {
+                  if (isAnonymousUser) {
+                    setShowSignupPromptModal(true);
+                  } else if (!isPremium) {
+                    toast({
+                      title: "Recurso Premium",
+                      description:
+                        "O Filmin.IA é exclusivo para assinantes premium. Assine para liberar o chat completo!",
+                    });
+                    setShowPaymentModal(true); // Go straight to the premium paywall
+                  } else if (isMobile) {
+                    navigate("/filmin-ia");
+                  } else {
+                    setShowAiChat(true);
+                  }
+                },
+              },
+            ].map((action) => (
+              <motion.button
+                key={action.key}
+                onClick={action.onClick}
+                whileTap={{ scale: 0.97 }}
+                className="group relative flex items-center gap-4 md:flex-col md:items-start md:gap-4 w-full text-left bg-filmeja-dark/80 hover:bg-filmeja-dark/95 border border-white/15 rounded-2xl p-4 md:p-5 backdrop-blur-md shadow-lg shadow-black/20 transition-colors touch-manipulation"
               >
-                <Crown className="w-5 h-5 mr-2 md:mr-3 text-pink-300" />
-                Ver recomendação premiada
-              </Button>
-            }*/}
+                <div
+                  className={`relative flex-shrink-0 w-12 h-12 md:w-11 md:h-11 rounded-xl flex items-center justify-center ${
+                    action.color === "purple"
+                      ? "bg-filmeja-purple/30"
+                      : action.color === "blue"
+                      ? "bg-filmeja-blue/30"
+                      : "bg-gradient-to-br from-filmeja-purple/60 to-filmeja-blue/60"
+                  }`}
+                >
+                  <action.icon
+                    className={`w-6 h-6 md:w-5 md:h-5 ${
+                      action.color === "purple"
+                        ? "text-filmeja-purple"
+                        : action.color === "blue"
+                        ? "text-filmeja-blue"
+                        : "text-white"
+                    }`}
+                  />
+                  {action.locked && (
+                    <div className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-filmeja-dark border border-white/20 flex items-center justify-center">
+                      <Lock className="w-2.5 h-2.5 text-gray-300" />
+                    </div>
+                  )}
+                </div>
 
-            <Button
-              onClick={() => {
-                // Check if user is anonymous before showing mood overlay
-                if (isAnonymousUser) {
-                  setShowSignupPromptModal(true);
-                } else {
-                  setShowMoodOverlay(true);
-                }
-              }}
-              className="w-full md:w-auto bg-filmeja-purple/20 hover:bg-filmeja-purple/40 border-2 border-filmeja-purple text-white px-6 md:px-8 py-4 rounded-xl backdrop-blur-sm transition-all active:scale-95 touch-manipulation"
-            >
-              <Heart className="w-5 h-5 mr-2 md:mr-3" />
-              Por Humor
-            </Button>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-white font-semibold">{action.title}</h3>
+                  <p className="text-sm text-gray-400 truncate md:whitespace-normal">
+                    {action.subtitle}
+                  </p>
+                </div>
 
-            <Button
-              onClick={() => {
-                // Check if user is anonymous before showing mood overlay
-                if (isAnonymousUser) {
-                  setShowSignupPromptModal(true);
-                } else {
-                  setShowGenreModal(true);
-                }
-              }}
-              className="w-full md:w-auto bg-filmeja-blue/20 hover:bg-filmeja-blue/40 border-2 border-filmeja-blue text-white px-6 md:px-8 py-4 rounded-xl backdrop-blur-sm transition-all active:scale-95 touch-manipulation"
-            >
-              <Film className="w-5 h-5 mr-2 md:mr-3" />
-              Por Gênero
-            </Button>
-
-            <Button
-              onClick={() => {
-                // Check if user is anonymous before showing mood overlay
-                if (isAnonymousUser) {
-                  setShowSignupPromptModal(true);
-                } else if (!isPremium) {
-                  setShowPremiumFilminModal(true);
-                  return;
-                } else {
-                  setShowAiChat(true);
-                }
-              }}
-              className="w-full md:w-auto bg-gradient-to-r from-filmeja-purple/20 to-filmeja-blue/20 hover:from-filmeja-purple/40 hover:to-filmeja-blue/40 border-2 border-white text-white px-6 md:px-8 py-4 rounded-xl backdrop-blur-sm transition-all active:scale-95 touch-manipulation"
-            >
-              <Sparkles className="w-5 h-5 mr-2 md:mr-3" />
-              Converse com Filmin.IA
-              {!isPremium && <Lock className="w-4 h-4 ml-2" />}
-            </Button>
+                <ChevronRight className="w-5 h-5 text-gray-500 group-hover:text-white group-hover:translate-x-0.5 transition-all flex-shrink-0 md:hidden" />
+              </motion.button>
+            ))}
+          </div>
           </div>
         </div>
         {showGenreModal && (
@@ -1670,7 +1588,8 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
           isOpen={showPaymentModal}
           onClose={() => setShowPaymentModal(false)}
           onSuccess={() => {
-            setIsPremium(true);
+            // isPremium now comes from usePremiumStatus's realtime subscription,
+            // which picks up the change as soon as the webhook updates the row.
             setShowPaymentModal(false);
             toast({
               title: "Bem-vindo ao Premium!",
@@ -1853,72 +1772,6 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
               <ContentCarousel title="" items={moodRecommendations} />
             </section>
           )}
-
-          <Dialog open={showPremiumModal} onOpenChange={setShowPremiumModal}>
-            <DialogContent className="bg-filmeja-dark/95 border-white/10 text-white">
-              <h2 className="text-2xl font-bold mb-4">Limite Atingido</h2>
-              <p className="mb-6">
-                Você atingiu o limite de recomendações gratuitas. Assine o plano
-                premium para continuar recebendo recomendações ilimitadas!
-              </p>
-              <Button
-                onClick={() => {
-                  setShowPremiumModal(false);
-                  setShowPaymentModal(true);
-                }}
-                className="w-full bg-filmeja-purple hover:bg-filmeja-purple/90"
-              >
-                Assinar Premium
-              </Button>
-            </DialogContent>
-          </Dialog>
-
-          <Dialog
-            open={showPremiumFilminModal}
-            onOpenChange={setShowPremiumFilminModal}
-          >
-            <DialogContent className="bg-filmeja-dark/95 border-white/10 text-white">
-              <DialogHeader>
-                <DialogTitle className="text-2xl font-bold mb-2 flex items-center gap-2">
-                  <Sparkles className="w-6 h-6 text-filmeja-purple" />
-                  Filmin.IA - Recurso Premium
-                </DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <p className="text-lg">
-                  Este recurso é exclusivo para assinantes premium, o recurso
-                  mais forte e potente de recomendações do FilmeJá!
-                </p>
-                <ul className="space-y-2">
-                  <li className="flex items-center gap-2">
-                    <Check className="w-5 h-5 text-green-500" />
-                    Recomendações personalizadas através de chat inteligente
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="w-5 h-5 text-green-500" />
-                    Sugestões baseadas em conversas naturais
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="w-5 h-5 text-green-500" />
-                    Descoberta avançada de conteúdo
-                  </li>
-                </ul>
-                <p className="text-sm text-gray-400 mt-2">
-                  Assine o plano premium por apenas R$9,99/mês e tenha acesso
-                  ilimitado!
-                </p>
-              </div>
-              <Button
-                onClick={() => {
-                  setShowPremiumFilminModal(false);
-                  setShowPaymentModal(true);
-                }}
-                className="w-full bg-filmeja-purple hover:bg-filmeja-purple/90 mt-4"
-              >
-                Assinar Premium
-              </Button>
-            </DialogContent>
-          </Dialog>
 
           <Dialog
             open={showEmailConfirmationDialog}

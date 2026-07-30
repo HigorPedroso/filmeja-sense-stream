@@ -33,16 +33,10 @@ const SuperDashboard = () => {
         revenueData,
         blogPostsData 
         ] = await Promise.all([
-          // Users metrics with subscribers join
+          // Users metrics
           supabase
             .from('profiles')
-            .select(`
-              id, 
-              created_at, 
-              subscribers!inner (
-                subscription_status
-              )
-            `)
+            .select('id, created_at, is_premium')
             .gte('created_at', dateRange.from?.toISOString())
             .lte('created_at', dateRange.to?.toISOString()),
   
@@ -87,7 +81,7 @@ const SuperDashboard = () => {
           users: {
             total: usersData.data?.length || 0,
             active: usersData.data?.filter(u => u.last_sign_in_at)?.length || 0,
-            withSubscription: usersData.data?.filter(u => u.subscribers?.status === 'active')?.length || 0
+            withSubscription: usersData.data?.filter(u => u.is_premium)?.length || 0
           },
           recommendations: {
             total: recommendationsData.data?.length || 0,

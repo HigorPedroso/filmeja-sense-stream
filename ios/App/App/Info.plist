@@ -47,5 +47,20 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<!-- Google's official AdMob TEST App ID. Replace with your real AdMob
+	     iOS App ID before shipping to production. -->
+	<key>GADIsAdManagerApp</key>
+	<true/>
+	<key>GADApplicationIdentifier</key>
+	<string>ca-app-pub-3940256099942544~1458002511</string>
+	<key>SKAdNetworkItems</key>
+	<array>
+		<dict>
+			<key>SKAdNetworkIdentifier</key>
+			<string>cstr6suwn9.skadnetwork</string>
+		</dict>
+	</array>
+	<key>NSUserTrackingUsageDescription</key>
+	<string>Usamos essas informações para mostrar anúncios mais relevantes para você.</string>
 </dict>
 </plist>

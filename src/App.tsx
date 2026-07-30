@@ -11,6 +11,8 @@ import ContentDetails from "./pages/ContentDetails";
 import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
 import RecommendationResult from "./pages/RecommendationResult";
+import FilminChat from "./pages/FilminChat";
+import Premium from "./pages/Premium";
 import { RecommendationResultProvider } from "./hooks/useRecommendationResult";
 import { AuthProvider } from "./hooks/useAuth";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -35,6 +37,7 @@ import { useCapacitorBackButton } from "./hooks/useCapacitorBackButton";
 import { Capacitor } from "@capacitor/core";
 import { SafeArea } from "@capacitor-community/safe-area";
 import { SplashScreen } from "@capacitor/splash-screen";
+import { initializeAds } from "./lib/ads";
 
 // Extend the Window interface to include fbq and _fbq
 declare global {
@@ -64,6 +67,7 @@ const App = () => {
 
     SafeArea.setSystemBarsStyle({ style: "DARK" }).catch(() => {});
     SplashScreen.hide().catch(() => {});
+    initializeAds();
   }, []);
 
   useEffect(() => {
@@ -166,6 +170,22 @@ const AppContent = ({ favoriteItems }) => {
         element={
           <ProtectedRoute>
             <RecommendationResult />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/filmin-ia"
+        element={
+          <ProtectedRoute>
+            <FilminChat />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/premium"
+        element={
+          <ProtectedRoute>
+            <Premium />
           </ProtectedRoute>
         }
       />

@@ -35,7 +35,10 @@ const Navbar: React.FC<NavbarProps> = ({ transparent = false }) => {
   const isAdmin = !!session;
 
   return (
-    <header className={`fixed w-full top-0 left-0 z-50 ${navbarClass}`}>
+    <header
+      className={`fixed w-full top-0 left-0 z-50 ${navbarClass}`}
+      style={{ paddingTop: "env(safe-area-inset-top)" }}
+    >
       <div className="container mx-auto flex items-center justify-between py-4">
         <Link
           to="/"

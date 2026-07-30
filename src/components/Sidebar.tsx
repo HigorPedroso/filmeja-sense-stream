@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { X } from "lucide-react";
 import { motion } from "framer-motion";
 import { ContentModal } from "@/components/ContentModal/ContentModal";
-import { fetchContentWithProviders } from "@/lib/utils/tmdb";
+import { fetchContentWithProviders, searchContentByTitle } from "@/lib/utils/tmdb";
 import { getContentDetails } from "../lib/tmdb";
 import { toast } from "@/hooks/use-toast";
 import PremiumPaymentModal from "@/components/PremiumPaymentModal"; // Import the modal
@@ -24,6 +24,7 @@ import { Check, Sparkles } from "lucide-react";
 import { SignupPromptModal } from "./modals/SignupPromptModal";
 import { SignupModal } from "./modals/SignupModal";
 import { useRecommendationResult } from "@/hooks/useRecommendationResult";
+import { usePremiumStatus } from "@/hooks/usePremiumStatus";
 
 interface SidebarProps {
   isExpanded: boolean;
@@ -47,7 +48,7 @@ export function Sidebar({ isExpanded, setIsExpanded, onLogout }: SidebarProps) {
     isLoadingRecommendation,
     setIsLoadingRecommendation,
   } = useRecommendationResult();
-  const [isPremium, setIsPremium] = useState<boolean>(false);
+  const isPremium = usePremiumStatus();
   const [showPremiumModal, setShowPremiumModal] = useState(false);
   const [showSignupModal, setShowSignupModal] = useState(false);
   const [isAnonymousUser, setIsAnonymousUser] = useState(false);
@@ -69,14 +70,6 @@ export function Sidebar({ isExpanded, setIsExpanded, onLogout }: SidebarProps) {
       if (user) {
         const isAnon = user.is_anonymous;
         setIsAnonymousUser(isAnon);
-
-        // Check premium status
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("is_premium")
-          .eq("id", user.id)
-          .single();
-        setIsPremium(!!profile?.is_premium);
       }
     };
     fetchUser();
@@ -87,97 +80,10 @@ export function Sidebar({ isExpanded, setIsExpanded, onLogout }: SidebarProps) {
     setShowRecommendationModal(true);
 
     try {
-      // Try searching in both movies and TV shows if type is not specified
-      const cleanTitle = title
-        .replace(/^("|'|`)|("|'|`)$/g, "") // Remove quotes
-        .replace(/^.*?recomendo\s+/i, "") // Remove "recomendo" and text before it
-        .replace(/^.*?sugiro\s+/i, "") // Remove "sugiro" and text before it
-        .split(".")[0] // Take only the first sentence
-        .split("(")[0] // Remove anything in parentheses
-        .trim();
-
-      console.log("Searching for title:", cleanTitle);
-
-      let searchResults = [];
-
-      if (!type) {
-        // Search in both movies and TV shows
-        const [movieSearch, tvSearch] = await Promise.all([
-          fetch(
-            `https://api.themoviedb.org/3/search/movie?api_key=${
-              import.meta.env.VITE_TMDB_API_KEY
-            }&query=${encodeURIComponent(title)}&language=pt-BR`
-          ).then((r) => r.json()),
-          fetch(
-            `https://api.themoviedb.org/3/search/tv?api_key=${
-              import.meta.env.VITE_TMDB_API_KEY
-            }&query=${encodeURIComponent(title)}&language=pt-BR`
-          ).then((r) => r.json()),
-        ]);
-
-        searchResults = [
-          ...(movieSearch.results || []).map((r) => ({
-            ...r,
-            mediaType: "movie",
-          })),
-          ...(tvSearch.results || []).map((r) => ({ ...r, mediaType: "tv" })),
-        ];
-      } else {
-        // Search in specified type only
-        const searchResponse = await fetch(
-          `https://api.themoviedb.org/3/search/${type}?api_key=${
-            import.meta.env.VITE_TMDB_API_KEY
-          }&query=${encodeURIComponent(title)}&language=pt-BR`
-        );
-        const searchData = await searchResponse.json();
-        searchResults = (searchData.results || []).map((r) => ({
-          ...r,
-          mediaType: type,
-        }));
-      }
-
-      // Sort by popularity and get the most relevant result
-      const content = searchResults.sort(
-        (a, b) => b.popularity - a.popularity
-      )[0];
-
-      if (!content) {
-        throw new Error(`No results found for: ${title}`);
-      }
-
-      const contentType = content.mediaType || type || "movie";
-      const contentId = content.id;
-
-      // Fetch additional details
-      const [details, videos, similar, providers] = await Promise.all([
-        fetch(
-          `https://api.themoviedb.org/3/${contentType}/${contentId}?api_key=${
-            import.meta.env.VITE_TMDB_API_KEY
-          }&language=pt-BR`
-        ).then((r) => r.json()),
-        fetch(
-          `https://api.themoviedb.org/3/${contentType}/${contentId}/videos?api_key=${
-            import.meta.env.VITE_TMDB_API_KEY
-          }&language=pt-BR`
-        ).then((r) => r.json()),
-        fetch(
-          `https://api.themoviedb.org/3/${contentType}/${contentId}/similar?api_key=${
-            import.meta.env.VITE_TMDB_API_KEY
-          }&language=pt-BR`
-        ).then((r) => r.json()),
-        fetch(
-          `https://api.themoviedb.org/3/${contentType}/${contentId}/watch/providers?api_key=${
-            import.meta.env.VITE_TMDB_API_KEY
-          }`
-        ).then((r) => r.json()),
-      ]);
-
-      setMoodRecommendation({
-        ...details,
-        videos: videos.results,
-        providers: providers.results?.BR,
-        similar: similar.results,
-        mediaType: contentType,
+      const item = await searchContentByTitle(title, type);
+      await fetchContentWithProviders(item, {
+        showToast: false,
+        onContentFetched: setMoodRecommendation,
       });
     } catch (error) {
       console.error("Error fetching content details:", error);
@@ -340,7 +246,6 @@ export function Sidebar({ isExpanded, setIsExpanded, onLogout }: SidebarProps) {
                 isOpen={showPremiumModal}
                 onClose={() => setShowPremiumModal(false)}
                 onSuccess={() => {
-                  setIsPremium(true);
                   setShowPremiumModal(false);
                 }}
               />
