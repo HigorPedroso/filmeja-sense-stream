@@ -81,3 +81,36 @@ Depois é só rodar pelo Xcode num simulador ou dispositivo físico (com uma con
 ## Ícones e splash screen
 
 Os ícones/splash padrão do Capacitor ainda estão no lugar. Para trocar pela identidade visual do FilmeJá, use [@capacitor/assets](https://github.com/ionic-team/capacitor-assets) a partir de um logo em alta resolução.
+
+## Login com Google nativo
+
+No app (Android/iOS) o login com Google usa o SDK nativo via [@capgo/capacitor-social-login](https://github.com/Cap-go/capacitor-social-login) em vez do redirect OAuth do navegador — no site (web) continua usando `supabase.auth.signInWithOAuth`. A troca é automática conforme a plataforma, ver [src/lib/googleAuth.ts](src/lib/googleAuth.ts).
+
+Para funcionar, falta configurar credenciais externas que só podem ser criadas no Google Cloud Console e no painel do Supabase (não dá pra automatizar por código):
+
+### 1. Google Cloud Console
+
+No mesmo projeto do Google Cloud usado hoje para o login web (mesmo projeto do Client ID que já está cadastrado no Supabase em Authentication → Providers → Google):
+
+1. Confirme/anote o **Web Client ID** (tipo "Web application") já existente — é ele que preenche `webClientId`.
+2. Crie um client **Android**: package name `com.filmeja.app` + SHA-1. Para o build de debug local, o SHA-1 já foi extraído aqui:
+   ```
+   AD:AE:C7:41:21:26:C9:70:B5:68:55:2A:D6:58:F9:83:1F:EB:86:B1
+   ```
+   (gerado com `cd android && ./gradlew signingReport`). Quando gerar uma keystore de release, repita o processo e cadastre o SHA-1 de release também — e o SHA-1 do **Play App Signing** depois de publicar na Play Store.
+3. Crie um client **iOS**: bundle ID `com.filmeja.app`. Esse é o `iOSClientId`.
+
+### 2. Variáveis de ambiente
+
+Preencha no `.env` (já criadas, vazias):
+
+```
+VITE_GOOGLE_WEB_CLIENT_ID=<o Web Client ID do passo 1>
+VITE_GOOGLE_IOS_CLIENT_ID=<o iOS Client ID do passo 1>
+```
+
+### 3. Supabase
+
+Em Authentication → Providers → Google, no campo **"Authorized Client IDs"**, adicione o Web Client ID e o iOS Client ID (separados por vírgula) além do que já estiver lá — o Supabase usa essa lista para validar de quais client IDs ele aceita `idToken` via `signInWithIdToken`.
+
+Depois de preencher tudo, rodar `npm run build && npx cap sync` novamente para propagar as env vars para os apps nativos.

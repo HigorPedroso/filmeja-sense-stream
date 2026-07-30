@@ -8,6 +8,7 @@ import { Mail, Lock, User } from 'lucide-react';
 import VideoBackground from '@/components/VideoBackground';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { loginWithGoogle } from '@/lib/googleAuth';
 
 const Signup = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -90,23 +91,10 @@ const Signup = () => {
   const handleGoogleLogin = async () => {
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
-          redirectTo: `${window.location.origin}/dashboard`
-        }
-      });
+      await loginWithGoogle();
 
-      if (error) throw error;
-
-      // Fix: Don't try to access user data from OAuth response
-      // The OAuth flow redirects the user, so we don't get the user object here
-      // User data will be handled by onAuthStateChange after redirect
-      
+      // On the web this redirects away; on native the session is set directly
+      // and the onAuthStateChange effect above navigates to /dashboard.
     } catch (error) {
       toast({
         title: 'Erro!',

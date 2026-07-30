@@ -18,6 +18,14 @@ const config: CapacitorConfig = {
       style: 'DARK',
       backgroundColor: '#0f0f0f',
     },
+    SocialLogin: {
+      providers: {
+        google: true,
+        facebook: false,
+        apple: false,
+        twitter: false,
+      },
+    },
   },
 };
 
