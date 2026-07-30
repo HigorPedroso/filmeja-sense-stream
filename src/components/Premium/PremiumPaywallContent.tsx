@@ -48,10 +48,13 @@ export function PremiumPaywallContent({ onClose, className }: PremiumPaywallCont
 
   return (
     <div className={cn("flex flex-col", className)}>
-      <div className="flex flex-col items-center text-center gap-1 pt-2 pb-6">
-        <div className="w-14 h-14 rounded-2xl bg-filmeja-purple/15 flex items-center justify-center mb-2">
-          <Crown className="w-7 h-7 text-filmeja-purple" />
-        </div>
+      <div className="relative flex flex-col items-center text-center gap-1 pt-2 pb-6">
+        <div className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 w-64 h-64 rounded-full bg-filmeja-purple/25 blur-3xl -z-10" />
+        <img
+          src="/paywall.png"
+          alt=""
+          className="w-full max-w-[260px] h-auto object-contain -mb-1 drop-shadow-[0_0_30px_rgba(155,135,245,0.35)]"
+        />
         <h1 className="text-2xl font-bold text-white leading-tight">
           Descubra o filme{" "}
           <span className="bg-gradient-to-r from-filmeja-purple to-filmeja-blue bg-clip-text text-transparent">
