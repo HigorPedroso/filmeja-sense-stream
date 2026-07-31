@@ -10,6 +10,46 @@ interface FetchContentOptions {
   onLoadingChange?: (loading: boolean) => void;
   onContentFetched?: (content: any) => void;
   showToast?: boolean;
+  // When true, throws NotAvailableInBrazilError instead of returning content
+  // that has no BR streaming provider. Used for AI-suggested titles, where
+  // there's no other guarantee the recommendation is actually watchable.
+  requireBrAvailability?: boolean;
+}
+
+// Thrown by searchContentByTitle when the AI suggested a title that hasn't
+// actually released yet — TMDB lists it (upcoming/announced), but there's
+// nothing to watch.
+export class NotReleasedError extends Error {
+  constructor(title: string) {
+    super(`"${title}" ainda não foi lançado.`);
+    this.name = "NotReleasedError";
+  }
+}
+
+// Thrown by fetchContentWithProviders (with requireBrAvailability) when a
+// released title still isn't on any streaming platform in Brazil — festival
+// titles, region-locked releases, theatrical-only, etc.
+export class NotAvailableInBrazilError extends Error {
+  constructor(title: string) {
+    super(`"${title}" não está disponível em nenhuma plataforma de streaming no Brasil no momento.`);
+    this.name = "NotAvailableInBrazilError";
+  }
+}
+
+// Shared toast copy for the two AI-recommendation guards above, so the 3
+// "Ver detalhes" call sites (Dashboard, Sidebar, FilminChat) don't each
+// duplicate the same if/else.
+export function describeAiRecommendationError(error: unknown): { title: string; description: string } {
+  if (error instanceof NotReleasedError) {
+    return { title: "Ainda não foi lançado", description: error.message };
+  }
+  if (error instanceof NotAvailableInBrazilError) {
+    return { title: "Não disponível no Brasil", description: error.message };
+  }
+  return {
+    title: "Conteúdo não encontrado",
+    description: "Não foi possível encontrar o título especificado",
+  };
 }
 
 function normalizeTitle(value?: string): string {
@@ -91,6 +131,13 @@ export async function searchContentByTitle(title: string, type?: "movie" | "tv")
     throw new Error(`No results found for: ${title}`);
   }
 
+  // Only block on a confirmed future date — missing/empty dates are common
+  // for obscure-but-real titles and shouldn't be treated as "not released".
+  const releaseDateStr = content.media_type === "tv" ? content.first_air_date : content.release_date;
+  if (releaseDateStr && new Date(releaseDateStr).getTime() > Date.now()) {
+    throw new NotReleasedError(content.title || content.name || title);
+  }
+
   return { ...content, media_type: content.media_type || type || "movie" } as ContentItem;
 }
 
@@ -98,7 +145,7 @@ export async function fetchContentWithProviders(
   item: ContentItem,
   options: FetchContentOptions = {}
 ) {
-  const { onLoadingChange, onContentFetched, showToast = true } = options;
+  const { onLoadingChange, onContentFetched, showToast = true, requireBrAvailability = false } = options;
 
   try {
     onLoadingChange?.(true);
@@ -125,6 +172,14 @@ export async function fetchContentWithProviders(
         }&language=pt-BR`
       ).then(r => r.json()),
     ]);
+
+    if (requireBrAvailability) {
+      const brProviders = providersData?.results?.BR;
+      const hasBrStreaming = !!(brProviders?.flatrate || brProviders?.free);
+      if (!hasBrStreaming) {
+        throw new NotAvailableInBrazilError(details?.title || details?.name || item.title || item.name || "Este título");
+      }
+    }
 
     let providers = null;
     let isInTheaters = false;

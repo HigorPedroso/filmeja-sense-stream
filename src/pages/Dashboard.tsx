@@ -64,7 +64,7 @@ import { useSearchParams } from "react-router-dom";
 import PaymentSuccessModal from "@/components/PaymentSuccessModal";
 import { Sidebar } from "@/components/Sidebar";
 import { MobileSidebar } from "@/components/MobileSidebar";
-import { fetchContentWithProviders, searchContentByTitle, pickBestTitleMatch } from "@/lib/utils/tmdb";
+import { fetchContentWithProviders, searchContentByTitle, pickBestTitleMatch, describeAiRecommendationError } from "@/lib/utils/tmdb";
 import { extractJsonFromResponse } from "@/utils/jsonParser";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -434,11 +434,6 @@ const Dashboard = () => {
         setShowPaymentModal(true); // Go straight to the premium paywall
         setDailyViews(error.dailyViews);
         setMonthlyViews(error.monthlyViews);
-        toast({
-          title: "Limite Atingido",
-          description: error.message,
-          variant: "destructive",
-        });
       } else {
         toast({
           title: "Erro",
@@ -778,9 +773,6 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
     id: number;
     name: string;
   }) => {
-    setIsLoadingRecommendation(true);
-    setShowRecommendationModal(true);
-
     try {
       const {
         data: { user },
@@ -824,15 +816,7 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
           setShowPaymentModal(true); // Go straight to the premium paywall
           setDailyViews(dailyViews);
           setMonthlyViews(monthlyViews);
-          setShowRecommendationModal(false);
-          setIsLoadingRecommendation(false);
-
-          toast({
-            title: "Limite Atingido",
-            description: `Você atingiu o limite de ${DAILY_FREE_LIMIT} recomendações gratuitas por dia. Assine o plano premium para continuar recebendo recomendações ilimitadas!`,
-            variant: "destructive",
-          });
-          return; // Exit early
+          return; // Exit early — the loading modal was never opened, nothing to close.
         }
 
         dailyViewsBeforeSpend = dailyViews;
@@ -858,6 +842,13 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
           await showInterstitialAd();
         }
       }
+
+      // Only now — after confirming the user isn't blocked by the daily
+      // limit — do we open the loading UI. Opening it earlier briefly showed
+      // the recommendation screen (and, on mobile, navigated to it) before
+      // the limit check could redirect to the paywall instead.
+      setIsLoadingRecommendation(true);
+      setShowRecommendationModal(true);
 
       function extractJsonFromResponse(text: string) {
         try {
@@ -1078,15 +1069,12 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
       const item = await searchContentByTitle(title, type);
       await fetchContentWithProviders(item, {
         showToast: false,
+        requireBrAvailability: true,
         onContentFetched: setMoodRecommendation,
       });
     } catch (error) {
       console.error("Error fetching content details:", error);
-      toast({
-        title: "Conteúdo não encontrado",
-        description: "Não foi possível encontrar o título especificado",
-        variant: "destructive",
-      });
+      toast({ ...describeAiRecommendationError(error), variant: "destructive" });
       setShowRecommendationModal(false);
     }
 
@@ -1347,11 +1335,6 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
                   if (isAnonymousUser) {
                     setShowSignupPromptModal(true);
                   } else if (!isPremium) {
-                    toast({
-                      title: "Recurso Premium",
-                      description:
-                        "O Filmin.IA é exclusivo para assinantes premium. Assine para liberar o chat completo!",
-                    });
                     setShowPaymentModal(true); // Go straight to the premium paywall
                   } else if (isMobile) {
                     navigate("/filmin-ia");

@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { X } from "lucide-react";
 import { motion } from "framer-motion";
 import { ContentModal } from "@/components/ContentModal/ContentModal";
-import { fetchContentWithProviders, searchContentByTitle } from "@/lib/utils/tmdb";
+import { fetchContentWithProviders, searchContentByTitle, describeAiRecommendationError } from "@/lib/utils/tmdb";
 import { getContentDetails } from "../lib/tmdb";
 import { toast } from "@/hooks/use-toast";
 import PremiumPaymentModal from "@/components/PremiumPaymentModal"; // Import the modal
@@ -83,15 +83,12 @@ export function Sidebar({ isExpanded, setIsExpanded, onLogout }: SidebarProps) {
       const item = await searchContentByTitle(title, type);
       await fetchContentWithProviders(item, {
         showToast: false,
+        requireBrAvailability: true,
         onContentFetched: setMoodRecommendation,
       });
     } catch (error) {
       console.error("Error fetching content details:", error);
-      toast({
-        title: "Conteúdo não encontrado",
-        description: "Não foi possível encontrar o título especificado",
-        variant: "destructive",
-      });
+      toast({ ...describeAiRecommendationError(error), variant: "destructive" });
       setShowRecommendationModal(false);
     }
 

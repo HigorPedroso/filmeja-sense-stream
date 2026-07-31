@@ -11,94 +11,63 @@ interface StreamingModalProps {
   content: ContentType;
 }
 
-const getStreamingAffiliateLink = async (
-  contentId: number, 
-  providerName: string, 
-  title?: string,
-  mediaType: string = 'movie'
-): Promise<string | null> => {
-  try {
-    const response = await fetch(
-      `https://api.themoviedb.org/3/${mediaType}/${contentId}/watch/providers?api_key=${import.meta.env.VITE_TMDB_API_KEY}`
-    );
-    const data = await response.json();
+// Maps a provider that's already confirmed present in content.providers.flatrate
+// to where it should actually open. No re-verification against TMDB here —
+// the provider being in that list *is* the verification; a second network
+// round-trip only added a failure point where any hiccup silently fell
+// through to a dead `provider.provider_url` link (TMDB never sends that
+// field per-provider).
+//
+// IMPORTANT: in Brazil, a huge share of TMDB's BR provider names are actual
+// third-party services sold as an add-on "channel" through Amazon —
+// "HBO Max Amazon Channel", "Paramount+ Amazon Channel", "Telecine Amazon
+// Channel", etc. Those all contain the substring "amazon", so the specific
+// services below MUST be checked before the generic Amazon/Prime Video
+// fallback, or every one of them wrongly resolves to the Amazon link.
+function getStreamingLink(providerName: string, title: string): string {
+  const name = providerName.toLowerCase();
+  const query = encodeURIComponent(title || "");
 
-    const brProviders = data.results?.BR?.flatrate || [];
-    
-    if (providerName === "Amazon Prime Video" || providerName === "Prime Video") {
-      const hasProvider = brProviders.some(
-        (provider: any) => provider.provider_name === "Amazon Prime Video" || 
-                          provider.provider_name === "Prime Video"
-      );
-      return hasProvider ? "https://amzn.to/43dxfa6" : null;
-    }
-    
-    if (providerName === "Disney Plus") {
-      const hasProvider = brProviders.some(
-        (provider: any) => provider.provider_name === "Disney Plus"
-      );
-      return hasProvider ? "https://acesse.vc/v2/144fe69bfb2" : null;
-    }
-
-    if (providerName === "Max" && title) {
-      const hasProvider = brProviders.some(
-        (provider: any) => provider.provider_name === "Max"
-      );
-      return hasProvider ? `https://play.max.com/search/result?q=${encodeURIComponent(title)}` : null;
-    }
-
-    if (providerName === "Netflix" && title) {
-      const hasProvider = brProviders.some(
-        (provider: any) => provider.provider_name === "Netflix"
-      );
-      return hasProvider ? `https://www.google.com/search?q=site:netflix.com+${encodeURIComponent(title)}` : null;
-    }
-
-    if (providerName === "Apple TV+" && title) {
-      const hasProvider = brProviders.some(
-        (provider: any) => provider.provider_name === "Apple TV+"
-      );
-      return hasProvider ? `https://tv.apple.com/search?term=${encodeURIComponent(title)}` : null;
-    }
-
-    if (providerName.includes("Paramount") && title) {
-      const hasProvider = brProviders.some(
-        (provider: any) => provider.provider_name.includes("Paramount")
-      );
-      return hasProvider ? `https://www.paramountplus.com/br/search}` : null;
-    }
-
-    return null;
-  } catch (error) {
-    console.error("Error checking streaming availability:", error);
-    return null;
+  if (name.includes("disney")) {
+    return "https://acesse.vc/v2/144fe69bfb2";
   }
-};
+  if (name.includes("max")) {
+    return `https://play.max.com/search/result?q=${query}`;
+  }
+  if (name.includes("netflix")) {
+    return `https://www.google.com/search?q=site:netflix.com+${query}`;
+  }
+  if (name.includes("apple tv")) {
+    return `https://tv.apple.com/search?term=${query}`;
+  }
+  if (name.includes("paramount")) {
+    return "https://www.paramountplus.com/br/";
+  }
+  if (name.includes("globoplay")) {
+    return `https://globoplay.globo.com/busca/?q=${query}`;
+  }
+  if (name.includes("star+") || name.includes("star plus")) {
+    return "https://www.starplus.com/";
+  }
+
+  // Generic Amazon/Prime Video fallback — also correctly catches
+  // channel-only services (like Telecine) that only exist as an Amazon
+  // add-on in Brazil, since no specific mapping above matched them.
+  if (name.includes("amazon") || name.includes("prime video")) {
+    return "https://amzn.to/43dxfa6";
+  }
+
+  // Unknown provider — safe generic fallback instead of a dead link.
+  return `https://www.google.com/search?q=${encodeURIComponent(`${providerName} ${title || ""}`)}`;
+}
 
 export const StreamingModal = ({ isOpen, onClose, content }: StreamingModalProps) => {
-  if (!isOpen || !content.providers?.flatrate) return null;
   const [isClicking, setIsClicking] = useState(false);
 
-  const handleProviderClick = async (provider: any) => {
-    if (provider.provider_name === "Amazon Prime Video" || 
-        provider.provider_name === "Prime Video" ||
-        provider.provider_name === "Disney Plus" ||
-        provider.provider_name === "Max"||
-        provider.provider_name === "Netflix"||
-        provider.provider_name === "Apple TV+"||
-        provider.provider_name.includes("Paramount")) {
-      const affiliateLink = await getStreamingAffiliateLink(
-        content.id, 
-        provider.provider_name,
-        content.title || content.name,
-        content.mediaType || 'movie'  // Add mediaType parameter
-      );
-      if (affiliateLink) {
-        window.open(affiliateLink, "_blank");
-        return;
-      }
-    }
-    window.open(provider.provider_url, "_blank");
+  if (!isOpen || !content.providers?.flatrate) return null;
+
+  const handleProviderClick = (provider: any) => {
+    window.open(getStreamingLink(provider.provider_name, content.title || content.name || ""), "_blank");
   };
 
   const handleRentClick = async () => {

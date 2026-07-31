@@ -63,9 +63,6 @@ export async function fetchMoodRecommendation(params: MoodRecommendationParams):
     setShowRecommendationModal,
     setMoodRecommendation,
   } = params;
-  
-  setIsLoadingRecommendation(true);
-  setShowRecommendationModal(true);
 
   try {
     const { data: { user } } = await supabase.auth.getUser();
@@ -107,7 +104,6 @@ export async function fetchMoodRecommendation(params: MoodRecommendationParams):
       const monthlyViews = viewStats?.monthly_views || 0;
 
       if (dailyViews >= DAILY_FREE_LIMIT) {
-        setShowRecommendationModal(false);
         throw {
           type: 'PREMIUM_REQUIRED',
           message: `Você atingiu o limite de ${DAILY_FREE_LIMIT} recomendações gratuitas por dia. Assine o plano premium para continuar recebendo recomendações ilimitadas!`
@@ -138,6 +134,13 @@ export async function fetchMoodRecommendation(params: MoodRecommendationParams):
         await showInterstitialAd();
       }
     }
+
+    // Only now — after confirming the user isn't blocked by the daily limit
+    // — do we open the loading UI. Opening it earlier briefly showed the
+    // recommendation screen (and, on mobile, navigated to it) before the
+    // limit check could redirect to the paywall instead.
+    setIsLoadingRecommendation(true);
+    setShowRecommendationModal(true);
 
     try {
       await fetchAndDeliverRecommendation();

@@ -4,7 +4,8 @@ import { ChevronLeft } from "lucide-react";
 import { AiChat } from "@/components/AiChat/AiChat";
 import { supabase } from "@/integrations/supabase/client";
 import { useRecommendationResult } from "@/hooks/useRecommendationResult";
-import { fetchContentWithProviders, searchContentByTitle } from "@/lib/utils/tmdb";
+import { fetchContentWithProviders, searchContentByTitle, describeAiRecommendationError } from "@/lib/utils/tmdb";
+import { toast } from "@/hooks/use-toast";
 
 const FilminChat = () => {
   const navigate = useNavigate();
@@ -27,10 +28,12 @@ const FilminChat = () => {
     try {
       const item = await searchContentByTitle(title, type);
       await fetchContentWithProviders(item, {
+        requireBrAvailability: true,
         onLoadingChange: setIsLoadingRecommendation,
         onContentFetched: setMoodRecommendation,
       });
-    } catch {
+    } catch (error) {
+      toast({ ...describeAiRecommendationError(error), variant: "destructive" });
       setShowRecommendationModal(false);
     }
   };

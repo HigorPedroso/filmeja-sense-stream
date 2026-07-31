@@ -18,6 +18,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { SubscriptionModal } from "@/components/SubscriptionModal";
+import PremiumPaymentModal from "@/components/PremiumPaymentModal";
 import { Sidebar } from "@/components/Sidebar";
 import { MobileSidebar } from "@/components/MobileSidebar";
 import { formatDistanceToNow } from "date-fns";
@@ -61,6 +62,7 @@ export function ProfilePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [watchHistory, setWatchHistory] = useState<WatchHistory[]>([]);
   // Add these states inside the component
@@ -346,7 +348,7 @@ export function ProfilePage() {
       />
 
     <MobileSidebar />
-      <div className="max-w-4xl mx-auto px-4 pb-8 pt-[max(2rem,env(safe-area-inset-top))]">
+      <div className="max-w-4xl mx-auto px-4 pb-8 pt-[max(1.75rem,calc(0.75rem_+_env(safe-area-inset-top)))]">
         {/* Profile Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -407,12 +409,12 @@ export function ProfilePage() {
                   <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  onClick={() => setShowSubscriptionModal(true)}
-                  className="mt-4 px-4 py-2 bg-gradient-to-r from-filmeja-purple to-filmeja-blue 
+                  onClick={() => setShowPaymentModal(true)}
+                  className="mt-4 px-4 py-2 bg-gradient-to-r from-filmeja-purple to-filmeja-blue
                   rounded-xl text-white text-sm font-medium flex items-center gap-2 group"
                 >
                   <Sparkles className="w-4 h-4" />
-                  Premium
+                  Seja Premium
                   <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                 </motion.button>
                 )}
@@ -551,7 +553,7 @@ export function ProfilePage() {
         Mantenha um histórico completo de todas as suas recomendações e acesse-as a qualquer momento com o plano Premium.
       </p>
       <Button
-        onClick={() => setShowSubscriptionModal(true)}
+        onClick={() => setShowPaymentModal(true)}
         className="bg-gradient-to-r from-filmeja-purple to-filmeja-blue text-white hover:opacity-90"
       >
         <Crown className="w-4 h-4 mr-2" />
@@ -594,6 +596,12 @@ export function ProfilePage() {
   onCancelSubscription={handleCancelSubscription}
   onUpgradeSubscription={handleUpgradeSubscription}
 />
+
+      <PremiumPaymentModal
+        isOpen={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        onSuccess={() => setShowPaymentModal(false)}
+      />
     </div>
   );
 }

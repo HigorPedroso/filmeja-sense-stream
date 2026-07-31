@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { ContentResultView } from "@/components/ContentModal/ContentResultView";
 import { ContentModalSkeleton } from "@/components/ContentModal/ContentModalSkeleton";
@@ -8,11 +8,25 @@ const RecommendationResult = () => {
   const navigate = useNavigate();
   const { showRecommendationModal, isLoadingRecommendation, moodRecommendation, setShowRecommendationModal } =
     useRecommendationResult();
+  // Tracks whether this screen was actually opened (as opposed to being
+  // reached directly via deep link/refresh with nothing in flight), so the
+  // close effect below knows which of the two cases it's handling.
+  const wasOpenRef = useRef(false);
 
   useEffect(() => {
-    // Reached directly (deep link, refresh) without anything in flight —
-    // nothing to show, so bounce back to the dashboard.
-    if (!showRecommendationModal) {
+    if (showRecommendationModal) {
+      wasOpenRef.current = true;
+      return;
+    }
+
+    if (wasOpenRef.current) {
+      // Real close: return to wherever the user came from — Dashboard,
+      // Sidebar, the Filmin.IA chat, etc. — instead of always landing on
+      // the dashboard regardless of entry point.
+      navigate(-1);
+    } else {
+      // Reached directly (deep link, refresh) without anything in flight —
+      // nothing to show, so bounce back to the dashboard.
       navigate("/dashboard", { replace: true });
     }
   }, [showRecommendationModal, navigate]);

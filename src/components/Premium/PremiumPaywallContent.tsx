@@ -9,6 +9,7 @@ import {
   Crown,
   Check,
   RotateCcw,
+  Film,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
@@ -48,22 +49,35 @@ export function PremiumPaywallContent({ onClose, className }: PremiumPaywallCont
 
   return (
     <div className={cn("flex flex-col", className)}>
-      <div className="relative flex flex-col items-center text-center gap-1 pt-2 pb-6">
-        <div className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 w-64 h-64 rounded-full bg-filmeja-purple/25 blur-3xl -z-10" />
+      <div className="flex items-center justify-center gap-2 pt-2 pb-6">
+        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-filmeja-purple to-filmeja-blue flex items-center justify-center flex-shrink-0">
+          <Film className="w-4 h-4 text-white" />
+        </div>
+        <span className="text-xl font-bold text-white">
+          Filme <span className="text-filmeja-purple">Já</span>
+        </span>
+      </div>
+
+      <div className="relative flex items-center gap-4 pb-6">
+        <div className="pointer-events-none absolute -top-6 right-4 w-40 h-40 rounded-full bg-filmeja-purple/25 blur-3xl -z-10" />
+        <div className="flex-1 min-w-0">
+          <h1 className="text-2xl font-bold text-white leading-tight">
+            Descubra o filme{" "}
+            <span className="bg-gradient-to-r from-filmeja-purple to-filmeja-blue bg-clip-text text-transparent">
+              perfeito com IA
+            </span>
+          </h1>
+          <p className="text-gray-400 text-sm mt-2">
+            Menos tempo procurando.
+            <br />
+            <span className="text-white font-medium">Mais tempo assistindo.</span>
+          </p>
+        </div>
         <img
           src="/paywall.png"
           alt=""
-          className="w-full max-w-[260px] h-auto object-contain -mb-1 drop-shadow-[0_0_30px_rgba(155,135,245,0.35)]"
+          className="w-[38%] max-w-[150px] h-auto object-contain flex-shrink-0 drop-shadow-[0_0_25px_rgba(155,135,245,0.35)]"
         />
-        <h1 className="text-2xl font-bold text-white leading-tight">
-          Descubra o filme{" "}
-          <span className="bg-gradient-to-r from-filmeja-purple to-filmeja-blue bg-clip-text text-transparent">
-            perfeito com IA
-          </span>
-        </h1>
-        <p className="text-gray-400 text-sm mt-1">
-          Menos tempo procurando. <span className="text-white font-medium">Mais tempo assistindo.</span>
-        </p>
       </div>
 
       <div className="rounded-2xl border border-white/10 bg-white/5 p-4 mb-6">

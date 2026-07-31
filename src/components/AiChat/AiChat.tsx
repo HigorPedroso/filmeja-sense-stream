@@ -1,9 +1,27 @@
 import { useState, useRef, useEffect, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
-import { Send, Bot, User } from "lucide-react";
+import { Send, Bot, User, Clapperboard } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { addToWatchHistory } from "@/lib/utils/watch-history";
+import { searchContentByTitle, fetchContentWithProviders } from "@/lib/utils/tmdb";
 import { supabase } from "@/integrations/supabase/client";
+
+// How many times we'll ask the AI for a different title before giving up and
+// showing a plain response with no recommendation attached. Each attempt
+// costs a real TMDB lookup, so this stays small.
+const MAX_RECOMMENDATION_ATTEMPTS = 3;
+
+// Quick conversation starters shown on the empty state. Humor and gênero
+// already have their own dedicated pickers on the dashboard, so these lean
+// into what only the chat can do: specific, contextual requests.
+const QUICK_STARTERS = [
+  "🎯 Algo parecido com um filme que eu gostei muito",
+  "⏱️ Um filme curto, tenho pouco tempo hoje",
+  "👨‍👩‍👧‍👦 Algo pra assistir em família",
+  "🏆 Um filme premiado que vale a pena",
+  "📖 Baseado em uma história real",
+  "🆕 O que tem de novo pra assistir agora",
+];
 
 interface Message {
   id: string;
@@ -57,8 +75,24 @@ export function AiChat({
     return titleMatch ? { title: titleMatch[1], type: typeMatch as "movie" | "tv" } : null;
   };
 
-  const handleSend = async () => {
-    if (!input.trim()) return;
+  // Ground truth check: is this title actually on a streaming platform in
+  // Brazil right now? The prompt tells the AI to only recommend available
+  // titles, but that's advisory — the model can still get it wrong, and this
+  // is a premium feature, so we verify against TMDB before ever showing a
+  // recommendation to the user instead of trusting the AI's word for it.
+  const isAvailableInBrazil = async (title: string, type: "movie" | "tv") => {
+    try {
+      const item = await searchContentByTitle(title, type);
+      await fetchContentWithProviders(item, { showToast: false, requireBrAvailability: true });
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const handleSend = async (overrideText?: string) => {
+    const textToSend = overrideText ?? input;
+    if (!textToSend.trim()) return;
 
     try {
       // Fetch last 10 recommendations from watch_history
@@ -91,7 +125,7 @@ export function AiChat({
 
       const userMessage: Message = {
         id: Date.now().toString(),
-        text: input,
+        text: textToSend,
         sender: "user",
         timestamp: new Date(),
       };
@@ -100,12 +134,27 @@ export function AiChat({
       setInput("");
       setIsTyping(true);
 
-      const prompt = `Você é o Filmin.IA, um assistente de descoberta de filmes e séries. Converse de forma natural e simpática, como um amigo cinéfilo — não como um robô que só cospe recomendações.
+      const today = new Date();
+      const todayFormatted = today.toLocaleDateString("pt-BR", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      });
+
+      const buildPrompt = (excludedTitles: string[]) => `Você é o Filmin.IA, um assistente de descoberta de filmes e séries. Converse de forma natural e simpática, como um amigo cinéfilo — não como um robô que só cospe recomendações.
+
+A data de hoje é ${todayFormatted}. Essa é a data real e atual — ignore qualquer suposição sobre "o ano atual" baseada nos seus dados de treinamento, e use a busca do Google quando precisar confirmar lançamentos recentes ou futuros.
 
 Regras:
 - Se a pessoa só cumprimentou ou ainda não deu nenhuma pista do que quer assistir, pode fazer UMA pergunta pra entender o gosto dela (humor, gênero, tempo disponível, etc.) antes de recomendar.
 - Assim que a pessoa der qualquer preferência (humor, gênero, duração, "algo tenso", "uma comédia", etc.), já é o suficiente — recomende um título específico nessa mesma resposta. Não fique encadeando perguntas de esclarecimento; no máximo UMA pergunta de acompanhamento na conversa inteira antes de recomendar.
 - Nunca recomende títulos que a pessoa já assistiu ou que já foram recomendados antes (listas abaixo), nem repita um título já sugerido nesta conversa.
+- NUNCA recomende filmes ou séries que ainda não foram lançados (anunciados, "em produção", com data de estreia futura). Só recomende títulos que já estrearam e já podem ser assistidos hoje. Na dúvida sobre se algo já lançou, use a busca do Google para confirmar antes de recomendar — se não tiver certeza, prefira um título mais antigo e comprovadamente disponível.
+- Só recomende títulos disponíveis em alguma plataforma de streaming por assinatura no Brasil (Netflix, Prime Video, Max, Disney+, Globoplay, Star+, Apple TV+, etc.). Evite lançamentos de festival, exclusivos de outro país ou só em cartaz no cinema — se não tiver certeza da disponibilidade em streaming no Brasil, prefira um título mais popular e comprovadamente disponível.${
+        excludedTitles.length
+          ? `\n- Os títulos a seguir JÁ FORAM VERIFICADOS e NÃO estão disponíveis em nenhum streaming no Brasil — não sugira nenhum deles de novo: ${excludedTitles.join(", ")}.`
+          : ""
+      }
 - Seja breve (2-4 frases) e use emojis com moderação.
 
 Títulos que a pessoa já assistiu: ${watchedTitles || "nenhum"}.
@@ -113,7 +162,7 @@ Títulos que a pessoa já assistiu: ${watchedTitles || "nenhum"}.
 
 Conversa até agora:
 ${conversationHistory || "(início da conversa)"}
-Usuário: "${input}"
+Usuário: "${textToSend}"
 
 Responda SEMPRE em JSON válido, sem nenhum texto fora do JSON, neste formato exato:
 {
@@ -121,31 +170,32 @@ Responda SEMPRE em JSON válido, sem nenhum texto fora do JSON, neste formato ex
   "recommendation": { "title": "Nome exato do título", "type": "movie" } ou null se não estiver recomendando nada agora
 }`;
 
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${
-          import.meta.env.VITE_GEMINI_API_KEY
-        }`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            tools: [{ google_search: {} }],
-            generationConfig: {
-              temperature: 0.8,
-              topK: 40,
-              topP: 0.95,
-              maxOutputTokens: 1536,
-              thinkingConfig: { thinkingBudget: 0 },
-            },
-          }),
-        }
-      );
+      const askGemini = async (prompt: string) => {
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${
+            import.meta.env.VITE_GEMINI_API_KEY
+          }`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
+              tools: [{ google_search: {} }],
+              generationConfig: {
+                temperature: 0.8,
+                topK: 40,
+                topP: 0.95,
+                maxOutputTokens: 1536,
+                thinkingConfig: { thinkingBudget: 0 },
+              },
+            }),
+          }
+        );
 
-      const data = await response.json();
-      const aiResponse = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        const data = await response.json();
+        const aiResponse = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!aiResponse) return null;
 
-      if (aiResponse) {
         try {
           // Extrai apenas o JSON do texto retornado
           const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
@@ -160,46 +210,64 @@ Responda SEMPRE em JSON válido, sem nenhum texto fora do JSON, neste formato ex
                   type: (rawRecommendation.type === "tv" ? "tv" : "movie") as "movie" | "tv",
                 }
               : null;
-
-          if (recommendation) {
-            await addToWatchHistory({
-              id: Date.now(), // Temporary ID until we get the real one
-              media_type: recommendation.type,
-              title: recommendation.title,
-              name: recommendation.title, // For TV shows
-              poster_path: null // We'll update this when we get the real content details
-            }, userId);
-          }
-
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: Date.now().toString(),
-              text: jsonResponse.chat,
-              sender: "ai",
-              timestamp: new Date(),
-              recommendation,
-            },
-          ]);
-          setIsTyping(false);
+          return { chat: jsonResponse.chat as string, recommendation };
         } catch (error) {
           console.error("Error parsing AI response:", error);
-
           // Fallback se o JSON falhar
-          const recommendation = extractRecommendation(aiResponse);
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: Date.now().toString(),
-              text: aiResponse,
-              sender: "ai",
-              timestamp: new Date(),
-              recommendation: recommendation,
-            },
-          ]);
-          setIsTyping(false);
+          return { chat: aiResponse as string, recommendation: extractRecommendation(aiResponse) };
         }
+      };
+
+      // Ask up to MAX_RECOMMENDATION_ATTEMPTS times, excluding any title that
+      // fails the Brazil-availability check, until we get a clean answer.
+      const excludedTitles: string[] = [];
+      let finalChat =
+        "Hmm, não encontrei um título certeiro disponível em streaming agora. Me conta mais um detalhe do que você quer assistir? 🤔";
+      let finalRecommendation: Message["recommendation"];
+
+      for (let attempt = 0; attempt < MAX_RECOMMENDATION_ATTEMPTS; attempt++) {
+        const result = await askGemini(buildPrompt(excludedTitles));
+        if (!result) break;
+
+        if (!result.recommendation) {
+          // No specific title this turn (greeting, clarifying question) — nothing to verify.
+          finalChat = result.chat;
+          finalRecommendation = undefined;
+          break;
+        }
+
+        const available = await isAvailableInBrazil(result.recommendation.title, result.recommendation.type);
+        if (available) {
+          finalChat = result.chat;
+          finalRecommendation = result.recommendation;
+          break;
+        }
+
+        // Not actually available — don't show it. Try again, excluding this title.
+        excludedTitles.push(result.recommendation.title);
       }
+
+      if (finalRecommendation) {
+        await addToWatchHistory({
+          id: Date.now(), // Temporary ID until we get the real one
+          media_type: finalRecommendation.type,
+          title: finalRecommendation.title,
+          name: finalRecommendation.title, // For TV shows
+          poster_path: null // We'll update this when we get the real content details
+        }, userId);
+      }
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now().toString(),
+          text: finalChat,
+          sender: "ai",
+          timestamp: new Date(),
+          recommendation: finalRecommendation,
+        },
+      ]);
+      setIsTyping(false);
     } catch (error) {
       console.error("Error:", error);
       setIsTyping(false);
@@ -243,6 +311,31 @@ Responda SEMPRE em JSON válido, sem nenhum texto fora do JSON, neste formato ex
       </div>
 
       <div className="flex-1 overflow-y-auto p-3 md:p-4 space-y-3 md:space-y-4">
+        {messages.length === 0 && !isTyping && (
+          <div className="h-full flex flex-col items-center justify-center text-center px-4">
+            <div className="w-16 h-16 rounded-2xl bg-filmeja-purple/15 flex items-center justify-center mb-4">
+              <Clapperboard className="w-8 h-8 text-filmeja-purple" />
+            </div>
+            <h4 className="text-white font-semibold text-base mb-1">
+              O que vamos assistir hoje?
+            </h4>
+            <p className="text-gray-400 text-sm max-w-xs mb-5">
+              Me conta seu humor, um gênero ou manda um "oi" que eu te ajudo a escolher.
+            </p>
+            <div className="flex flex-wrap justify-center gap-2 max-w-sm">
+              {QUICK_STARTERS.map((starter) => (
+                <button
+                  key={starter}
+                  type="button"
+                  onClick={() => handleSend(starter)}
+                  className="px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-sm text-gray-200 hover:bg-white/10 hover:border-filmeja-purple/50 transition-colors"
+                >
+                  {starter}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         <AnimatePresence>
           {messages.map((message) => (
             <motion.div
@@ -333,7 +426,7 @@ Responda SEMPRE em JSON válido, sem nenhum texto fora do JSON, neste formato ex
             className="flex-1 bg-white/5 text-white rounded-lg px-3 py-2.5 text-sm md:text-base focus:outline-none focus:ring-2 focus:ring-filmeja-purple"
           />
           <Button
-            onClick={handleSend}
+            onClick={() => handleSend()}
             className="bg-filmeja-purple hover:bg-filmeja-purple/90 px-3"
           >
             <Send className="w-4 h-4" />

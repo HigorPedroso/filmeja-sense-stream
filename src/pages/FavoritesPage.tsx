@@ -146,7 +146,7 @@ export function FavoritesPage({ title, items }: FavoritesPageProps) {
       )}
 
       {/* Content Layer */}
-      <div className="relative z-10 px-4 pb-6 md:px-8 md:pb-8 pt-[max(1.5rem,env(safe-area-inset-top))] md:pt-8 min-h-screen">
+      <div className="relative z-10 px-4 pb-6 md:px-8 md:pb-8 pt-[max(1.75rem,calc(0.75rem_+_env(safe-area-inset-top)))] md:pt-8 min-h-screen">
         <div className="max-w-7xl mx-auto">
           <motion.h1 
             initial={{ opacity: 0, y: -20 }}
