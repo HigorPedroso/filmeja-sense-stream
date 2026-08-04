@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
-import { Send, Bot, User, Clapperboard } from "lucide-react";
+import { Send, Bot, Target, Clock, Users, Shuffle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { addToWatchHistory } from "@/lib/utils/watch-history";
 import { searchContentByTitle, fetchContentWithProviders } from "@/lib/utils/tmdb";
 import { supabase } from "@/integrations/supabase/client";
+import { getConversation, saveConversation, deriveTitle } from "@/lib/filminConversations";
 
 // How many times we'll ask the AI for a different title before giving up and
 // showing a plain response with no recommendation attached. Each attempt
@@ -15,15 +16,13 @@ const MAX_RECOMMENDATION_ATTEMPTS = 3;
 // already have their own dedicated pickers on the dashboard, so these lean
 // into what only the chat can do: specific, contextual requests.
 const QUICK_STARTERS = [
-  "🎯 Algo parecido com um filme que eu gostei muito",
-  "⏱️ Um filme curto, tenho pouco tempo hoje",
-  "👨‍👩‍👧‍👦 Algo pra assistir em família",
-  "🏆 Um filme premiado que vale a pena",
-  "📖 Baseado em uma história real",
-  "🆕 O que tem de novo pra assistir agora",
+  { icon: Target, label: "Algo parecido com o que eu gostei", message: "Quero algo parecido com um filme ou série que eu gostei muito" },
+  { icon: Clock, label: "Tenho pouco tempo hoje", message: "Quero um filme curto, tenho pouco tempo hoje" },
+  { icon: Users, label: "Pra assistir em família", message: "Quero algo pra assistir em família" },
+  { icon: Shuffle, label: "Me surpreenda", message: "Me surpreenda com uma recomendação" },
 ];
 
-interface Message {
+export interface Message {
   id: string;
   text: string;
   sender: "user" | "ai";
@@ -31,32 +30,34 @@ interface Message {
   recommendation?: {
     title: string;
     type?: "movie" | "tv"; // Ensure this is strictly typed as "movie" | "tv"
+    releaseYear?: number;
   };
 }
 
 // Add these props to the component
 interface AiChatProps {
-  onShowContent: (title: string, type?: "movie" | "tv") => void;
+  conversationId: string;
+  onShowContent: (title: string, type?: "movie" | "tv", releaseYear?: number) => void;
   watchedContent?: Array<{ title?: string; name?: string; type?: "movie" | "tv" }>;
-  userAvatar?: string;
   userId: string; // Add this line
+  userName?: string;
   fullScreen?: boolean;
   headerLeft?: ReactNode;
 }
 
 // Update the component parameters
 export function AiChat({
+  conversationId,
   onShowContent,
   watchedContent = [],
-  userAvatar,
   userId,
+  userName,
   fullScreen = false,
   headerLeft,
 }: AiChatProps) {
-  const [messages, setMessages] = useState<Message[]>(() => {
-    const savedMessages = localStorage.getItem('chat_messages');
-    return savedMessages ? JSON.parse(savedMessages) : [];
-  });
+  const [messages, setMessages] = useState<Message[]>(
+    () => getConversation(conversationId)?.messages || []
+  );
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -69,7 +70,7 @@ export function AiChat({
     scrollToBottom();
   }, [messages]);
 
-  const extractRecommendation = (text: string) => {
+  const extractRecommendation = (text: string): Message["recommendation"] | null => {
     const titleMatch = text.match(/["']([^"']+)["']/);
     const typeMatch = text.toLowerCase().includes("série") ? "tv" : "movie";
     return titleMatch ? { title: titleMatch[1], type: typeMatch as "movie" | "tv" } : null;
@@ -80,9 +81,9 @@ export function AiChat({
   // titles, but that's advisory — the model can still get it wrong, and this
   // is a premium feature, so we verify against TMDB before ever showing a
   // recommendation to the user instead of trusting the AI's word for it.
-  const isAvailableInBrazil = async (title: string, type: "movie" | "tv") => {
+  const isAvailableInBrazil = async (title: string, type: "movie" | "tv", releaseYear?: number) => {
     try {
-      const item = await searchContentByTitle(title, type);
+      const item = await searchContentByTitle(title, type, releaseYear);
       await fetchContentWithProviders(item, { showToast: false, requireBrAvailability: true });
       return true;
     } catch {
@@ -143,6 +144,8 @@ export function AiChat({
 
       const buildPrompt = (excludedTitles: string[]) => `Você é o Filmin.IA, um assistente de descoberta de filmes e séries. Converse de forma natural e simpática, como um amigo cinéfilo — não como um robô que só cospe recomendações.
 
+${userName ? `Você está conversando com ${userName}. Pode chamá-lo(a) pelo nome de vez em quando para deixar a conversa mais pessoal, sem exagerar.` : ""}
+
 A data de hoje é ${todayFormatted}. Essa é a data real e atual — ignore qualquer suposição sobre "o ano atual" baseada nos seus dados de treinamento, e use a busca do Google quando precisar confirmar lançamentos recentes ou futuros.
 
 Regras:
@@ -167,8 +170,11 @@ Usuário: "${textToSend}"
 Responda SEMPRE em JSON válido, sem nenhum texto fora do JSON, neste formato exato:
 {
   "chat": "sua resposta para a pessoa, em português",
-  "recommendation": { "title": "Nome exato do título", "type": "movie" } ou null se não estiver recomendando nada agora
-}`;
+  "recommendation": { "title": "Nome exato do título", "type": "movie ou tv", "releaseYear": 2019 } ou null se não estiver recomendando nada agora
+}
+IMPORTANTE:
+- "type" tem que refletir o que você está de fato recomendando: "movie" para filme, "tv" para série. NUNCA coloque "movie" por padrão — se for uma série, é "tv". Errar isso faz o app buscar na categoria errada e mostrar um título completamente diferente pra pessoa.
+- "releaseYear" é o ano de lançamento REAL do título (ano em que estreou) — sem ele não conseguimos diferenciar remakes e refilmagens que usam o mesmo nome (ex: "Duna" 2021 vs 1984), então sempre inclua quando houver uma recomendação.`;
 
       const askGemini = async (prompt: string) => {
         const response = await fetch(
@@ -208,6 +214,7 @@ Responda SEMPRE em JSON válido, sem nenhum texto fora do JSON, neste formato ex
               ? {
                   title: rawRecommendation.title as string,
                   type: (rawRecommendation.type === "tv" ? "tv" : "movie") as "movie" | "tv",
+                  releaseYear: Number(rawRecommendation.releaseYear) || undefined,
                 }
               : null;
           return { chat: jsonResponse.chat as string, recommendation };
@@ -236,7 +243,11 @@ Responda SEMPRE em JSON válido, sem nenhum texto fora do JSON, neste formato ex
           break;
         }
 
-        const available = await isAvailableInBrazil(result.recommendation.title, result.recommendation.type);
+        const available = await isAvailableInBrazil(
+          result.recommendation.title,
+          result.recommendation.type,
+          result.recommendation.releaseYear
+        );
         if (available) {
           finalChat = result.chat;
           finalRecommendation = result.recommendation;
@@ -274,15 +285,20 @@ Responda SEMPRE em JSON válido, sem nenhum texto fora do JSON, neste formato ex
     }
   };
 
-  // Add effect to save messages
+  // Persist to this conversation's slot every time messages change, so the
+  // conversations list (title + preview) always reflects the latest state.
   useEffect(() => {
-    localStorage.setItem('chat_messages', JSON.stringify(messages));
-  }, [messages]);
+    saveConversation({
+      id: conversationId,
+      title: deriveTitle(messages),
+      messages,
+      updatedAt: Date.now(),
+    });
+  }, [conversationId, messages]);
 
   // Add function to clear chat history
   const clearChatHistory = () => {
     setMessages([]);
-    localStorage.removeItem('chat_messages');
   };
 
   return (
@@ -300,37 +316,36 @@ Responda SEMPRE em JSON válido, sem nenhum texto fora do JSON, neste formato ex
           <span className="truncate">Filmin.AI te ajuda</span>
         </h3>
         {messages.length > 0 && (
-          <Button
-            variant="ghost"
+          <button
             onClick={clearChatHistory}
-            className="text-gray-400 hover:text-white text-sm"
+            className="text-gray-300 hover:text-white text-sm bg-white/5 border border-white/10 rounded-full px-4 py-2 flex-shrink-0"
           >
             Limpar conversa
-          </Button>
+          </button>
         )}
       </div>
 
       <div className="flex-1 overflow-y-auto p-3 md:p-4 space-y-3 md:space-y-4">
         {messages.length === 0 && !isTyping && (
-          <div className="h-full flex flex-col items-center justify-center text-center px-4">
-            <div className="w-16 h-16 rounded-2xl bg-filmeja-purple/15 flex items-center justify-center mb-4">
-              <Clapperboard className="w-8 h-8 text-filmeja-purple" />
-            </div>
-            <h4 className="text-white font-semibold text-base mb-1">
-              O que vamos assistir hoje?
-            </h4>
-            <p className="text-gray-400 text-sm max-w-xs mb-5">
-              Me conta seu humor, um gênero ou manda um "oi" que eu te ajudo a escolher.
-            </p>
-            <div className="flex flex-wrap justify-center gap-2 max-w-sm">
+          <div className="pt-4 px-2">
+            <div className="text-4xl mb-3">🎬</div>
+            <h2 className="text-3xl font-bold text-white mb-1">
+              Oi{userName ? ` ${userName.split(" ")[0]}` : ""}
+            </h2>
+            <p className="text-gray-400 text-lg mb-6">Vamos escolher algo bom pra assistir!</p>
+
+            <div className="space-y-3">
               {QUICK_STARTERS.map((starter) => (
                 <button
-                  key={starter}
+                  key={starter.label}
                   type="button"
-                  onClick={() => handleSend(starter)}
-                  className="px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-sm text-gray-200 hover:bg-white/10 hover:border-filmeja-purple/50 transition-colors"
+                  onClick={() => handleSend(starter.message)}
+                  className="w-full flex items-center gap-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full px-4 py-3.5 transition-colors text-left"
                 >
-                  {starter}
+                  <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0">
+                    <starter.icon className="w-4 h-4 text-white" />
+                  </div>
+                  <span className="text-white font-medium">{starter.label}</span>
                 </button>
               ))}
             </div>
@@ -347,32 +362,7 @@ Responda SEMPRE em JSON válido, sem nenhum texto fora do JSON, neste formato ex
                 message.sender === "user" ? "justify-end" : "justify-start"
               }`}
             >
-              <div
-                className={`flex items-start gap-2 max-w-[80%] ${
-                  message.sender === "user" ? "flex-row-reverse" : ""
-                }`}
-              >
-                <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center overflow-hidden ${
-                    message.sender === "user"
-                      ? "bg-filmeja-purple"
-                      : "bg-filmeja-blue"
-                  }`}
-                >
-                  {message.sender === "user" ? (
-                    userAvatar ? (
-                      <img 
-                        src={userAvatar} 
-                        alt="User" 
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <User className="w-5 h-5 text-white" />
-                    )
-                  ) : (
-                    <Bot className="w-5 h-5 text-white" />
-                  )}
-                </div>
+              <div className="max-w-[80%]">
                 <div
                   className={`p-3 rounded-xl ${message.sender === "user" ? "bg-filmeja-purple text-white" : "bg-white/10 text-white"}`}
                 >
@@ -382,7 +372,7 @@ Responda SEMPRE em JSON válido, sem nenhum texto fora do JSON, neste formato ex
                       onClick={() => {
                         const title = message.recommendation?.title || "";
                         const type = message.recommendation?.type || "movie";
-                        onShowContent(title, type);
+                        onShowContent(title, type, message.recommendation?.releaseYear);
                       }}
                       className="mt-3 bg-filmeja-purple/20 hover:bg-filmeja-purple/40 text-white text-sm px-4 py-2 rounded-full"
                     >
@@ -397,11 +387,8 @@ Responda SEMPRE em JSON válido, sem nenhum texto fora do JSON, neste formato ex
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="flex items-center gap-2"
+              className="flex justify-start"
             >
-              <div className="w-8 h-8 rounded-full bg-filmeja-blue flex items-center justify-center">
-                <Bot className="w-5 h-5 text-white" />
-              </div>
               <div className="p-3 rounded-xl bg-white/10 text-white">
                 <div className="flex gap-1">
                   <span className="animate-bounce">.</span>
@@ -416,21 +403,21 @@ Responda SEMPRE em JSON válido, sem nenhum texto fora do JSON, neste formato ex
       </div>
 
       <div className="p-3 md:p-4 border-t border-white/10">
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-3xl pl-5 pr-2 py-2">
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyPress={(e) => e.key === "Enter" && handleSend()}
-            placeholder="Descreva o que você quer assistir..."
-            className="flex-1 bg-white/5 text-white rounded-lg px-3 py-2.5 text-sm md:text-base focus:outline-none focus:ring-2 focus:ring-filmeja-purple"
+            placeholder="Pergunte qualquer coisa..."
+            className="flex-1 bg-transparent text-white py-2 text-sm md:text-base placeholder:text-gray-400 focus:outline-none"
           />
-          <Button
+          <button
             onClick={() => handleSend()}
-            className="bg-filmeja-purple hover:bg-filmeja-purple/90 px-3"
+            className="w-10 h-10 rounded-full bg-gradient-to-br from-filmeja-purple to-filmeja-blue flex items-center justify-center text-white flex-shrink-0"
           >
             <Send className="w-4 h-4" />
-          </Button>
+          </button>
         </div>
       </div>
     </div>

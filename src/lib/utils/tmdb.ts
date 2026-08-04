@@ -61,34 +61,84 @@ function normalizeTitle(value?: string): string {
     .trim();
 }
 
+function releaseYearOf(item: { release_date?: string; first_air_date?: string }): number | undefined {
+  const dateStr = item.release_date || item.first_air_date;
+  return dateStr ? new Date(dateStr).getFullYear() : undefined;
+}
+
+// Among several candidates that already tied on title, prefer the one whose
+// release year matches what was asked for — this is what actually
+// disambiguates remakes, sequels reusing the base title, and any title that
+// got released more than once (e.g. "Duna" 2021 vs 1984). Falls back to the
+// closest year, then to the first candidate (original order) when no year
+// was given at all.
+function pickByYear<T extends { release_date?: string; first_air_date?: string }>(
+  candidates: T[],
+  wantedYear?: number
+): T {
+  if (!wantedYear) return candidates[0];
+
+  const exactYear = candidates.find((r) => releaseYearOf(r) === wantedYear);
+  if (exactYear) return exactYear;
+
+  return [...candidates].sort((a, b) => {
+    const yearA = releaseYearOf(a);
+    const yearB = releaseYearOf(b);
+    if (yearA === undefined) return 1;
+    if (yearB === undefined) return -1;
+    return Math.abs(yearA - wantedYear) - Math.abs(yearB - wantedYear);
+  })[0];
+}
+
 // Search results often include sequels, remakes or unrelated titles that
 // happen to be more "popular" than the one actually being looked for —
 // sorting by popularity alone can silently swap in the wrong movie/show.
-// Prefer an exact (or near-exact) title match first, and only fall back to
+// Prefer an exact (or near-exact) title match first, using the release year
+// (when known) to pick between same-titled results, and only fall back to
 // "most popular" when nothing actually matches the requested title.
 export function pickBestTitleMatch<
-  T extends { id: number; title?: string; name?: string; popularity?: number }
->(results: T[], wantedTitle: string): T | undefined {
+  T extends {
+    id: number;
+    title?: string;
+    name?: string;
+    popularity?: number;
+    release_date?: string;
+    first_air_date?: string;
+  }
+>(results: T[], wantedTitle: string, wantedYear?: number): T | undefined {
   if (!results.length) return undefined;
 
   const target = normalizeTitle(wantedTitle);
-  if (!target) return [...results].sort((a, b) => (b.popularity || 0) - (a.popularity || 0))[0];
+  if (!target) {
+    return pickByYear([...results].sort((a, b) => (b.popularity || 0) - (a.popularity || 0)), wantedYear);
+  }
 
-  const exact = results.find((r) => normalizeTitle(r.title || r.name) === target);
-  if (exact) return exact;
+  const exactMatches = results.filter((r) => normalizeTitle(r.title || r.name) === target);
+  if (exactMatches.length) return pickByYear(exactMatches, wantedYear);
 
-  const closeMatch = results.find((r) => {
+  const closeMatches = results.filter((r) => {
     const candidate = normalizeTitle(r.title || r.name);
     return candidate && (candidate.startsWith(target) || target.startsWith(candidate));
   });
-  if (closeMatch) return closeMatch;
+  if (closeMatches.length) return pickByYear(closeMatches, wantedYear);
 
-  return [...results].sort((a, b) => (b.popularity || 0) - (a.popularity || 0))[0];
+  return pickByYear([...results].sort((a, b) => (b.popularity || 0) - (a.popularity || 0)), wantedYear);
 }
 
 // Resolves a free-text title (e.g. suggested by the AI chat) to a TMDB item
-// shaped like what fetchContentWithProviders expects.
-export async function searchContentByTitle(title: string, type?: "movie" | "tv") {
+// shaped like what fetchContentWithProviders expects. Passing the release
+// year the AI gave us lets pickBestTitleMatch tell apart same-titled results
+// (remakes, sequels, re-releases) instead of guessing from popularity alone.
+//
+// Always searches BOTH movie and tv, regardless of the `type` the caller
+// passed in. That param is what the AI claims it's recommending, and the AI
+// gets it wrong often enough (e.g. labelling a series "movie") that trusting
+// it to pick the search category caused completely unrelated titles to show
+// up — searching "Outer Banks" (a series) as a movie finds nothing named
+// that and falls back to some random low-relevance movie by popularity.
+// Searching both and letting the exact-title(+year) match decide is immune
+// to that mislabeling.
+export async function searchContentByTitle(title: string, type?: "movie" | "tv", year?: number) {
   const cleanTitle = title
     .replace(/^("|'|`)|("|'|`)$/g, "")
     .replace(/^.*?recomendo\s+/i, "")
@@ -97,36 +147,24 @@ export async function searchContentByTitle(title: string, type?: "movie" | "tv")
     .split("(")[0]
     .trim();
 
-  let searchResults: any[] = [];
-
-  if (!type) {
-    const [movieSearch, tvSearch] = await Promise.all([
-      fetch(
-        `https://api.themoviedb.org/3/search/movie?api_key=${
-          import.meta.env.VITE_TMDB_API_KEY
-        }&query=${encodeURIComponent(cleanTitle)}&language=pt-BR`
-      ).then((r) => r.json()),
-      fetch(
-        `https://api.themoviedb.org/3/search/tv?api_key=${
-          import.meta.env.VITE_TMDB_API_KEY
-        }&query=${encodeURIComponent(cleanTitle)}&language=pt-BR`
-      ).then((r) => r.json()),
-    ]);
-    searchResults = [
-      ...(movieSearch.results || []).map((r: any) => ({ ...r, media_type: "movie" })),
-      ...(tvSearch.results || []).map((r: any) => ({ ...r, media_type: "tv" })),
-    ];
-  } else {
-    const searchResponse = await fetch(
-      `https://api.themoviedb.org/3/search/${type}?api_key=${
+  const [movieSearch, tvSearch] = await Promise.all([
+    fetch(
+      `https://api.themoviedb.org/3/search/movie?api_key=${
         import.meta.env.VITE_TMDB_API_KEY
       }&query=${encodeURIComponent(cleanTitle)}&language=pt-BR`
-    );
-    const searchData = await searchResponse.json();
-    searchResults = (searchData.results || []).map((r: any) => ({ ...r, media_type: type }));
-  }
+    ).then((r) => r.json()),
+    fetch(
+      `https://api.themoviedb.org/3/search/tv?api_key=${
+        import.meta.env.VITE_TMDB_API_KEY
+      }&query=${encodeURIComponent(cleanTitle)}&language=pt-BR`
+    ).then((r) => r.json()),
+  ]);
+  const searchResults = [
+    ...(movieSearch.results || []).map((r: any) => ({ ...r, media_type: "movie" })),
+    ...(tvSearch.results || []).map((r: any) => ({ ...r, media_type: "tv" })),
+  ];
 
-  const content = pickBestTitleMatch(searchResults, cleanTitle);
+  const content = pickBestTitleMatch(searchResults, cleanTitle, year);
   if (!content) {
     throw new Error(`No results found for: ${title}`);
   }

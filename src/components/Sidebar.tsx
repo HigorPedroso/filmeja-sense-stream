@@ -75,12 +75,12 @@ export function Sidebar({ isExpanded, setIsExpanded, onLogout }: SidebarProps) {
     fetchUser();
   }, []);
 
-  const fetchContentDetails = async (title: string, type?: "movie" | "tv") => {
+  const fetchContentDetails = async (title: string, type?: "movie" | "tv", releaseYear?: number) => {
     setIsLoadingRecommendation(true);
     setShowRecommendationModal(true);
 
     try {
-      const item = await searchContentByTitle(title, type);
+      const item = await searchContentByTitle(title, type, releaseYear);
       await fetchContentWithProviders(item, {
         showToast: false,
         requireBrAvailability: true,
@@ -396,13 +396,14 @@ export function Sidebar({ isExpanded, setIsExpanded, onLogout }: SidebarProps) {
               </Button>
             </div>
             <AiChat
-              onShowContent={async (title, type) => {
+              conversationId="desktop"
+              onShowContent={async (title, type, releaseYear) => {
                 setShowAiChat(false);
-                fetchContentDetails(title, type);
+                fetchContentDetails(title, type, releaseYear);
               }}
               watchedContent={[...userWatchedMovies, ...userWatchedSeries]}
-              userAvatar={currentUser?.user_metadata?.avatar_url}
               userId={currentUser?.id}
+              userName={currentUser?.user_metadata?.name || currentUser?.user_metadata?.full_name}
             />
           </motion.div>
         </div>

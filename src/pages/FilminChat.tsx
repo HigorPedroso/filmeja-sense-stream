@@ -1,23 +1,23 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { ChevronLeft } from "lucide-react";
 import { AiChat } from "@/components/AiChat/AiChat";
-import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { useRecommendationResult } from "@/hooks/useRecommendationResult";
 import { fetchContentWithProviders, searchContentByTitle, describeAiRecommendationError } from "@/lib/utils/tmdb";
 import { toast } from "@/hooks/use-toast";
 
 const FilminChat = () => {
   const navigate = useNavigate();
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const { conversationId } = useParams<{ conversationId: string }>();
+  // Shared app-wide auth state, already resolved by the time the user has
+  // navigated this deep — avoids the redundant per-mount getUser() call that
+  // used to block this whole screen behind a blank background while it
+  // resolved.
+  const { user: currentUser } = useAuth();
   const { setShowRecommendationModal, setMoodRecommendation, setIsLoadingRecommendation } =
     useRecommendationResult();
 
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => setCurrentUser(user));
-  }, []);
-
-  const handleShowContent = async (title: string, type?: "movie" | "tv") => {
+  const handleShowContent = async (title: string, type?: "movie" | "tv", releaseYear?: number) => {
     setShowRecommendationModal(true);
     setIsLoadingRecommendation(true);
     // Unlike ContentModal (which watches its own isOpen prop and navigates
@@ -26,7 +26,7 @@ const FilminChat = () => {
     // leave, same as every other trigger.
     navigate("/recomendacao");
     try {
-      const item = await searchContentByTitle(title, type);
+      const item = await searchContentByTitle(title, type, releaseYear);
       await fetchContentWithProviders(item, {
         requireBrAvailability: true,
         onLoadingChange: setIsLoadingRecommendation,
@@ -38,7 +38,7 @@ const FilminChat = () => {
     }
   };
 
-  if (!currentUser) return null;
+  if (!currentUser || !conversationId) return null;
 
   return (
     <div
@@ -49,6 +49,8 @@ const FilminChat = () => {
       }}
     >
       <AiChat
+        key={conversationId}
+        conversationId={conversationId}
         fullScreen
         headerLeft={
           <button
@@ -59,8 +61,8 @@ const FilminChat = () => {
           </button>
         }
         onShowContent={handleShowContent}
-        userAvatar={currentUser?.user_metadata?.avatar_url}
         userId={currentUser?.id}
+        userName={currentUser?.user_metadata?.name || currentUser?.user_metadata?.full_name}
       />
     </div>
   );

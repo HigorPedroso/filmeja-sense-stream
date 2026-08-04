@@ -12,6 +12,7 @@ import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
 import RecommendationResult from "./pages/RecommendationResult";
 import FilminChat from "./pages/FilminChat";
+import FilminConversations from "./pages/FilminConversations";
 import Premium from "./pages/Premium";
 import { RecommendationResultProvider } from "./hooks/useRecommendationResult";
 import { AuthProvider } from "./hooks/useAuth";
@@ -175,6 +176,14 @@ const AppContent = ({ favoriteItems }) => {
       />
       <Route
         path="/filmin-ia"
+        element={
+          <ProtectedRoute>
+            <FilminConversations />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/filmin-ia/:conversationId"
         element={
           <ProtectedRoute>
             <FilminChat />

@@ -473,10 +473,12 @@ Formato obrigatório:
     "title": "Nome do título",
     "tmdbId": 12345,
     "description": "Breve descrição com até 250 caracteres",
-    "tipo": "movie" ou "tv"
+    "tipo": "movie" ou "tv",
+    "releaseYear": 2021
   }
 ]
 
+"releaseYear" é o ano de lançamento real do título — importante para diferenciar remakes/refilmagens que usam o mesmo nome.
 A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
 `;
 
@@ -515,6 +517,7 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
             tmdbId: Number(suggestion.tmdbId || 0),
             description: String(suggestion.description || ""),
             tipo: (suggestion.tipo === "tv" ? "tv" : "movie") as "movie" | "tv",
+            releaseYear: Number(suggestion.releaseYear) || undefined,
           }))
         : [];
 
@@ -535,7 +538,7 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
             );
             const searchData = await searchResponse.json();
 
-            const bestMatch = pickBestTitleMatch(searchData.results || [], suggestion.title);
+            const bestMatch = pickBestTitleMatch(searchData.results || [], suggestion.title, suggestion.releaseYear);
             if (bestMatch) {
               return {
                 ...suggestion,
@@ -1026,6 +1029,7 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
           description: string;
           urlImg: string;
           tipo: string;
+          releaseYear?: number;
         }[] = extractJsonFromResponse(raw) || [];
 
         if (suggestions.length > 0) {
@@ -1033,7 +1037,8 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
             suggestions[Math.floor(Math.random() * suggestions.length)];
           await fetchContentDetails(
             randomSuggestion.title,
-            randomSuggestion.tipo as "movie" | "tv"
+            randomSuggestion.tipo as "movie" | "tv",
+            randomSuggestion.releaseYear
           );
         } else {
           throw new Error("No suggestions found");
@@ -1061,12 +1066,12 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
     }
   };
 
-  const fetchContentDetails = async (title: string, type?: "movie" | "tv") => {
+  const fetchContentDetails = async (title: string, type?: "movie" | "tv", releaseYear?: number) => {
     setIsLoadingRecommendation(true);
     setShowRecommendationModal(true);
 
     try {
-      const item = await searchContentByTitle(title, type);
+      const item = await searchContentByTitle(title, type, releaseYear);
       await fetchContentWithProviders(item, {
         showToast: false,
         requireBrAvailability: true,
@@ -1490,13 +1495,14 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
                 </Button>
               </div>
               <AiChat
-                onShowContent={(title, type) => {
+                conversationId="desktop"
+                onShowContent={(title, type, releaseYear) => {
                   setShowAiChat(false);
-                  fetchContentDetails(title, type);
+                  fetchContentDetails(title, type, releaseYear);
                 }}
                 watchedContent={[...userWatchedMovies, ...userWatchedSeries]}
-                userAvatar={currentUser?.user_metadata?.avatar_url}
                 userId={currentUser?.id}
+                userName={currentUser?.user_metadata?.name || currentUser?.user_metadata?.full_name}
               />
             </motion.div>
           </div>

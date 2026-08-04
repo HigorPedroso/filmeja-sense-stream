@@ -20,6 +20,7 @@ export interface ContentSuggestion {
   description: string;
   imgUrl?: string;
   tipo: "movie" | "tv";
+  releaseYear?: number;
 }
 
 export interface MoodRecommendationParams {
@@ -256,15 +257,16 @@ export async function fetchMoodRecommendation(params: MoodRecommendationParams):
 
     const parsedSuggestions = extractJsonFromResponse(raw) || [];
     // Ensure we're working with a properly typed array of ContentSuggestion objects
-    const suggestions: ContentSuggestion[] = Array.isArray(parsedSuggestions) ? 
+    const suggestions: ContentSuggestion[] = Array.isArray(parsedSuggestions) ?
       parsedSuggestions.map(suggestion => ({
         title: String(suggestion.title || ""),
         tmdbId: Number(suggestion.tmdbId || 0),
         description: String(suggestion.description || ""),
         imgUrl: suggestion.imgUrl ? String(suggestion.imgUrl) : undefined,
-        tipo: (suggestion.tipo === "tv" ? "tv" : "movie") as "movie" | "tv"
+        tipo: (suggestion.tipo === "tv" ? "tv" : "movie") as "movie" | "tv",
+        releaseYear: Number(suggestion.releaseYear) || undefined,
       })) : [];
-      
+
     const shuffledSuggestions = shuffleArray(suggestions);
 
     const suggestionsWithCorrectIds = await Promise.all(
@@ -278,7 +280,7 @@ export async function fetchMoodRecommendation(params: MoodRecommendationParams):
           );
           const searchData = await searchResponse.json();
 
-          const bestMatch = pickBestTitleMatch(searchData.results || [], suggestion.title);
+          const bestMatch = pickBestTitleMatch(searchData.results || [], suggestion.title, suggestion.releaseYear);
           if (bestMatch) {
             return {
               ...suggestion,

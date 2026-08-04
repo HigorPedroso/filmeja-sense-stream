@@ -1,61 +1,80 @@
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 // Single source of truth for premium status. Stripe checkout is no longer
 // wired up (moving to Google Play Billing later) — `profiles.is_premium` is
 // a plain boolean you can flip directly in Supabase Studio (on your user's
-// row) to test premium features. Stays live via a realtime subscription.
-export function usePremiumStatus() {
-  const [isPremium, setIsPremium] = useState(false);
+// row) to test premium features.
+//
+// Shared module-level cache: Dashboard, HeaderDashboard, Sidebar and
+// MobileSidebar all call this hook, and Dashboard remounts every time the
+// user navigates back to it — with a plain per-component useState, that
+// meant a fresh Supabase round-trip (and a flash back to "not premium")
+// every single time. Now the fetch happens once per app session; every
+// later mount just reads the cached value instantly, and a realtime
+// subscription (opened once, shared) keeps it live if the row changes.
+let isPremiumCache = false;
+const listeners = new Set<() => void>();
+let realtimeChannel: ReturnType<typeof supabase.channel> | null = null;
+let subscriberCount = 0;
 
-  useEffect(() => {
-    const checkPremiumStatus = async () => {
-      try {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        if (!user) {
-          setIsPremium(false);
-          return;
-        }
+function notify() {
+  listeners.forEach((listener) => listener());
+}
 
-        const { data: profile, error } = await supabase
-          .from("profiles")
-          .select("is_premium")
-          .eq("id", user.id)
-          .single();
+async function fetchPremiumStatus() {
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      isPremiumCache = false;
+      notify();
+      return;
+    }
 
-        if (error) {
-          setIsPremium(false);
-          return;
-        }
+    const { data: profile, error } = await supabase
+      .from("profiles")
+      .select("is_premium")
+      .eq("id", user.id)
+      .single();
 
-        setIsPremium(!!profile?.is_premium);
-      } catch (error) {
-        console.error("Error checking premium status:", error);
-        setIsPremium(false);
-      }
-    };
+    isPremiumCache = error ? false : !!profile?.is_premium;
+  } catch (error) {
+    console.error("Error checking premium status:", error);
+    isPremiumCache = false;
+  }
+  notify();
+}
 
-    checkPremiumStatus();
+function subscribe(listener: () => void) {
+  listeners.add(listener);
+  subscriberCount++;
 
-    const subscription = supabase
+  if (subscriberCount === 1) {
+    // First consumer in the app: kick off the one fetch and open the one
+    // realtime channel that every future consumer will just piggyback on.
+    fetchPremiumStatus();
+    realtimeChannel = supabase
       .channel("profile-premium-status")
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "profiles",
-        },
-        checkPremiumStatus
-      )
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "profiles" }, fetchPremiumStatus)
       .subscribe();
+  }
 
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
+  return () => {
+    listeners.delete(listener);
+    subscriberCount--;
+    if (subscriberCount === 0 && realtimeChannel) {
+      realtimeChannel.unsubscribe();
+      realtimeChannel = null;
+    }
+  };
+}
 
-  return isPremium;
+function getSnapshot() {
+  return isPremiumCache;
+}
+
+export function usePremiumStatus() {
+  return useSyncExternalStore(subscribe, getSnapshot);
 }
