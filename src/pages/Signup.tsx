@@ -3,19 +3,25 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, User, Eye, EyeOff, Loader2, ChevronLeft } from 'lucide-react';
+import { Mail, Lock, User, Eye, EyeOff, Loader2, ChevronLeft, Apple } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { loginWithGoogle } from '@/lib/googleAuth';
+import { loginWithApple } from '@/lib/appleAuth';
 import { Capacitor } from '@capacitor/core';
 import { cn } from '@/lib/utils';
 
 const isNative = Capacitor.isNativePlatform();
+// Apple only requires offering Sign in with Apple on iOS (App Store review
+// guideline 4.8) — the plugin's Android support needs a server redirect
+// flow we don't have set up, so keep this iOS-only.
+const isIOS = Capacitor.getPlatform() === 'ios';
 
 const Signup = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [appleLoading, setAppleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -109,7 +115,23 @@ const Signup = () => {
     }
   };
 
-  const busy = loading || googleLoading;
+  const handleAppleLogin = async () => {
+    setAppleLoading(true);
+    try {
+      await loginWithApple();
+      // The session is set directly and the onAuthStateChange effect above
+      // navigates to /dashboard.
+    } catch (error) {
+      toast({
+        title: 'Erro!',
+        description: error.message || 'Ocorreu um erro ao conectar com a Apple.',
+        variant: 'destructive',
+      });
+      setAppleLoading(false);
+    }
+  };
+
+  const busy = loading || googleLoading || appleLoading;
 
   return (
     <div className="min-h-[100dvh] relative bg-filmeja-dark overflow-hidden">
@@ -196,6 +218,23 @@ const Signup = () => {
             )}
             Continuar com Google
           </Button>
+
+          {isIOS && (
+            <Button
+              variant="outline"
+              className="w-full h-12 rounded-xl bg-black text-white border-transparent hover:bg-black/80 font-medium mt-3"
+              onClick={handleAppleLogin}
+              type="button"
+              disabled={busy}
+            >
+              {appleLoading ? (
+                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+              ) : (
+                <Apple className="w-5 h-5 mr-2 fill-white" />
+              )}
+              Continuar com Apple
+            </Button>
+          )}
 
           <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">
