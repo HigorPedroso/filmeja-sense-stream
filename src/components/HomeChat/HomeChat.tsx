@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Bot, ArrowRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -526,7 +526,7 @@ export function HomeChat({ onClose }: { onClose?: () => void }) {
   return (
     <div className="max-w-xl w-full h-[600px] border rounded-lg flex flex-col overflow-hidden">
       <div className="sticky top-0 z-20 border-b border-white/10 flex items-center gap-2 bg-black/80 backdrop-blur-xl p-4">
-        <Bot className="w-5 h-5 text-filmeja-purple" />
+        <img src="/mascote.png" alt="Filmin.IA" className="w-6 h-6 object-contain" />
         <h3 className="text-lg font-semibold text-white flex-1">
           Filmin.AI te ajuda
         </h3>
@@ -586,7 +586,7 @@ export function HomeChat({ onClose }: { onClose?: () => void }) {
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <Bot className="w-5 h-5 text-white" />
+                    <img src="/mascote.png" alt="Filmin.IA" className="w-6 h-6 object-contain" />
                   )}
                 </div>
 

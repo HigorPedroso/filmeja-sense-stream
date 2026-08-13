@@ -5,6 +5,7 @@ import { TrailerModal } from "./TrailerModal";
 import { StreamingModal } from "./StreamingModal";
 import { useTrailerHandler } from "./useTrailerHandler";
 import { useContentActions } from "./useContentActions";
+import { trackEvent } from "@/lib/analytics/trackEvent";
 
 interface ContentResultViewProps {
   content: ContentType;
@@ -61,6 +62,11 @@ export const ContentResultView = ({
 
   const handleNextSuggestion = async () => {
     closeTrailerModal();
+    trackEvent("title_disliked", {
+      tmdbId: contentData.id,
+      title: contentData.title || contentData.name,
+      mediaType: contentData.mediaType,
+    });
     if (onRequestNew) {
       await onRequestNew();
     }

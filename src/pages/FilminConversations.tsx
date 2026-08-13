@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ChevronLeft, ChevronRight, MessageSquare, Plus, Search, Bot, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, MessageSquare, Plus, Search, Trash2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   getConversations,
   createConversation,
   deleteConversation,
+  getConversationCoverPosterPath,
   type FilminConversation,
 } from "@/lib/filminConversations";
 
@@ -24,11 +25,14 @@ interface ConversationRowProps {
 
 const ConversationRow = ({ conversation, isOpen, onOpenChange, onSelect, onDelete }: ConversationRowProps) => {
   const lastMessage = conversation.messages[conversation.messages.length - 1];
-  // framer-motion still fires onTap after a real drag release (onDragEnd
-  // runs first, synchronously) — without this guard, swiping the row open
-  // also fired onSelect() using the pre-drag `isOpen`, navigating into the
-  // chat right as the delete button was revealed.
-  const justDraggedRef = useRef(false);
+  const coverPosterPath = getConversationCoverPosterPath(conversation);
+  // framer-motion's own tap/drag gesture resolution (info.offset /
+  // info.velocity from onDragEnd + onTap) turned out unreliable on real
+  // touch hardware — plain taps kept getting misread as drags. This tracks
+  // the raw pointerdown→pointerup distance ourselves, via native pointer
+  // events, and uses that single number as the only source of truth for
+  // "was this a tap or a drag".
+  const pointerDownX = useRef<number | null>(null);
 
   return (
     <div className="relative overflow-hidden rounded-xl">
@@ -49,33 +53,42 @@ const ConversationRow = ({ conversation, isOpen, onOpenChange, onSelect, onDelet
         drag="x"
         dragConstraints={{ left: -DELETE_WIDTH, right: 0 }}
         dragElastic={{ left: 0.15, right: 0 }}
+        dragMomentum={false}
         animate={{ x: isOpen ? -DELETE_WIDTH : 0 }}
         whileTap={{ scale: 0.98 }}
         transition={{ type: "spring", stiffness: 500, damping: 40 }}
-        onDragEnd={(_, info) => {
-          // Real touch taps have more jitter than a mouse does — velocity
-          // alone (meant to catch a fast flick) kept spiking on plain taps
-          // and opening the delete button by accident, so this now only
-          // opens on actual, deliberate horizontal movement.
-          const hasMoved = Math.abs(info.offset.x) > 15;
-          justDraggedRef.current = hasMoved;
-          onOpenChange(hasMoved && info.offset.x < -DELETE_WIDTH / 2 ? conversation.id : null);
+        onPointerDown={(e) => {
+          pointerDownX.current = e.clientX;
         }}
-        onTap={() => {
-          if (justDraggedRef.current) {
-            justDraggedRef.current = false;
-            return;
-          }
-          if (isOpen) {
-            onOpenChange(null);
+        onPointerUp={(e) => {
+          if (pointerDownX.current === null) return;
+          const delta = e.clientX - pointerDownX.current;
+          pointerDownX.current = null;
+
+          // 24px is well past normal touch jitter but still far short of
+          // a deliberate swipe — anything under that is unambiguously a tap.
+          if (Math.abs(delta) < 24) {
+            if (isOpen) {
+              onOpenChange(null);
+            } else {
+              onSelect();
+            }
           } else {
-            onSelect();
+            onOpenChange(delta < -DELETE_WIDTH / 2 ? conversation.id : null);
           }
         }}
         className="relative z-10 w-full flex items-center gap-3 py-3 px-2 bg-filmeja-dark cursor-pointer"
       >
-        <div className="w-11 h-11 rounded-xl bg-filmeja-purple/15 flex items-center justify-center flex-shrink-0">
-          <Bot className="w-5 h-5 text-filmeja-purple" />
+        <div className="w-11 h-11 rounded-xl bg-filmeja-purple/15 flex items-center justify-center flex-shrink-0 overflow-hidden">
+          {coverPosterPath ? (
+            <img
+              src={`https://image.tmdb.org/t/p/w200${coverPosterPath}`}
+              alt=""
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <img src="/mascote.png" alt="" className="w-8 h-8 object-contain" />
+          )}
         </div>
         <div className="flex-1 min-w-0">
           <h3 className="text-white font-semibold truncate">{conversation.title}</h3>
@@ -98,6 +111,7 @@ const FilminConversations = () => {
   const [conversations, setConversations] = useState<FilminConversation[]>([]);
   const [query, setQuery] = useState("");
   const [openRowId, setOpenRowId] = useState<string | null>(null);
+  const [isClosing, setIsClosing] = useState(false);
 
   useEffect(() => {
     setConversations(getConversations());
@@ -114,6 +128,11 @@ const FilminConversations = () => {
     setOpenRowId(null);
   };
 
+  // Routes don't get exit animations for free (no AnimatePresence around
+  // <Routes>), so we fake it: animate back out to the right first, then
+  // navigate away once that animation actually finishes.
+  const handleBack = () => setIsClosing(true);
+
   const filteredConversations = conversations.filter((conversation) => {
     if (!query.trim()) return true;
     const haystack = `${conversation.title} ${conversation.messages.map((m) => m.text).join(" ")}`.toLowerCase();
@@ -121,7 +140,13 @@ const FilminConversations = () => {
   });
 
   return (
-    <div
+    <motion.div
+      initial={{ x: "100%" }}
+      animate={{ x: isClosing ? "100%" : 0 }}
+      transition={{ type: "tween", duration: 0.3, ease: "easeInOut" }}
+      onAnimationComplete={() => {
+        if (isClosing) navigate(-1);
+      }}
       className="h-[100dvh] bg-filmeja-dark flex flex-col overflow-hidden"
       style={{
         paddingTop: "env(safe-area-inset-top)",
@@ -130,7 +155,7 @@ const FilminConversations = () => {
     >
       <div className="flex items-center justify-between px-4 py-3 flex-shrink-0">
         <button
-          onClick={() => navigate(-1)}
+          onClick={handleBack}
           className="text-gray-300 hover:text-white p-1 -ml-1"
         >
           <ChevronLeft className="w-6 h-6" />
@@ -194,7 +219,7 @@ const FilminConversations = () => {
           </div>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 };
 

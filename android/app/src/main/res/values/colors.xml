@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Matches SplashScreen.backgroundColor in capacitor.config.ts. -->
+    <color name="splashBackground">#0f0f0f</color>
+</resources>

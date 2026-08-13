@@ -78,3 +78,11 @@ function getSnapshot() {
 export function usePremiumStatus() {
   return useSyncExternalStore(subscribe, getSnapshot);
 }
+
+// Flips every subscriber (Dashboard, Sidebar, ad hooks, ...) to premium the
+// instant a purchase/restore is confirmed, instead of waiting on the
+// `profiles` write to round-trip back through the realtime subscription.
+export function setPremiumStatusLocally(isPremium: boolean) {
+  isPremiumCache = isPremium;
+  notify();
+}

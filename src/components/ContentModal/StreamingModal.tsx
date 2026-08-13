@@ -4,6 +4,7 @@ import { X, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ContentType } from "./types";
 import { useState } from "react";
+import { trackEvent } from "@/lib/analytics/trackEvent";
 
 interface StreamingModalProps {
   isOpen: boolean;
@@ -67,6 +68,11 @@ export const StreamingModal = ({ isOpen, onClose, content }: StreamingModalProps
   if (!isOpen || !content.providers?.flatrate) return null;
 
   const handleProviderClick = (provider: any) => {
+    trackEvent("streaming_provider_clicked", {
+      provider: provider.provider_name,
+      tmdbId: content.id,
+      title: content.title || content.name,
+    });
     window.open(getStreamingLink(provider.provider_name, content.title || content.name || ""), "_blank");
   };
 

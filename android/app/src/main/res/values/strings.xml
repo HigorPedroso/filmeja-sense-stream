@@ -4,7 +4,5 @@
     <string name="title_activity_main">FilmeJá</string>
     <string name="package_name">com.filmeja.app</string>
     <string name="custom_url_scheme">com.filmeja.app</string>
-    <!-- Google's official AdMob TEST App ID. Replace with your real AdMob
-         Android App ID before shipping to production. -->
-    <string name="admob_app_id">ca-app-pub-3940256099942544~3347511713</string>
+    <string name="admob_app_id">ca-app-pub-7861501292446252~7130292779</string>
 </resources>

@@ -17,6 +17,15 @@
 
 
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
-        <item name="android:background">@drawable/splash</item>
+        <!-- On API < 31 (core-splashscreen compat mode), leaving this attribute
+             unset does NOT reliably fall back to the app's real launcher icon —
+             it showed a generic placeholder. So it must be set explicitly. The
+             mask (circle on most devices) only crops content placed near the
+             edge of the drawable, which is why splash_icon.png has generous
+             transparent padding baked in — the visible logo sits well inside
+             the safe zone and is never clipped. -->
+        <item name="windowSplashScreenBackground">@color/splashBackground</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_icon</item>
+        <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
     </style>
 </resources>

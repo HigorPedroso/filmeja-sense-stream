@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { ContentType } from "./types";
+import { trackEvent } from "@/lib/analytics/trackEvent";
 
 export const useContentActions = (content: ContentType) => {
   const [isWatched, setIsWatched] = useState(false);
@@ -79,6 +80,11 @@ export const useContentActions = (content: ContentType) => {
         });
 
         setIsFavorite(true);
+        trackEvent("title_saved", {
+          tmdbId: content.id,
+          title: content.title || content.name,
+          mediaType: content.mediaType,
+        });
         toast({
           title: "Adicionado",
           description: "Conteúdo adicionado aos favoritos",
@@ -146,6 +152,11 @@ export const useContentActions = (content: ContentType) => {
   const handleWatchClick = () => {
     if (content.providers?.flatrate?.length > 0) {
       setShowStreamingModal(true);
+      trackEvent("title_liked", {
+        tmdbId: content.id,
+        title: content.title || content.name,
+        mediaType: content.mediaType,
+      });
     } else {
       toast({
         title: "Indisponível",

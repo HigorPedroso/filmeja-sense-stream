@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
-import { Send, Bot, Target, Clock, Users, Shuffle } from "lucide-react";
+import { Send, Target, Clock, Users, Shuffle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { addToWatchHistory } from "@/lib/utils/watch-history";
 import { searchContentByTitle, fetchContentWithProviders } from "@/lib/utils/tmdb";
@@ -31,6 +31,7 @@ export interface Message {
     title: string;
     type?: "movie" | "tv"; // Ensure this is strictly typed as "movie" | "tv"
     releaseYear?: number;
+    posterPath?: string;
   };
 }
 
@@ -81,19 +82,42 @@ export function AiChat({
   // titles, but that's advisory — the model can still get it wrong, and this
   // is a premium feature, so we verify against TMDB before ever showing a
   // recommendation to the user instead of trusting the AI's word for it.
-  const isAvailableInBrazil = async (title: string, type: "movie" | "tv", releaseYear?: number) => {
+  // Also returns the poster, already fetched as part of this same check, so
+  // the recommendation can double as this conversation's cover image.
+  const checkAvailabilityInBrazil = async (title: string, type: "movie" | "tv", releaseYear?: number) => {
     try {
       const item = await searchContentByTitle(title, type, releaseYear);
-      await fetchContentWithProviders(item, { showToast: false, requireBrAvailability: true });
-      return true;
+      const details = await fetchContentWithProviders(item, { showToast: false, requireBrAvailability: true });
+      return { available: true, posterPath: details?.poster_path as string | undefined };
     } catch {
-      return false;
+      return { available: false, posterPath: undefined };
     }
   };
 
   const handleSend = async (overrideText?: string) => {
     const textToSend = overrideText ?? input;
     if (!textToSend.trim()) return;
+
+    // Show the user's message and clear the input right away — everything
+    // else here is async network work (watch history, Gemini, TMDB checks)
+    // that shouldn't make the message feel like it's taking forever to send.
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      text: textToSend,
+      sender: "user",
+      timestamp: new Date(),
+    };
+    // Last turns of the actual conversation (before this new message), so
+    // the model has real context instead of treating every message as a
+    // fresh, isolated request.
+    const conversationHistory = messages
+      .slice(-12)
+      .map((m) => `${m.sender === "user" ? "Usuário" : "Filmin.IA"}: ${m.text}`)
+      .join("\n");
+
+    setMessages((prev) => [...prev, userMessage]);
+    setInput("");
+    setIsTyping(true);
 
     try {
       // Fetch last 10 recommendations from watch_history
@@ -116,24 +140,6 @@ export function AiChat({
       const recentTitles = recentRecommendations
         ?.map(item => `${item.title}`)
         .join(", ");
-
-      // Last turns of the actual conversation, so the model has real context
-      // instead of treating every message as a fresh, isolated request.
-      const conversationHistory = messages
-        .slice(-12)
-        .map((m) => `${m.sender === "user" ? "Usuário" : "Filmin.IA"}: ${m.text}`)
-        .join("\n");
-
-      const userMessage: Message = {
-        id: Date.now().toString(),
-        text: textToSend,
-        sender: "user",
-        timestamp: new Date(),
-      };
-
-      setMessages((prev) => [...prev, userMessage]);
-      setInput("");
-      setIsTyping(true);
 
       const today = new Date();
       const todayFormatted = today.toLocaleDateString("pt-BR", {
@@ -243,14 +249,14 @@ IMPORTANTE:
           break;
         }
 
-        const available = await isAvailableInBrazil(
+        const { available, posterPath } = await checkAvailabilityInBrazil(
           result.recommendation.title,
           result.recommendation.type,
           result.recommendation.releaseYear
         );
         if (available) {
           finalChat = result.chat;
-          finalRecommendation = result.recommendation;
+          finalRecommendation = { ...result.recommendation, posterPath };
           break;
         }
 
@@ -264,7 +270,7 @@ IMPORTANTE:
           media_type: finalRecommendation.type,
           title: finalRecommendation.title,
           name: finalRecommendation.title, // For TV shows
-          poster_path: null // We'll update this when we get the real content details
+          poster_path: finalRecommendation.posterPath || null
         }, userId);
       }
 
@@ -296,11 +302,6 @@ IMPORTANTE:
     });
   }, [conversationId, messages]);
 
-  // Add function to clear chat history
-  const clearChatHistory = () => {
-    setMessages([]);
-  };
-
   return (
     <div
       className={
@@ -312,23 +313,15 @@ IMPORTANTE:
       <div className="p-3 md:p-4 border-b border-white/10 flex justify-between items-center gap-2">
         <h3 className="text-base md:text-lg font-semibold text-white flex items-center gap-2 min-w-0">
           {headerLeft}
-          <Bot className="w-5 h-5 text-filmeja-purple flex-shrink-0" />
+          <img src="/mascote.png" alt="Filmin.IA" className="w-6 h-6 object-contain flex-shrink-0" />
           <span className="truncate">Filmin.AI te ajuda</span>
         </h3>
-        {messages.length > 0 && (
-          <button
-            onClick={clearChatHistory}
-            className="text-gray-300 hover:text-white text-sm bg-white/5 border border-white/10 rounded-full px-4 py-2 flex-shrink-0"
-          >
-            Limpar conversa
-          </button>
-        )}
       </div>
 
       <div className="flex-1 overflow-y-auto p-3 md:p-4 space-y-3 md:space-y-4">
         {messages.length === 0 && !isTyping && (
           <div className="pt-4 px-2">
-            <div className="text-4xl mb-3">🎬</div>
+            <img src="/mascote.png" alt="Filmin.IA" className="w-14 h-14 object-contain mb-3" />
             <h2 className="text-3xl font-bold text-white mb-1">
               Oi{userName ? ` ${userName.split(" ")[0]}` : ""}
             </h2>

@@ -19,6 +19,13 @@ export function deriveTitle(messages: Message[]): string {
   return text.length > 40 ? `${text.slice(0, 40)}…` : text;
 }
 
+// The conversation's "cover" is the poster of the first title it actually
+// recommended — falls back to the Filmin.IA mascot (handled by the caller)
+// when nothing's been recommended in it yet.
+export function getConversationCoverPosterPath(conversation: FilminConversation): string | undefined {
+  return conversation.messages.find((m) => m.recommendation?.posterPath)?.recommendation?.posterPath;
+}
+
 function readAll(): FilminConversation[] {
   const raw = localStorage.getItem(CONVERSATIONS_KEY);
   if (raw) {

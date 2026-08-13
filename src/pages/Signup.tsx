@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, User, Eye, EyeOff, Film, Loader2, ChevronLeft } from 'lucide-react';
+import { Mail, Lock, User, Eye, EyeOff, Loader2, ChevronLeft } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { loginWithGoogle } from '@/lib/googleAuth';
@@ -136,9 +136,11 @@ const Signup = () => {
         }}
       >
         <div className="w-full max-w-sm flex flex-col items-center mb-8">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-filmeja-purple to-filmeja-blue flex items-center justify-center shadow-lg shadow-filmeja-purple/30 mb-4">
-            <Film className="h-7 w-7 text-white" />
-          </div>
+          <img
+            src="/icone.png"
+            alt="FilmeJá"
+            className="w-14 h-14 rounded-2xl shadow-lg shadow-filmeja-purple/30 mb-4"
+          />
           <h1 className="text-xl font-bold text-white text-center">
             <span className="text-filmeja-purple">Filme</span>Já
           </h1>

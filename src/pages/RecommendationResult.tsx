@@ -3,11 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { ContentResultView } from "@/components/ContentModal/ContentResultView";
 import { ContentModalSkeleton } from "@/components/ContentModal/ContentModalSkeleton";
 import { useRecommendationResult } from "@/hooks/useRecommendationResult";
+import { useBannerAdHeight } from "@/hooks/useBannerAdHeight";
 
 const RecommendationResult = () => {
   const navigate = useNavigate();
   const { showRecommendationModal, isLoadingRecommendation, moodRecommendation, setShowRecommendationModal } =
     useRecommendationResult();
+  const bannerHeight = useBannerAdHeight();
   // Tracks whether this screen was actually opened (as opposed to being
   // reached directly via deep link/refresh with nothing in flight), so the
   // close effect below knows which of the two cases it's handling.
@@ -51,7 +53,10 @@ const RecommendationResult = () => {
       className="min-h-[100dvh] bg-filmeja-dark overflow-y-auto px-4"
       style={{
         paddingTop: "max(2rem, calc(1rem + env(safe-area-inset-top)))",
-        paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))",
+        // The banner ad floats above the safe area on top of this content —
+        // add its height (plus some breathing room) so the last
+        // buttons/content aren't hidden under it or crammed right above it.
+        paddingBottom: `calc(max(1.5rem, env(safe-area-inset-bottom)) + ${bannerHeight}px + 1.5rem)`,
       }}
     >
       {isLoadingRecommendation || !moodRecommendation ? (

@@ -95,5 +95,29 @@ url = ""
 [functions.stripe-webhook]
 verify_jwt = false
 
+# Processes RevenueCat webhook events (purchase/renewal/cancellation) and
+# syncs profiles.is_premium. Authenticated via a shared secret header
+# (REVENUECAT_WEBHOOK_AUTH_HEADER) instead of a Supabase JWT.
+[functions.revenuecat-webhook]
+verify_jwt = false
+
+# Internal-only: sends a push notification to one user's registered
+# devices. Callable only with the service role key (checked inside the
+# function itself, on top of the platform's own JWT check).
+[functions.send-push-notification]
+
+# Internal-only, called daily by a pg_cron job: decides who gets the
+# re-engagement push and triggers send-push-notification for each.
+[functions.send-smart-reengagement]
+
+# Internal-only, called Fri/Sat evenings by a pg_cron job: sends the
+# "what to watch tonight" nudge to every user with a device token.
+[functions.send-weekend-session]
+
+# Internal-only, called daily by a pg_cron job: matches today's TMDB
+# trending titles against each user's genre history and notifies high
+# matches ("X% compatible with you").
+[functions.send-title-compatibility]
+
 [realtime]
 enabled = false

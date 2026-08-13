@@ -8,6 +8,7 @@ import PremiumPaymentModal from "./PremiumPaymentModal";
 import PaymentSuccessModal from "./PaymentSuccessModal";
 import { useToast } from "@/components/ui/use-toast";
 import { useLocation } from "react-router-dom";
+import { getLocalDateString } from "@/lib/utils/date";
 import { usePremiumStatus } from "@/hooks/usePremiumStatus";
 import { DAILY_FREE_LIMIT } from "@/lib/recommendations/fetchMoodRecommendation";
 
@@ -69,7 +70,7 @@ const HeaderDashboard = () => {
           .limit(1)
           .single();
 
-        const today = new Date().toISOString().split("T")[0];
+        const today = getLocalDateString();
         const currentMonth = today.slice(0, 7); // 'YYYY-MM'
         let dailyViews = viewStats?.daily_views || 0;
         let monthlyViews = viewStats?.monthly_views || 0;

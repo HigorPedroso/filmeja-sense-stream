@@ -1,0 +1,49 @@
+{
+  "project_info": {
+    "project_number": "680231197631",
+    "firebase_url": "https://agroverde-shopper-place.firebaseio.com",
+    "project_id": "agroverde-shopper-place",
+    "storage_bucket": "agroverde-shopper-place.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:680231197631:android:946ce64031b2a175fa9f0a",
+        "android_client_info": {
+          "package_name": "com.example.agroverdeshopperplace"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAXFBo-byxZgwXOPvh6xjDtTJVpokrJvJM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:680231197631:android:8b7c786555bd1e0ffa9f0a",
+        "android_client_info": {
+          "package_name": "com.filmeja.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAXFBo-byxZgwXOPvh6xjDtTJVpokrJvJM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

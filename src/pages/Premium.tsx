@@ -36,7 +36,7 @@ const Premium = () => {
           <span className="text-sm">Voltar</span>
         </button>
       </div>
-      <div className="flex-1 overflow-y-auto px-5 pb-6">
+      <div className="flex-1 overflow-y-auto px-5 pb-6 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
         <PremiumPaywallContent onClose={handleClose} />
       </div>
     </motion.div>

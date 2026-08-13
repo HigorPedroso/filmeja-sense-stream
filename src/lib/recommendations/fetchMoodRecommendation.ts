@@ -4,6 +4,8 @@ import { extractJsonFromResponse } from "@/utils/jsonParser";
 import { pickBestTitleMatch } from "@/lib/utils/tmdb";
 import { showInterstitialAd } from "@/lib/ads";
 import { refundDailyView } from "@/lib/recommendations/refundDailyView";
+import { getLocalDateString } from "@/lib/utils/date";
+import { trackEvent } from "@/lib/analytics/trackEvent";
 
 // Combined daily cap for free (non-premium) users across mood + genre
 // recommendations. Query 1 is ad-free; queries 2 and 3 show an interstitial.
@@ -83,7 +85,7 @@ export async function fetchMoodRecommendation(params: MoodRecommendationParams):
     // Coin bookkeeping: if a coin is spent below but the fetch fails
     // afterward, we refund it in the catch block so the user doesn't lose a
     // free query for a recommendation that never loaded.
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalDateString();
     let coinSpent = false;
     let dailyViewsBeforeSpend = 0;
     let monthlyViewsBeforeSpend = 0;
@@ -372,6 +374,12 @@ export async function fetchMoodRecommendation(params: MoodRecommendationParams):
 
     // Set the recommendation
     setMoodRecommendation(selectedContent);
+    trackEvent("recommendation_generated", {
+      source: "mood",
+      mood,
+      tmdbId: selectedContent.id,
+      title: selectedContent.title || selectedContent.name,
+    });
     }
 
   } catch (error) {

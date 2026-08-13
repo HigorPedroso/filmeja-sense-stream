@@ -10,6 +10,7 @@ import MoodSelection from "./pages/MoodSelection";
 import ContentDetails from "./pages/ContentDetails";
 import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
+import Welcome, { WELCOME_SEEN_KEY } from "./pages/Welcome";
 import RecommendationResult from "./pages/RecommendationResult";
 import FilminChat from "./pages/FilminChat";
 import FilminConversations from "./pages/FilminConversations";
@@ -24,6 +25,7 @@ import { ProfilePage } from "./pages/Profile";
 import FAQ from "./pages/FAQ";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
+import DeleteAccountRequest from "./pages/DeleteAccountRequest";
 import Contact from "./pages/Contact";
 import { BlogPost } from "./pages/BlogPost";
 import { BlogPostView } from "./pages/BlogPostView";
@@ -35,10 +37,19 @@ import { useGoogleAds } from './hooks/useGoogleAds';
 import { StoriesIndex } from "./pages/StoriesIndex";
 import { AmpStoryPage } from "./pages/AmpStoryPage";
 import { useCapacitorBackButton } from "./hooks/useCapacitorBackButton";
+import { useRecommendationNavigation } from "./hooks/useRecommendationNavigation";
+import { useDetailsBannerAd } from "./hooks/useDetailsBannerAd";
+import { useTitleViewedTracking } from "./hooks/useTitleViewedTracking";
+import { usePushNotifications } from "./hooks/usePushNotifications";
+import { StatusBarScrim } from "./components/StatusBarScrim";
+import { NavigationBarScrim } from "./components/NavigationBarScrim";
 import { Capacitor } from "@capacitor/core";
 import { SafeArea } from "@capacitor-community/safe-area";
 import { SplashScreen } from "@capacitor/splash-screen";
 import { initializeAds } from "./lib/ads";
+import { trackEvent } from "./lib/analytics/trackEvent";
+import { initializePurchases } from "./lib/purchases";
+import { useSyncPurchasesAuth } from "./hooks/useSyncPurchasesAuth";
 
 // Extend the Window interface to include fbq and _fbq
 declare global {
@@ -63,12 +74,20 @@ const App = () => {
     fetchFavorites();
   }, []);
 
+  // Once per app launch (not per navigation) — fires as soon as auth
+  // resolves; trackEvent() itself no-ops silently if there's no logged-in
+  // user yet.
+  useEffect(() => {
+    trackEvent("app_opened");
+  }, []);
+
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
 
     SafeArea.setSystemBarsStyle({ style: "DARK" }).catch(() => {});
     SplashScreen.hide().catch(() => {});
     initializeAds();
+    initializePurchases();
   }, []);
 
   useEffect(() => {
@@ -136,18 +155,35 @@ const App = () => {
 const AppContent = ({ favoriteItems }) => {
   useGoogleAds(); // Move the hook here, inside Router context
   useCapacitorBackButton();
+  useRecommendationNavigation();
+  useDetailsBannerAd();
+  useTitleViewedTracking();
+  usePushNotifications();
+  useSyncPurchasesAuth();
 
-  // On the native app, open straight into the user's dashboard instead of the marketing landing page.
+  // On the native app, open straight into the user's dashboard instead of the
+  // marketing landing page — but the very first time ever (before login),
+  // show the welcome intro first. Gated purely on-device (see Welcome.tsx),
+  // same reasoning as the taste-preferences questionnaire's gate: this has
+  // nothing to do with the user's account, only with this install.
+  const hasSeenWelcome = localStorage.getItem(WELCOME_SEEN_KEY) === "true";
   const homeElement = Capacitor.isNativePlatform() ? (
-    <ProtectedRoute>
-      <Dashboard />
-    </ProtectedRoute>
+    hasSeenWelcome ? (
+      <ProtectedRoute>
+        <Dashboard />
+      </ProtectedRoute>
+    ) : (
+      <Welcome />
+    )
   ) : (
     <Index />
   );
 
   return (
-    <Routes>
+    <>
+      <StatusBarScrim />
+      <NavigationBarScrim />
+      <Routes>
       <Route path="/" element={homeElement} />
       <Route path="/explore" element={<Explore />} />
       <Route path="/mood" element={<MoodSelection />} />
@@ -156,6 +192,7 @@ const AppContent = ({ favoriteItems }) => {
       <Route path="/faq" element={<FAQ />} />
       <Route path="/termos" element={<Terms />} />
       <Route path="/privacidade" element={<Privacy />} />
+      <Route path="/excluir-conta" element={<DeleteAccountRequest />} />
       <Route path="/contato" element={<Contact />} />
       <Route path="/blog" element={<BlogPage />} />
       <Route
@@ -303,7 +340,8 @@ const AppContent = ({ favoriteItems }) => {
       <Route path="/stories" element={<StoriesIndex />} />
       <Route path="/stories/:slug" element={<AmpStoryPage />} />
       <Route path="*" element={<NotFound />} />
-    </Routes>
+      </Routes>
+    </>
   );
 };
 

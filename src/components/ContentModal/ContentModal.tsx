@@ -1,7 +1,5 @@
 
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { ContentModalProps } from "./types";
 import { ContentModalSkeleton } from "./ContentModalSkeleton";
 import { ContentResultView } from "./ContentResultView";
@@ -16,20 +14,17 @@ export const ContentModal = ({
   hasReachedLimit,
 }: ContentModalProps) => {
   const isMobile = useIsMobile();
-  const navigate = useNavigate();
 
-  // On mobile, push the dedicated result screen right away instead of
-  // showing a loading dialog first. The screen reads isOpen/isLoading/content
-  // from the same shared RecommendationResult context, so it keeps updating
-  // live even after this component (and whatever page rendered it) unmounts.
+  // On mobile, the dedicated /recomendacao screen is what actually shows
+  // this — pushing it there is handled once, globally, by
+  // useRecommendationNavigation (see App.tsx). ContentModal is rendered by
+  // several always-mounted components at once (Dashboard, the desktop
+  // Sidebar, MobileSidebar), all bound to the same shared isOpen/content;
+  // if each one pushed the route itself, a single open fired one navigate()
+  // per mounted instance, stacking duplicate history entries that a single
+  // close could never fully undo. This only decides not to render its own
+  // Dialog on mobile — no navigation here.
   const shouldUseFullScreen = isMobile && isOpen;
-
-  useEffect(() => {
-    if (shouldUseFullScreen) {
-      navigate("/recomendacao");
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shouldUseFullScreen]);
 
   if (shouldUseFullScreen) return null;
 

@@ -10,11 +10,24 @@ import {
   Film,
   History,
   Sparkles,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { deleteAccount } from "@/lib/account/deleteAccount";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { SubscriptionModal } from "@/components/SubscriptionModal";
@@ -26,7 +39,7 @@ import { ptBR } from "date-fns/locale";
 import ImageBackground from "@/components/ImageBackground";
 import { fetchContentWithProviders } from "@/lib/utils/tmdb";
 import { ContentModal } from "@/components/ContentModal/ContentModal";
-import { Onboarding } from "@/components/Onboarding/Onboarding";
+import { Onboarding, GENRE_OPTIONS, CONTENT_TYPE_OPTIONS } from "@/components/Onboarding/Onboarding";
 import { useRecommendationResult } from "@/hooks/useRecommendationResult";
 
 interface WatchHistory {
@@ -65,6 +78,7 @@ export function ProfilePage() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [watchHistory, setWatchHistory] = useState<WatchHistory[]>([]);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   // Add these states inside the component
   const {
     showRecommendationModal: showContentModal,
@@ -318,6 +332,27 @@ export function ProfilePage() {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    setIsDeletingAccount(true);
+    try {
+      await deleteAccount();
+      toast({
+        title: "Conta excluída",
+        description: "Sua conta e todos os seus dados foram removidos permanentemente.",
+      });
+      navigate("/");
+    } catch (error) {
+      console.error("Error deleting account:", error);
+      toast({
+        title: "Erro ao excluir conta",
+        description: "Não foi possível excluir sua conta. Tente novamente mais tarde.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeletingAccount(false);
+    }
+  };
+
   const handleLogout = async () => {
     try {
       const { error } = await supabase.auth.signOut();
@@ -444,7 +479,7 @@ export function ProfilePage() {
                     key={genre}
                     className="px-3 py-1 bg-filmeja-purple/20 rounded-full text-sm text-white"
                   >
-                    {genre}
+                    {GENRE_OPTIONS[genre]?.label ?? genre}
                   </span>
                 ))}
               </div>
@@ -456,7 +491,7 @@ export function ProfilePage() {
                   <span
                     className="px-3 py-1 bg-filmeja-blue/20 rounded-full text-sm text-white"
                   >
-                    {profile.preferences?.content_type}
+                    {CONTENT_TYPE_OPTIONS[profile.preferences?.content_type ?? ""]?.label ?? profile.preferences?.content_type}
                   </span>
               </div>
             </div>
@@ -576,7 +611,7 @@ export function ProfilePage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="mt-8 mb-20 sm:mb-8 flex justify-center"
+          className="mt-8 mb-4 sm:mb-8 flex justify-center"
         >
           <Button
             variant="ghost"
@@ -586,6 +621,47 @@ export function ProfilePage() {
             <LogOut className="w-5 h-5 sm:w-4 sm:h-4 mr-2" />
             Sair da Conta
           </Button>
+        </motion.div>
+
+        {/* Delete Account */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.45 }}
+          className="mb-20 sm:mb-8 flex justify-center"
+        >
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="ghost"
+                className="text-red-400/70 hover:text-red-400 hover:bg-red-500/10 w-full sm:w-auto px-4 py-6 sm:py-2 text-base sm:text-sm"
+              >
+                <Trash2 className="w-5 h-5 sm:w-4 sm:h-4 mr-2" />
+                Excluir Conta
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent className="bg-filmeja-dark border-white/10">
+              <AlertDialogHeader>
+                <AlertDialogTitle className="text-white">Excluir sua conta?</AlertDialogTitle>
+                <AlertDialogDescription className="text-gray-400">
+                  Essa ação é permanente. Todos os seus dados — perfil, preferências, histórico,
+                  favoritos e assinatura — serão excluídos e não poderão ser recuperados.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel className="bg-transparent border-white/10 text-white hover:bg-white/5 hover:text-white">
+                  Cancelar
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDeleteAccount}
+                  disabled={isDeletingAccount}
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                >
+                  {isDeletingAccount ? "Excluindo..." : "Excluir permanentemente"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </motion.div>
       </div>
 

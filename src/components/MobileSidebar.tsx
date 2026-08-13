@@ -10,6 +10,7 @@ import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { useRecommendationResult } from "@/hooks/useRecommendationResult";
 import { usePremiumStatus } from "@/hooks/usePremiumStatus";
+import { lightImpact } from "@/lib/haptics";
 
 export function MobileSidebar() {
   const navigate = useNavigate();
@@ -157,7 +158,10 @@ useEffect(() => {
             <button
               key={tab.key}
               type="button"
-              onClick={tab.onClick}
+              onClick={() => {
+                lightImpact();
+                tab.onClick();
+              }}
               className={cn(
                 "flex flex-1 flex-col items-center justify-center gap-1 py-2.5 transition-colors active:scale-95",
                 tab.active ? "text-filmeja-purple" : "text-gray-400"

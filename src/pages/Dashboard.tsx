@@ -41,7 +41,6 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion, AnimatePresence } from "framer-motion";
 import trailerSound from "@/assets/sounds/trailer-whoosh.mp3"; // You'll need to add this sound file
-import { Onboarding } from "@/components/Onboarding/Onboarding";
 import { supabase } from "@/integrations/supabase/client";
 import { ContentModal } from "@/components/ContentModal/ContentModal";
 import { AiChat } from "@/components/AiChat/AiChat";
@@ -53,6 +52,8 @@ import {
 } from "@/lib/recommendations/fetchMoodRecommendation";
 import { showInterstitialAd } from "@/lib/ads";
 import { refundDailyView } from "@/lib/recommendations/refundDailyView";
+import { getLocalDateString } from "@/lib/utils/date";
+import { trackEvent } from "@/lib/analytics/trackEvent";
 import SpinnerWheel from "@/components/SpinnerWheel";
 import { getUserFavorites, FavoriteItem } from "@/lib/favorites";
 import StreamingServices from "@/components/StreamingServices";
@@ -74,6 +75,7 @@ import { useGoogleAdsPageView } from "@/hooks/useGoogleAds";
 import { useRecommendationResult } from "@/hooks/useRecommendationResult";
 import { usePremiumStatus } from "@/hooks/usePremiumStatus";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { lightImpact } from "@/lib/haptics";
 
 // Mock user data - in a real app, this would come from authentication
 const mockUser = {
@@ -164,11 +166,6 @@ const moodEmojis: Record<string, string> = {
   mysterious: "🔍",
 };
 
-// Cached at module scope so the onboarding check only runs once per app
-// launch (right after the splash screen), not every time Dashboard remounts
-// from navigating back to it. Resets naturally when the app is restarted.
-let onboardingCheckCache: { hasCompletedOnboarding: boolean } | null = null;
-
 const Dashboard = () => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
@@ -192,10 +189,6 @@ const Dashboard = () => {
   const [showTrailerModal, setShowTrailerModal] = useState(false);
   const [showMoodOverlay, setShowMoodOverlay] = useState(false);
   const [isTrailerAnimating, setIsTrailerAnimating] = useState(false);
-  const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(
-    onboardingCheckCache?.hasCompletedOnboarding ?? false
-  );
-  const [isCheckingOnboarding, setIsCheckingOnboarding] = useState(onboardingCheckCache === null);
   const getMoodName = (mood: MoodType): string => {
     return moodNames[mood] || mood;
   };
@@ -272,7 +265,9 @@ const Dashboard = () => {
   }, [searchParams]);
 
   const handleGenreSelect = (selectedGenre: { id: number; name: string }) => {
+    lightImpact();
     setGenre(selectedGenre);
+    trackEvent("genre_selected", { genreId: selectedGenre.id, genreName: selectedGenre.name });
     fetchGenreRecommendation(selectedGenre);
   };
 
@@ -689,89 +684,6 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
     fetchUserPreferences();
   }, []);
 
-  useEffect(() => {
-    // Already checked earlier this app launch — skip re-running it (and
-    // re-showing the loading spinner) just because Dashboard remounted.
-    if (onboardingCheckCache !== null) {
-      setHasCompletedOnboarding(onboardingCheckCache.hasCompletedOnboarding);
-      setIsCheckingOnboarding(false);
-      return;
-    }
-
-    const checkOnboardingStatus = async (): Promise<boolean> => {
-      try {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        if (!user) {
-          return false;
-        }
-
-        // Check if user has visited before
-        const { data: visits, error: visitsError } = await supabase
-          .from("user_visits")
-          .select("visit_count")
-          .eq("user_id", user.id)
-          .single();
-
-        if (!visits) {
-          // First visit - create record and skip onboarding
-          const { error: insertError } = await supabase
-            .from("user_visits")
-            .insert({
-              user_id: user.id,
-              visit_count: 1,
-            })
-            .select()
-            .single();
-
-          if (insertError) {
-            console.error("Error creating visit record:", insertError);
-            return false;
-          }
-
-          return true; // Skip onboarding on first visit
-        }
-
-        // Update existing visit count
-        const { error: updateError } = await supabase
-          .from("user_visits")
-          .upsert({
-            user_id: user.id,
-            visit_count: visits.visit_count + 1,
-            updated_at: new Date().toISOString(),
-          })
-          .select();
-
-        if (updateError) {
-          console.error("Error updating visit count:", updateError);
-        }
-
-        // Show onboarding only on second visit when preferences don't exist
-        if (visits.visit_count === 1) {
-          const { data: preferences, error: prefError } = await supabase
-            .from("user_preferences")
-            .select("*")
-            .eq("user_id", user.id)
-            .maybeSingle();
-
-          return !!preferences;
-        }
-
-        return true;
-      } catch (error) {
-        console.error("Error checking onboarding status:", error);
-        return false;
-      }
-    };
-
-    checkOnboardingStatus().then((completed) => {
-      onboardingCheckCache = { hasCompletedOnboarding: completed };
-      setHasCompletedOnboarding(completed);
-      setIsCheckingOnboarding(false);
-    });
-  }, []);
-
   const fetchGenreRecommendation = async (genre: {
     id: number;
     name: string;
@@ -796,7 +708,7 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
       // Coin bookkeeping: if a coin is spent below but the fetch fails
       // afterward, we refund it in the catch block so a failed recommendation
       // doesn't cost the user one of their free daily queries.
-      const today = new Date().toISOString().split("T")[0];
+      const today = getLocalDateString();
       let coinSpent = false;
       let dailyViewsBeforeSpend = 0;
       let monthlyViewsBeforeSpend = 0;
@@ -1075,7 +987,14 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
       await fetchContentWithProviders(item, {
         showToast: false,
         requireBrAvailability: true,
-        onContentFetched: setMoodRecommendation,
+        onContentFetched: (fetchedContent) => {
+          setMoodRecommendation(fetchedContent);
+          trackEvent("recommendation_generated", {
+            source: genre ? "genre" : "filmin_ia",
+            tmdbId: fetchedContent.id,
+            title: fetchedContent.title || fetchedContent.name,
+          });
+        },
       });
     } catch (error) {
       console.error("Error fetching content details:", error);
@@ -1241,20 +1160,6 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
       </div>
     );
   };
-
-  if (isCheckingOnboarding) {
-    return (
-      <div className="min-h-screen bg-filmeja-dark flex items-center justify-center">
-        <div className="animate-spin">
-          <Film className="w-8 h-8 text-filmeja-purple" />
-        </div>
-      </div>
-    );
-  }
-
-  if (!hasCompletedOnboarding) {
-    return <Onboarding />;
-  }
 
   return (
     <div className="min-h-screen bg-filmeja-dark overflow-x-hidden">
@@ -1543,7 +1448,9 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
                       whileHover={{ scale: 1.03 }}
                       whileTap={{ scale: 0.97 }}
                       onClick={() => {
+                        lightImpact();
                         setSelectedMood(mood as MoodType);
+                        trackEvent("mood_selected", { mood, moodName: name });
                         handleMoodSelect(mood);
                         setShowMoodOverlay(false);
                       }}
