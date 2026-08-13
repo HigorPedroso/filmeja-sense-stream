@@ -15,7 +15,7 @@ workflows:
         BUNDLE_ID: "com.filmeja.app"
         XCODE_WORKSPACE: "ios/App/App.xcworkspace"
         XCODE_SCHEME: "App"
-      node: 20.18.0
+      node: 22.11.0
       xcode: latest
     scripts:
       - name: Install npm dependencies
