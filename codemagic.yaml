@@ -29,24 +29,12 @@ workflows:
         script: npx cap sync ios
       - name: Set up keychain
         script: keychain initialize
-      - name: Create a distribution certificate for Codemagic
-        # There's already an "Apple Distribution" certificate on this team
-        # (shared by other apps), but Codemagic doesn't hold its private
-        # key, so it can't reuse it — fetch-signing-files --create chokes
-        # trying to save that existing-but-keyless certificate instead of
-        # falling through to creating a new one. `certificates create` has
-        # no such ambiguity: it always mints a brand-new certificate,
-        # entirely separate from — and without touching — the existing one
-        # the other apps use. It needs a private key to build the CSR from
-        # rather than generating one itself, so generate one here and hand
-        # it over; --save keeps both in Codemagic's vault for reuse.
-        script: |
-          set -e
-          openssl genrsa -out /tmp/codemagic_distribution.pem 2048
-          app-store-connect certificates create \
-            --type DISTRIBUTION \
-            --certificate-key-path /tmp/codemagic_distribution.pem \
-            --save
+      # The distribution certificate is uploaded manually in Codemagic's
+      # Code signing identities (Team/App settings → iOS certificates) —
+      # generated locally with openssl and combined with the certificate
+      # Apple issued for it, entirely separate from the certificate the
+      # user's other 3 apps already use. use-profiles finds it there and
+      # fetches/creates the matching provisioning profile automatically.
       - name: Fetch/generate provisioning profiles and apply to the Xcode project
         script: xcode-project use-profiles
       - name: Increment build number
