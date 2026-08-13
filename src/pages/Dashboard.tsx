@@ -688,6 +688,15 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
     id: number;
     name: string;
   }) => {
+    // Open the loading UI immediately, before any network round-trip — the
+    // daily-limit check, interstitial ad, and recommendation fetch below can
+    // together take the better part of a minute, and none of that should
+    // happen behind an unresponsive-looking screen. If the limit check below
+    // turns out to block the user, it closes this again and the paywall
+    // opens in its place.
+    setIsLoadingRecommendation(true);
+    setShowRecommendationModal(true);
+
     try {
       const {
         data: { user },
@@ -728,10 +737,14 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
 
         // Só realiza o bloqueio se o usuário NÃO for premium
         if (dailyViews >= DAILY_FREE_LIMIT) {
+          // Close the loading UI we optimistically opened above — the
+          // paywall opens in its place.
+          setIsLoadingRecommendation(false);
+          setShowRecommendationModal(false);
           setShowPaymentModal(true); // Go straight to the premium paywall
           setDailyViews(dailyViews);
           setMonthlyViews(monthlyViews);
-          return; // Exit early — the loading modal was never opened, nothing to close.
+          return;
         }
 
         dailyViewsBeforeSpend = dailyViews;
@@ -757,13 +770,6 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
           await showInterstitialAd();
         }
       }
-
-      // Only now — after confirming the user isn't blocked by the daily
-      // limit — do we open the loading UI. Opening it earlier briefly showed
-      // the recommendation screen (and, on mobile, navigated to it) before
-      // the limit check could redirect to the paywall instead.
-      setIsLoadingRecommendation(true);
-      setShowRecommendationModal(true);
 
       function extractJsonFromResponse(text: string) {
         try {
