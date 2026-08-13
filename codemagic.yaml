@@ -33,8 +33,12 @@ workflows:
       # Code signing identities (Team/App settings → iOS certificates) —
       # generated locally with openssl and combined with the certificate
       # Apple issued for it, entirely separate from the certificate the
-      # user's other 3 apps already use. use-profiles finds it there and
-      # fetches/creates the matching provisioning profile automatically.
+      # user's other 3 apps already use. It doesn't end up in the build's
+      # keychain on its own though — add-certificates is what actually
+      # pulls it in (via the CM_CERTIFICATE/CM_CERTIFICATE_PASSWORD env
+      # vars Codemagic injects for whatever's uploaded).
+      - name: Add uploaded certificate to the keychain
+        script: keychain add-certificates
       - name: Fetch/generate provisioning profiles and apply to the Xcode project
         script: xcode-project use-profiles
       - name: Increment build number
