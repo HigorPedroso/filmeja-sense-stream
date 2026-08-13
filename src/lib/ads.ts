@@ -113,6 +113,11 @@ export async function showInterstitialAd(): Promise<void> {
 // value already used for the rest of the app's own bottom padding — and
 // converts it from CSS px to dp, which is the unit AdMob's Android plugin
 // multiplies by density internally.
+//
+// iOS-only note: the iOS AdMob SDK already positions BOTTOM_CENTER banners
+// above the safe area (home indicator) on its own — adding this same margin
+// there double-compensates and pushes the banner up well past where it
+// should sit. Callers must only use this on Android (see showBannerAd).
 function getSafeAreaInsetBottomDp(): number {
   const probe = document.createElement("div");
   probe.style.position = "fixed";
@@ -140,7 +145,9 @@ export async function showBannerAd(): Promise<void> {
       adId: BANNER_AD_ID,
       adSize: BannerAdSize.ADAPTIVE_BANNER,
       position: BannerAdPosition.BOTTOM_CENTER,
-      margin: getSafeAreaInsetBottomDp(),
+      // Android-only: iOS already positions this above the safe area on its
+      // own (see the note on getSafeAreaInsetBottomDp above).
+      margin: Capacitor.getPlatform() === "android" ? getSafeAreaInsetBottomDp() : 0,
     });
   } catch (error) {
     console.error("Error showing banner ad:", error);
