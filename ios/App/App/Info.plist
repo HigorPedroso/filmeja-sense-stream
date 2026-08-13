@@ -66,5 +66,11 @@
 	<array>
 		<string>remote-notification</string>
 	</array>
+	<!-- The app only uses standard HTTPS/TLS (Supabase, TMDB, RevenueCat,
+	     AdMob, Firebase push, ...) — no custom encryption — so it qualifies
+	     for the export compliance exemption. Declaring this here skips the
+	     "Faltam dados de conformidade" prompt on every TestFlight build. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 </dict>
 </plist>
