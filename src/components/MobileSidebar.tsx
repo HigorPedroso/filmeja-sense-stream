@@ -1,6 +1,8 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { Home, Heart, Star, User, MessageSquare } from "lucide-react";
+import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
+import { Capacitor } from "@capacitor/core";
 import { supabase } from "@/integrations/supabase/client";
 import { ContentModal } from "@/components/ContentModal/ContentModal"; // Add this import at the top
 import PremiumPaymentModal from "@/components/PremiumPaymentModal"; // Add this import
@@ -11,6 +13,8 @@ import { cn } from "@/lib/utils";
 import { useRecommendationResult } from "@/hooks/useRecommendationResult";
 import { usePremiumStatus } from "@/hooks/usePremiumStatus";
 import { lightImpact } from "@/lib/haptics";
+
+const isIOS = Capacitor.getPlatform() === "ios";
 
 export function MobileSidebar() {
   const navigate = useNavigate();
@@ -99,10 +103,26 @@ useEffect(() => {
       )}
 
       <div
-        className="fixed bottom-0 left-0 right-0 bg-filmeja-dark/90 border-t border-white/10 backdrop-blur-xl md:hidden z-50"
-        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+        className={cn("fixed bottom-0 left-0 right-0 md:hidden z-50", isIOS && "px-3")}
+        style={{
+          paddingBottom: isIOS
+            ? "calc(env(safe-area-inset-bottom) + 0.5rem)"
+            : "env(safe-area-inset-bottom)",
+        }}
       >
-        <nav className="flex items-stretch justify-around">
+        <nav
+          className={cn(
+            "flex items-stretch justify-around relative",
+            isIOS
+              ? // iOS 26 "Liquid Glass" look: a floating, heavily translucent,
+                // saturated-blur pill instead of an edge-to-edge solid bar.
+                "mx-auto max-w-md rounded-[28px] border border-white/15 bg-white/10 backdrop-blur-2xl backdrop-saturate-150 shadow-[0_8px_32px_rgba(0,0,0,0.45)] overflow-hidden"
+              : "bg-filmeja-dark/90 border-t border-white/10 backdrop-blur-xl"
+          )}
+        >
+          {isIOS && (
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/50 to-transparent" />
+          )}
           {[
             {
               key: "home",
@@ -163,18 +183,25 @@ useEffect(() => {
                 tab.onClick();
               }}
               className={cn(
-                "flex flex-1 flex-col items-center justify-center gap-1 py-2.5 transition-colors active:scale-95",
+                "relative flex flex-1 flex-col items-center justify-center gap-1 py-2.5 transition-colors active:scale-95",
                 tab.active ? "text-filmeja-purple" : "text-gray-400"
               )}
             >
+              {isIOS && tab.active && (
+                <motion.div
+                  layoutId="ios-tab-glass-pill"
+                  className="absolute inset-1.5 rounded-2xl bg-white/15"
+                  transition={{ type: "spring", bounce: 0.25, duration: 0.5 }}
+                />
+              )}
               <tab.icon
-                className="h-5 w-5"
+                className="h-5 w-5 relative"
                 strokeWidth={tab.active ? 2.5 : 2}
                 fill={tab.active && tab.key === "favorites" ? "currentColor" : "none"}
               />
               <span
                 className={cn(
-                  "text-[10px] leading-none",
+                  "relative text-[10px] leading-none",
                   tab.active ? "font-semibold" : "font-medium"
                 )}
               >
