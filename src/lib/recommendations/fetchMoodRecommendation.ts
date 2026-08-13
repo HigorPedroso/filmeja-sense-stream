@@ -67,15 +67,6 @@ export async function fetchMoodRecommendation(params: MoodRecommendationParams):
     setMoodRecommendation,
   } = params;
 
-  // Open the loading UI immediately, before any network round-trip — the
-  // daily-limit check, interstitial ad, and recommendation fetch below can
-  // together take the better part of a minute, and none of that should
-  // happen behind an unresponsive-looking screen. If the limit check below
-  // turns out to block the user, it closes this again and the paywall opens
-  // in its place.
-  setIsLoadingRecommendation(true);
-  setShowRecommendationModal(true);
-
   try {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("User not authenticated");
@@ -116,13 +107,14 @@ export async function fetchMoodRecommendation(params: MoodRecommendationParams):
       const monthlyViews = viewStats?.monthly_views || 0;
 
       if (dailyViews >= DAILY_FREE_LIMIT) {
-        // Close the loading UI we optimistically opened above — the caller
-        // shows the paywall instead.
-        setIsLoadingRecommendation(false);
-        setShowRecommendationModal(false);
+        // Nothing opened yet at this point (the loading UI only opens
+        // below, once we know the user isn't blocked) — the caller shows
+        // the paywall directly, with nothing to navigate away from first.
         throw {
           type: 'PREMIUM_REQUIRED',
-          message: `Você atingiu o limite de ${DAILY_FREE_LIMIT} recomendações gratuitas por dia. Assine o plano premium para continuar recebendo recomendações ilimitadas!`
+          message: `Você atingiu o limite de ${DAILY_FREE_LIMIT} recomendações gratuitas por dia. Assine o plano premium para continuar recebendo recomendações ilimitadas!`,
+          dailyViews,
+          monthlyViews,
         };
       }
 
@@ -144,11 +136,24 @@ export async function fetchMoodRecommendation(params: MoodRecommendationParams):
       );
       coinSpent = true;
 
+      // Now that the user is confirmed not blocked, open the loading UI —
+      // before the interstitial ad and the recommendation fetch below,
+      // which together can take a while, so neither happens behind an
+      // unresponsive-looking screen. (Opening this any earlier, before the
+      // limit check above, meant navigating to the recommendation screen
+      // and then immediately back out to the paywall on the blocked path —
+      // those two navigations could race and drop the paywall entirely.)
+      setIsLoadingRecommendation(true);
+      setShowRecommendationModal(true);
+
       // 1st free query of the day is ad-free; 2nd and 3rd show an
       // interstitial ad before the recommendation loads.
       if (newDailyViews >= 2) {
         await showInterstitialAd();
       }
+    } else {
+      setIsLoadingRecommendation(true);
+      setShowRecommendationModal(true);
     }
 
     try {

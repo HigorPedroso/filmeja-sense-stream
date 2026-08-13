@@ -688,15 +688,6 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
     id: number;
     name: string;
   }) => {
-    // Open the loading UI immediately, before any network round-trip — the
-    // daily-limit check, interstitial ad, and recommendation fetch below can
-    // together take the better part of a minute, and none of that should
-    // happen behind an unresponsive-looking screen. If the limit check below
-    // turns out to block the user, it closes this again and the paywall
-    // opens in its place.
-    setIsLoadingRecommendation(true);
-    setShowRecommendationModal(true);
-
     try {
       const {
         data: { user },
@@ -735,12 +726,14 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
         const dailyViews = viewStats?.view_date === today ? (viewStats?.daily_views || 0) : 0;
         const monthlyViews = viewStats?.monthly_views || 0;
 
-        // Só realiza o bloqueio se o usuário NÃO for premium
+        // Só realiza o bloqueio se o usuário NÃO for premium. Nothing has
+        // opened yet at this point (the loading UI only opens below, once
+        // we know the user isn't blocked) — go straight to the paywall,
+        // nothing to navigate away from first. (Opening the loading UI any
+        // earlier meant navigating to the recommendation screen and then
+        // immediately back out to the paywall on this exact path — those
+        // two navigations could race and drop the paywall entirely.)
         if (dailyViews >= DAILY_FREE_LIMIT) {
-          // Close the loading UI we optimistically opened above — the
-          // paywall opens in its place.
-          setIsLoadingRecommendation(false);
-          setShowRecommendationModal(false);
           setShowPaymentModal(true); // Go straight to the premium paywall
           setDailyViews(dailyViews);
           setMonthlyViews(monthlyViews);
@@ -764,11 +757,20 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
         );
         coinSpent = true;
 
+        // Now that the user is confirmed not blocked, open the loading UI —
+        // before the interstitial ad and the recommendation fetch below,
+        // which together can take a while.
+        setIsLoadingRecommendation(true);
+        setShowRecommendationModal(true);
+
         // 1st free query of the day is ad-free; 2nd and 3rd show an
         // interstitial ad before the recommendation loads.
         if (newDailyViews >= 2) {
           await showInterstitialAd();
         }
+      } else {
+        setIsLoadingRecommendation(true);
+        setShowRecommendationModal(true);
       }
 
       function extractJsonFromResponse(text: string) {
