@@ -34,12 +34,19 @@ workflows:
         # (shared by other apps), but Codemagic doesn't hold its private
         # key, so it can't reuse it — fetch-signing-files --create chokes
         # trying to save that existing-but-keyless certificate instead of
-        # falling through to creating a new one. create-certificate has no
-        # such ambiguity: it always mints a brand-new certificate (with a
-        # private key Codemagic actually keeps), entirely separate from —
-        # and without touching — the existing one the other apps use.
+        # falling through to creating a new one. `certificates create` has
+        # no such ambiguity: it always mints a brand-new certificate,
+        # entirely separate from — and without touching — the existing one
+        # the other apps use. It needs a private key to build the CSR from
+        # rather than generating one itself, so generate one here and hand
+        # it over; --save keeps both in Codemagic's vault for reuse.
         script: |
-          app-store-connect create-certificate --type DISTRIBUTION --save
+          set -e
+          openssl genrsa -out /tmp/codemagic_distribution.pem 2048
+          app-store-connect certificates create \
+            --type DISTRIBUTION \
+            --certificate-key-path /tmp/codemagic_distribution.pem \
+            --save
       - name: Fetch/generate provisioning profiles and apply to the Xcode project
         script: xcode-project use-profiles
       - name: Increment build number
