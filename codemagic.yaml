@@ -39,7 +39,19 @@ workflows:
       # vars Codemagic injects for whatever's uploaded).
       - name: Add uploaded certificate to the keychain
         script: keychain add-certificates
-      - name: Fetch/generate provisioning profiles and apply to the Xcode project
+      # use-profiles only *looks up* existing profiles, it doesn't create
+      # one from nothing — with the old cached profile gone (both on Apple's
+      # side and Codemagic's), there's nothing left for it to find. This is
+      # the same fetch-signing-files --create call that failed earlier over
+      # the certificate ambiguity; now that a usable certificate is already
+      # loaded into the keychain (previous step), it should be able to
+      # create the missing profile without hitting that issue again.
+      - name: Create provisioning profile
+        script: |
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --create
+      - name: Apply signing files to the Xcode project
         script: xcode-project use-profiles
       - name: Increment build number
         script: |
