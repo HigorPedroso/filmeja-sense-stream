@@ -13,7 +13,10 @@ workflows:
         - filmeja_secrets
       vars:
         BUNDLE_ID: "com.filmeja.app"
-        XCODE_WORKSPACE: "ios/App/App.xcworkspace"
+        # This project uses Capacitor's Swift Package Manager integration
+        # (no CocoaPods, no Podfile), so there's no wrapping .xcworkspace —
+        # only the plain .xcodeproj.
+        XCODE_PROJECT: "ios/App/App.xcodeproj"
         XCODE_SCHEME: "App"
       node: 22.11.0
       xcode: latest
@@ -44,7 +47,7 @@ workflows:
       - name: Build ipa for distribution
         script: |
           xcode-project build-ipa \
-            --workspace "$XCODE_WORKSPACE" \
+            --project "$XCODE_PROJECT" \
             --scheme "$XCODE_SCHEME"
     artifacts:
       - build/ios/ipa/*.ipa
