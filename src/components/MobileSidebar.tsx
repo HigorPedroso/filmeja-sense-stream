@@ -116,7 +116,9 @@ useEffect(() => {
             isIOS
               ? // iOS 26 "Liquid Glass" look: a floating, heavily translucent,
                 // saturated-blur pill instead of an edge-to-edge solid bar.
-                "mx-auto max-w-md rounded-[28px] border border-white/15 bg-white/10 backdrop-blur-2xl backdrop-saturate-150 shadow-[0_8px_32px_rgba(0,0,0,0.45)] overflow-hidden"
+                // Tinted dark (not white) so it reads as dark glass instead
+                // of washed-out gray.
+                "mx-auto max-w-md rounded-[28px] border border-white/15 bg-black/50 backdrop-blur-2xl backdrop-saturate-150 shadow-[0_8px_32px_rgba(0,0,0,0.45)] overflow-hidden"
               : "bg-filmeja-dark/90 border-t border-white/10 backdrop-blur-xl"
           )}
         >
