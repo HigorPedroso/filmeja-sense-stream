@@ -47,19 +47,17 @@ workflows:
       # just needs to find and apply what's already uploaded.
       - name: Apply signing files to the Xcode project
         script: xcode-project use-profiles
-      - name: Increment build number
+      - name: Set build number from timestamp
         script: |
           #!/bin/sh
           set -e
           cd "$CM_BUILD_DIR/ios/App"
-          # get-latest-app-store-build-number only counts builds attached to
-          # a *production* App Store version — since this workflow only ever
-          # ships to TestFlight, that would return 0 forever and every
-          # upload after the first would collide on build number 1 and get
-          # rejected. get-latest-testflight-build-number tracks every build
-          # ever uploaded for this bundle ID, TestFlight included.
-          LATEST_BUILD_NUMBER=$(app-store-connect get-latest-testflight-build-number "$BUNDLE_ID" || echo 0)
-          agvtool new-version -all $(($LATEST_BUILD_NUMBER + 1))
+          # get-latest-testflight-build-number turned out unreliable here —
+          # a build still got rejected for reusing build number 1 despite
+          # incrementing off of it. A minute-precision timestamp is always
+          # higher than whatever came before, with no dependency on querying
+          # App Store Connect for "the latest" anything.
+          agvtool new-version -all $(date +%Y%m%d%H%M)
       - name: Build ipa for distribution
         script: |
           xcode-project build-ipa \
