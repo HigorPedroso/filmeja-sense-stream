@@ -72,5 +72,20 @@
 	     "Faltam dados de conformidade" prompt on every TestFlight build. -->
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<!-- GIDSignIn (Google Sign-In) validates at login time that this URL
+	     scheme is registered — without it, tapping "Continuar com Google"
+	     crashes the app instead of returning a normal error. This is the
+	     iOS Client ID (VITE_GOOGLE_IOS_CLIENT_ID) with its two dot-separated
+	     segments reversed and re-joined with dots, per Google's own setup
+	     docs. If that client ID ever changes, this must be updated to match. -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.1007117509691-m972o8nnk5i4p3se85q6s4neel09nv4v</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>
