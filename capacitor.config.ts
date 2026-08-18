@@ -11,15 +11,14 @@ const config: CapacitorConfig = {
   },
   plugins: {
     SplashScreen: {
-      launchShowDuration: 1500,
-      backgroundColor: '#0f0f0f',
-      androidSplashResourceName: 'splash',
-      // Default is FIT_XY, which stretches the image to fill the screen
-      // without preserving aspect ratio — visibly warps a centered icon on
-      // screens whose aspect ratio doesn't match the splash image. CENTER_INSIDE
-      // keeps the icon at its natural proportions, centered.
-      androidScaleType: 'CENTER_INSIDE',
-      showSpinner: false,
+      // 0 makes the plugin's own showOnLaunch() a no-op (see its Android
+      // source: `if (config.getLaunchShowDuration() == 0) return;`) — this
+      // app already has a real native splash via the Android 12
+      // SplashScreen theme (styles.xml + MainActivity's
+      // installSplashScreen()). Without this, the plugin showed its own
+      // *separate* splash view (using drawable/splash.png) right after,
+      // so cold start looked like two splash screens back to back.
+      launchShowDuration: 0,
     },
     SafeArea: {
       statusBarStyle: 'DARK',
