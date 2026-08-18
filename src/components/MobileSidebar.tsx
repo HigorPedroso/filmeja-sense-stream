@@ -103,7 +103,17 @@ useEffect(() => {
       )}
 
       <div
-        className={cn("fixed bottom-0 left-0 right-0 md:hidden z-50", isIOS && "px-3")}
+        className={cn(
+          "fixed bottom-0 left-0 right-0 md:hidden z-50",
+          isIOS
+            ? "px-3"
+            : // Android: the safe-area padding below sits under the system
+              // navigation bar. Coloring only the <nav> left that strip
+              // transparent, so the system nav buttons looked like they
+              // were floating over nothing instead of sitting on the tab
+              // bar's own color — filling it here too closes that gap.
+              "bg-filmeja-dark/90 border-t border-white/10 backdrop-blur-xl"
+        )}
         style={{
           paddingBottom: isIOS
             ? "calc(env(safe-area-inset-bottom) + 0.5rem)"
@@ -113,13 +123,12 @@ useEffect(() => {
         <nav
           className={cn(
             "flex items-stretch justify-around relative",
-            isIOS
-              ? // iOS 26 "Liquid Glass" look: a floating, heavily translucent,
-                // saturated-blur pill instead of an edge-to-edge solid bar.
-                // Tinted dark (not white) so it reads as dark glass instead
-                // of washed-out gray.
-                "mx-auto max-w-md rounded-[28px] border border-white/15 bg-black/50 backdrop-blur-2xl backdrop-saturate-150 shadow-[0_8px_32px_rgba(0,0,0,0.45)] overflow-hidden"
-              : "bg-filmeja-dark/90 border-t border-white/10 backdrop-blur-xl"
+            isIOS &&
+              // iOS 26 "Liquid Glass" look: a floating, heavily translucent,
+              // saturated-blur pill instead of an edge-to-edge solid bar.
+              // Tinted dark (not white) so it reads as dark glass instead
+              // of washed-out gray.
+              "mx-auto max-w-md rounded-[28px] border border-white/15 bg-black/50 backdrop-blur-2xl backdrop-saturate-150 shadow-[0_8px_32px_rgba(0,0,0,0.45)] overflow-hidden"
           )}
         >
           {isIOS && (

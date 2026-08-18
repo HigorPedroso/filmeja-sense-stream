@@ -159,7 +159,7 @@ const Signup = () => {
       >
         <div className="w-full max-w-sm flex flex-col items-center mb-8">
           <img
-            src="/icone.png"
+            src="/icone_novo.png"
             alt="FilmeJá"
             className="w-14 h-14 rounded-2xl shadow-lg shadow-filmeja-purple/30 mb-4"
           />
