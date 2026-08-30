@@ -87,5 +87,18 @@
 			</array>
 		</dict>
 	</array>
+	<!-- AppLauncher.canOpenUrl() always returns false for a scheme not
+	     declared here, even if the app is installed — keep in sync with
+	     the provider map in StreamingModal.tsx. -->
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>nflx</string>
+		<string>aiv</string>
+		<string>disneyplus</string>
+		<string>hbomax</string>
+		<string>paramountplus</string>
+		<string>globoplay</string>
+		<string>starplus</string>
+	</array>
 </dict>
 </plist>

@@ -31,6 +31,21 @@
         <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="@string/admob_app_id" />
     </application>
 
+    <!-- Android 11+ (API 30+) hides other apps' packages by default
+         (package visibility) — AppLauncher.canOpenUrl()/openUrl() can only
+         see the streaming apps listed here. Keep this in sync with the
+         provider map in StreamingModal.tsx. -->
+    <queries>
+        <package android:name="com.netflix.mediaclient" />
+        <package android:name="com.amazon.avod.thirdpartyclient" />
+        <package android:name="com.disney.disneyplus" />
+        <package android:name="com.wbd.stream" />
+        <package android:name="com.hbo.hbonow" />
+        <package android:name="com.cbs.app" />
+        <package android:name="com.globo.globotv" />
+        <package android:name="com.disney.starplus" />
+    </queries>
+
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />

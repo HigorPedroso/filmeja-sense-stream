@@ -5,6 +5,9 @@ import { Button } from "@/components/ui/button";
 import { ContentType } from "./types";
 import { useState } from "react";
 import { trackEvent } from "@/lib/analytics/trackEvent";
+import { Capacitor } from "@capacitor/core";
+import { AppLauncher } from "@capacitor/app-launcher";
+import { useToast } from "@/components/ui/use-toast";
 
 interface StreamingModalProps {
   isOpen: boolean;
@@ -62,17 +65,80 @@ function getStreamingLink(providerName: string, title: string): string {
   return `https://www.google.com/search?q=${encodeURIComponent(`${providerName} ${title || ""}`)}`;
 }
 
+interface StreamingAppTarget {
+  appName: string;
+  androidPackage: string;
+  iosScheme: string;
+}
+
+// Native app identifiers for AppLauncher.canOpenUrl()/openUrl() — Android
+// takes a package name, iOS a URL scheme (both must also be declared,
+// respectively, in AndroidManifest.xml's <queries> and Info.plist's
+// LSApplicationQueriesSchemes, or canOpenUrl always reports false).
+// Only covers providers with a well-known, stable app identifier; anything
+// else (Apple TV, unrecognized providers) falls through to the web link.
+// Same provider-name matching/ordering as getStreamingLink above.
+function getStreamingAppTarget(providerName: string): StreamingAppTarget | null {
+  const name = providerName.toLowerCase();
+
+  if (name.includes("disney")) {
+    return { appName: "Disney+", androidPackage: "com.disney.disneyplus", iosScheme: "disneyplus" };
+  }
+  if (name.includes("max")) {
+    return { appName: "Max", androidPackage: "com.wbd.stream", iosScheme: "hbomax" };
+  }
+  if (name.includes("netflix")) {
+    return { appName: "Netflix", androidPackage: "com.netflix.mediaclient", iosScheme: "nflx" };
+  }
+  if (name.includes("paramount")) {
+    return { appName: "Paramount+", androidPackage: "com.cbs.app", iosScheme: "paramountplus" };
+  }
+  if (name.includes("globoplay")) {
+    return { appName: "Globoplay", androidPackage: "com.globo.globotv", iosScheme: "globoplay" };
+  }
+  if (name.includes("star+") || name.includes("star plus")) {
+    return { appName: "Star+", androidPackage: "com.disney.starplus", iosScheme: "starplus" };
+  }
+  if (name.includes("amazon") || name.includes("prime video")) {
+    return { appName: "Prime Video", androidPackage: "com.amazon.avod.thirdpartyclient", iosScheme: "aiv" };
+  }
+
+  return null;
+}
+
 export const StreamingModal = ({ isOpen, onClose, content }: StreamingModalProps) => {
   const [isClicking, setIsClicking] = useState(false);
+  const { toast } = useToast();
 
   if (!isOpen || !content.providers?.flatrate) return null;
 
-  const handleProviderClick = (provider: any) => {
+  const handleProviderClick = async (provider: any) => {
     trackEvent("streaming_provider_clicked", {
       provider: provider.provider_name,
       tmdbId: content.id,
       title: content.title || content.name,
     });
+
+    const target = Capacitor.isNativePlatform() ? getStreamingAppTarget(provider.provider_name) : null;
+
+    if (target) {
+      const identifier = Capacitor.getPlatform() === "ios" ? target.iosScheme : target.androidPackage;
+      try {
+        const { value: canOpen } = await AppLauncher.canOpenUrl({ url: identifier });
+        if (canOpen) {
+          await AppLauncher.openUrl({ url: identifier });
+          return;
+        }
+      } catch (error) {
+        console.error("[streaming] failed to check/open native app", error);
+      }
+      toast({
+        title: `Você não tem o ${target.appName} instalado`,
+        description: "Instale o app para assistir diretamente por lá.",
+      });
+      return;
+    }
+
     window.open(getStreamingLink(provider.provider_name, content.title || content.name || ""), "_blank");
   };
 
