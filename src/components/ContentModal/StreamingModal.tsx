@@ -130,7 +130,7 @@ export const StreamingModal = ({ isOpen, onClose, content }: StreamingModalProps
           return;
         }
       } catch (error) {
-        console.error("[streaming] failed to check/open native app", error);
+        console.error("canOpenUrl/openUrl threw", error);
       }
       toast({
         title: `Você não tem o ${target.appName} instalado`,
@@ -139,7 +139,8 @@ export const StreamingModal = ({ isOpen, onClose, content }: StreamingModalProps
       return;
     }
 
-    window.open(getStreamingLink(provider.provider_name, content.title || content.name || ""), "_blank");
+    const fallbackUrl = getStreamingLink(provider.provider_name, content.title || content.name || "");
+    window.open(fallbackUrl, "_blank");
   };
 
   const handleRentClick = async () => {
@@ -221,7 +222,7 @@ export const StreamingModal = ({ isOpen, onClose, content }: StreamingModalProps
           whileHover={{ scale: 1.02 }}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="w-full mb-6 bg-gradient-to-r from-filmeja-purple to-filmeja-blue hover:opacity-90 transition-all rounded-lg overflow-hidden"
+          className="relative w-full mb-6 bg-gradient-to-r from-filmeja-purple to-filmeja-blue hover:opacity-90 transition-all rounded-lg overflow-hidden"
           onClick={handleRentClick}
           disabled={isClicking}
         >
