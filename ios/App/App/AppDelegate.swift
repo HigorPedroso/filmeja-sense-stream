@@ -1,13 +1,18 @@
 import UIKit
 import Capacitor
+import FirebaseCore
+import FirebaseMessaging
 
 @UIApplicationMain
-class AppDelegate: UIResponder, UIApplicationDelegate {
+class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
 
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         // Override point for customization after application launch.
+        FirebaseApp.configure()
+        Messaging.messaging().delegate = self
+
         DispatchQueue.main.async { [weak self] in
             self?.showAnimatedSplash()
         }
@@ -72,16 +77,27 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Called when the application is about to terminate. Save data if appropriate. See also applicationDidEnterBackground:.
     }
 
-    // @capacitor/push-notifications only fires its JS "registration"/
-    // "registrationError" events once these are forwarded — without them
-    // PushNotifications.register() silently never resolves on iOS, even
-    // though the OS-level permission prompt and registration succeed.
+    // Hands the raw APNs token to FirebaseMessaging, which exchanges it for
+    // an FCM registration token — the backend (send-push-notification) only
+    // knows how to deliver to FCM tokens, not raw APNs ones. The resulting
+    // FCM token is what actually gets forwarded to Capacitor, in
+    // messaging(_:didReceiveRegistrationToken:) below.
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
-        NotificationCenter.default.post(name: .capacitorDidRegisterForRemoteNotifications, object: deviceToken)
+        Messaging.messaging().apnsToken = deviceToken
     }
 
     func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
         NotificationCenter.default.post(name: .capacitorDidFailToRegisterForRemoteNotifications, object: error)
+    }
+
+    // @capacitor/push-notifications only fires its JS "registration" event
+    // once this is forwarded — without it PushNotifications.register()
+    // silently never resolves on iOS, even though the OS-level permission
+    // prompt and APNs registration succeed. Also fires again whenever
+    // Firebase rotates the token, which is expected and fine to re-save.
+    func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
+        guard let fcmToken = fcmToken else { return }
+        NotificationCenter.default.post(name: .capacitorDidRegisterForRemoteNotifications, object: fcmToken)
     }
 
     func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey: Any] = [:]) -> Bool {
