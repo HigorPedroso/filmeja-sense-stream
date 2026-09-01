@@ -122,7 +122,7 @@ export const StreamingModal = ({ isOpen, onClose, content }: StreamingModalProps
     const target = Capacitor.isNativePlatform() ? getStreamingAppTarget(provider.provider_name) : null;
 
     if (target) {
-      const identifier = Capacitor.getPlatform() === "ios" ? target.iosScheme : target.androidPackage;
+      const identifier = Capacitor.getPlatform() === "ios" ? `${target.iosScheme}://` : target.androidPackage;
       try {
         const { value: canOpen } = await AppLauncher.canOpenUrl({ url: identifier });
         if (canOpen) {
