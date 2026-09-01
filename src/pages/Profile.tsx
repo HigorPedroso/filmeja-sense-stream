@@ -131,25 +131,33 @@ export function ProfilePage() {
     const fetchUserProfile = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
-        
+
         if (!user) {
           navigate('/login');
           return;
         }
 
-        // Fetch all data in parallel
-        const [profileResponse, preferencesResponse] = await Promise.all([
+        // Fetch profile, preferences and watch history all in parallel —
+        // none of these depend on each other, only on user.id.
+        const [profileResponse, preferencesResponse, historyResponse] = await Promise.all([
           supabase.from('profiles').select('*').eq('id', user.id).single(),
           supabase.from('user_preferences').select('*').eq('user_id', user.id).single(),
+          supabase
+            .from('watch_history')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false })
+            .limit(10),
         ]);
 
         const { data: profileData, error: profileError } = profileResponse;
         const { data: preferencesData, error: preferencesError } = preferencesResponse;
+        const { data: historyData, error: historyError } = historyResponse;
 
         if (profileError) throw profileError;
         if (preferencesError && preferencesError.code !== 'PGRST116') throw preferencesError;
+        if (historyError) throw historyError;
 
-        // Now set the profile with all data available
         setProfile({
           id: user.id,
           email: user.email!,
@@ -167,37 +175,35 @@ export function ProfilePage() {
           }
         });
 
-        const { data: historyData, error: historyError } = await supabase
-      .from('watch_history')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(10);
+        // Show the history list right away (posters fall back to the
+        // placeholder image already handled in the render below), then
+        // stop blocking the whole page on it — this section's own up-to-10
+        // TMDB poster lookups shouldn't hold up the header/preferences,
+        // which is why the profile page used to feel so slow to open.
+        setWatchHistory(historyData || []);
+        setIsLoading(false);
 
-    if (historyError) throw historyError;
+        const historyWithPosters = await Promise.all(
+          (historyData || []).map(async (item) => {
+            try {
+              const response = await fetch(
+                `https://api.themoviedb.org/3/search/${item.content_type}?api_key=${import.meta.env.VITE_TMDB_API_KEY}&query=${encodeURIComponent(item.title)}&language=pt-BR`
+              );
+              const data = await response.json();
+              const result = data.results[0];
 
-    // Fetch TMDB data for each history item
-    const historyWithPosters = await Promise.all(
-      (historyData || []).map(async (item) => {
-        try {
-          const response = await fetch(
-            `https://api.themoviedb.org/3/search/${item.content_type}?api_key=${import.meta.env.VITE_TMDB_API_KEY}&query=${encodeURIComponent(item.title)}&language=pt-BR`
-          );
-          const data = await response.json();
-          const result = data.results[0];
-          
-          return {
-            ...item,
-            poster_path: result?.poster_path || null
-          };
-        } catch (error) {
-          console.error('Error fetching TMDB data:', error);
-          return item;
-        }
-      })
-    );
+              return {
+                ...item,
+                poster_path: result?.poster_path || null
+              };
+            } catch (error) {
+              console.error('Error fetching TMDB data:', error);
+              return item;
+            }
+          })
+        );
 
-    setWatchHistory(historyWithPosters);
+        setWatchHistory(historyWithPosters);
 
       } catch (error) {
         console.error('Error fetching profile:', error);
@@ -206,7 +212,6 @@ export function ProfilePage() {
           description: "Por favor, tente novamente mais tarde",
           variant: "destructive",
         });
-      } finally {
         setIsLoading(false);
       }
     };
