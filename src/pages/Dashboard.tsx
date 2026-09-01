@@ -1170,7 +1170,7 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
   };
 
   return (
-    <div className="min-h-screen bg-filmeja-dark overflow-x-hidden">
+    <div className="min-h-screen bg-filmeja-dark">
       {/* Premium overlay */}
       {/* {!isPremium && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-md z-30 flex flex-col items-center justify-center">
