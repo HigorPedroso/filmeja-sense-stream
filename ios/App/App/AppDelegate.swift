@@ -8,7 +8,46 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         // Override point for customization after application launch.
+        DispatchQueue.main.async { [weak self] in
+            self?.showAnimatedSplash()
+        }
         return true
+    }
+
+    // LaunchScreen.storyboard can only show a static frame (iOS renders it
+    // before any app code runs), so this overlay picks up right where that
+    // frame leaves off — same image, same full-bleed layout — and animates
+    // a slow zoom + fade into the real content. Android isn't touched by
+    // any of this; it keeps its own native Android 12 SplashScreen API
+    // animation, unrelated to this iOS-only view.
+    private func showAnimatedSplash() {
+        guard let window = self.window else { return }
+
+        let overlay = UIView(frame: window.bounds)
+        overlay.backgroundColor = .white
+        overlay.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+
+        let imageView = UIImageView(frame: window.bounds)
+        imageView.image = UIImage(named: "Splash")
+        imageView.contentMode = .scaleAspectFill
+        imageView.clipsToBounds = true
+        imageView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        overlay.addSubview(imageView)
+
+        window.addSubview(overlay)
+
+        UIView.animate(
+            withDuration: 0.9,
+            delay: 0.3,
+            options: [.curveEaseInOut],
+            animations: {
+                imageView.transform = CGAffineTransform(scaleX: 1.06, y: 1.06)
+                overlay.alpha = 0
+            },
+            completion: { _ in
+                overlay.removeFromSuperview()
+            }
+        )
     }
 
     func applicationWillResignActive(_ application: UIApplication) {
