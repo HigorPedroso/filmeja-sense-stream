@@ -196,16 +196,33 @@ const Dashboard = () => {
   const [genre, setGenre] = useState<{ id: number; name: string } | null>(null);
 
   // iOS/WebKit lets a touch-scroll gesture drag position:fixed overlays
-  // along with the page behind them instead of keeping them pinned —
-  // happens even with a clean ancestor chain, seemingly tied to
-  // backdrop-filter on the fixed element. Locking background scroll while
-  // either modal is open removes the scroll gesture that triggers it.
+  // along with the page behind them instead of keeping them pinned — happens
+  // even with a clean ancestor chain, seemingly tied to backdrop-filter on
+  // the fixed element. `overflow: hidden` alone does NOT stop touch
+  // scrolling on iOS Safari/WKWebView (a long-documented WebKit quirk) — the
+  // body must actually be taken out of the scrollable flow via
+  // position:fixed, with the scroll offset preserved and restored by hand,
+  // since fixing position resets it to the top.
   useEffect(() => {
     if (showMoodOverlay || showGenreModal) {
-      const previousOverflow = document.body.style.overflow;
-      document.body.style.overflow = "hidden";
+      const scrollY = window.scrollY;
+      const body = document.body;
+      const previous = {
+        position: body.style.position,
+        top: body.style.top,
+        width: body.style.width,
+        overflow: body.style.overflow,
+      };
+      body.style.position = "fixed";
+      body.style.top = `-${scrollY}px`;
+      body.style.width = "100%";
+      body.style.overflow = "hidden";
       return () => {
-        document.body.style.overflow = previousOverflow;
+        body.style.position = previous.position;
+        body.style.top = previous.top;
+        body.style.width = previous.width;
+        body.style.overflow = previous.overflow;
+        window.scrollTo(0, scrollY);
       };
     }
   }, [showMoodOverlay, showGenreModal]);
