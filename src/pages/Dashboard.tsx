@@ -194,6 +194,21 @@ const Dashboard = () => {
   };
   const [showGenreModal, setShowGenreModal] = useState(false);
   const [genre, setGenre] = useState<{ id: number; name: string } | null>(null);
+
+  // iOS/WebKit lets a touch-scroll gesture drag position:fixed overlays
+  // along with the page behind them instead of keeping them pinned —
+  // happens even with a clean ancestor chain, seemingly tied to
+  // backdrop-filter on the fixed element. Locking background scroll while
+  // either modal is open removes the scroll gesture that triggers it.
+  useEffect(() => {
+    if (showMoodOverlay || showGenreModal) {
+      const previousOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = previousOverflow;
+      };
+    }
+  }, [showMoodOverlay, showGenreModal]);
   const [showAiChat, setShowAiChat] = useState(false);
   const [selectedContent, setSelectedContent] = useState<ContentItem | null>(
     null
