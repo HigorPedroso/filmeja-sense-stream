@@ -7,6 +7,13 @@ const GOOGLE_IOS_CLIENT_ID = import.meta.env.VITE_GOOGLE_IOS_CLIENT_ID as string
 
 let initialized: Promise<void> | null = null;
 
+async function sha256Hex(value: string): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
 function ensureGoogleAuthInitialized() {
   if (!initialized) {
     initialized = SocialLogin.initialize({
@@ -24,26 +31,27 @@ function ensureGoogleAuthInitialized() {
 async function loginWithGoogleNative() {
   await ensureGoogleAuthInitialized();
 
-  // Without an explicit nonce, the native SDKs (GIDSignIn on iOS in
-  // particular) generate their own and embed it in the id_token's `nonce`
-  // claim — but never hand that value back to us, so Supabase has no way to
-  // confirm it and rejects the token with "Passed nonce and nonce in
-  // id_token should either both exist or not."
+  // Without an explicit nonce, the native SDKs generate their own and embed
+  // it in the id_token's `nonce` claim — but never hand that value back to
+  // us, so Supabase has no way to confirm it and rejects the token with
+  // "Passed nonce and nonce in id_token should either both exist or not."
   //
-  // Both the native SDK and Supabase treat this as an opaque string: Google
-  // embeds whatever we pass verbatim in the token's nonce claim, and
-  // Supabase compares it directly against that claim (no hashing on either
-  // side for this provider — confirmed by hashing it first and getting a
-  // "nonce mismatch" instead, since the plugin also passes Apple's nonce
-  // through unhashed). Same raw value goes to both sides.
-  const nonce = crypto.randomUUID();
+  // Google's identity servers echo whatever nonce we pass verbatim into the
+  // token's claim (same as Apple's), while Supabase hashes whatever nonce
+  // *we* give *it* and compares that against the claim — so Google needs
+  // the hash, Supabase needs the raw value, exactly like Sign in with Apple.
+  // Confirmed directly on-device: sending the same raw value to both sides
+  // reproduces "Nonces mismatch" every time; this hashed/raw split is what
+  // actually signs in successfully.
+  const rawNonce = crypto.randomUUID();
+  const hashedNonce = await sha256Hex(rawNonce);
 
   // Don't pass custom `scopes` here: the Android provider rejects any custom
   // scope unless MainActivity implements ModifiedMainActivityForSocialLoginPlugin.
   // The default scopes (openid, email, profile) are enough for Supabase's idToken sign-in.
   const { result } = await SocialLogin.login({
     provider: "google",
-    options: { nonce },
+    options: { nonce: hashedNonce },
   });
 
   const idToken = "idToken" in result ? result.idToken : undefined;
@@ -54,7 +62,7 @@ async function loginWithGoogleNative() {
   const { error } = await supabase.auth.signInWithIdToken({
     provider: "google",
     token: idToken,
-    nonce,
+    nonce: rawNonce,
   });
 
   if (error) throw error;
