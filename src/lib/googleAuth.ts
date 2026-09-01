@@ -7,13 +7,6 @@ const GOOGLE_IOS_CLIENT_ID = import.meta.env.VITE_GOOGLE_IOS_CLIENT_ID as string
 
 let initialized: Promise<void> | null = null;
 
-async function sha256Hex(value: string): Promise<string> {
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
-  return Array.from(new Uint8Array(digest))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-}
-
 function ensureGoogleAuthInitialized() {
   if (!initialized) {
     initialized = SocialLogin.initialize({
@@ -37,20 +30,20 @@ async function loginWithGoogleNative() {
   // confirm it and rejects the token with "Passed nonce and nonce in
   // id_token should either both exist or not."
   //
-  // Google's SDK embeds whatever nonce we give it verbatim (no hashing of
-  // its own), while Supabase hashes whatever nonce *we* give *it* and
-  // compares that against the token's claim — the same rawNonce/hashedNonce
-  // split Sign in with Apple requires natively. So Google gets the hash,
-  // Supabase gets the raw value.
-  const rawNonce = crypto.randomUUID();
-  const hashedNonce = await sha256Hex(rawNonce);
+  // Both the native SDK and Supabase treat this as an opaque string: Google
+  // embeds whatever we pass verbatim in the token's nonce claim, and
+  // Supabase compares it directly against that claim (no hashing on either
+  // side for this provider — confirmed by hashing it first and getting a
+  // "nonce mismatch" instead, since the plugin also passes Apple's nonce
+  // through unhashed). Same raw value goes to both sides.
+  const nonce = crypto.randomUUID();
 
   // Don't pass custom `scopes` here: the Android provider rejects any custom
   // scope unless MainActivity implements ModifiedMainActivityForSocialLoginPlugin.
   // The default scopes (openid, email, profile) are enough for Supabase's idToken sign-in.
   const { result } = await SocialLogin.login({
     provider: "google",
-    options: { nonce: hashedNonce },
+    options: { nonce },
   });
 
   const idToken = "idToken" in result ? result.idToken : undefined;
@@ -61,7 +54,7 @@ async function loginWithGoogleNative() {
   const { error } = await supabase.auth.signInWithIdToken({
     provider: "google",
     token: idToken,
-    nonce: rawNonce,
+    nonce,
   });
 
   if (error) throw error;
