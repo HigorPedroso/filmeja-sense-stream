@@ -56,7 +56,6 @@ const MoodSelectPage = () => {
             animate={{ opacity: 1, y: 0 }}
             className="mb-8 md:mb-10 text-center"
           >
-            <div className="text-5xl md:text-6xl mb-4">✨</div>
             <h1 className="text-2xl md:text-4xl font-bold text-white mb-3">
               Como você está se sentindo hoje?
             </h1>
