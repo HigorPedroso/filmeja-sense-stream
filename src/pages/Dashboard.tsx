@@ -368,9 +368,20 @@ const Dashboard = () => {
   // router state instead of a direct function call. Clearing the state
   // (replace, no new history entry) stops the same selection re-firing on
   // a later back/forward through this exact history entry.
+  //
+  // Dashboard remounting fresh (re-fetching trending, watch history, etc.)
+  // used to flash the full home screen for a moment before the daily-limit
+  // check resolved and either opened the recommendation or the paywall —
+  // reads as "it went back to home" even though it's just on the way
+  // through. isProcessingSelection swaps that flash for a plain spinner
+  // instead, cleared once we know which of the two outcomes it was.
+  const [isProcessingSelection, setIsProcessingSelection] = useState(false);
+
   useEffect(() => {
     const state = location.state as { selectMood?: string; selectGenre?: { id: number; name: string } } | null;
     if (!state?.selectMood && !state?.selectGenre) return;
+
+    setIsProcessingSelection(true);
 
     if (state.selectMood) {
       setSelectedMood(state.selectMood as MoodType);
@@ -383,6 +394,12 @@ const Dashboard = () => {
     navigate(location.pathname, { replace: true, state: {} });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.state]);
+
+  useEffect(() => {
+    if (isProcessingSelection && (showRecommendationModal || showPaymentModal)) {
+      setIsProcessingSelection(false);
+    }
+  }, [isProcessingSelection, showRecommendationModal, showPaymentModal]);
 
   const handleFirst = async () => {
     setIsLoadingRecommendation(true);
@@ -1113,6 +1130,19 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
       </div>
     );
   };
+
+  if (isProcessingSelection) {
+    return (
+      <div className="min-h-screen bg-filmeja-dark flex items-center justify-center">
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+        >
+          <Film className="w-8 h-8 text-filmeja-purple" />
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-filmeja-dark">
