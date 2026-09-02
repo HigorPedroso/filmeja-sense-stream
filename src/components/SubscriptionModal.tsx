@@ -13,6 +13,7 @@ interface SubscriptionModalProps {
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
+import { translateAuthError } from "@/lib/errors/translateAuthError";
 
 export function SubscriptionModal({
   isOpen,
@@ -29,17 +30,17 @@ export function SubscriptionModal({
       setIsCancelling(true);
       const { data: { session } } = await supabase.auth.getSession();
       
-      if (!session) throw new Error('No session found');
+      if (!session) throw new Error('Sessão não encontrada');
 
       const { data, error } = await supabase.functions.invoke('cancel-subscription', {
-        body: { 
-          userId: session.user.id 
+        body: {
+          userId: session.user.id
         }
       });
 
       if (error) {
         console.error('Function error details:', error);
-        throw new Error(error.message || 'Error cancelling subscription');
+        throw new Error(error.message || 'Erro ao cancelar assinatura');
       }
 
       await onCancelSubscription?.();
@@ -52,7 +53,7 @@ export function SubscriptionModal({
       console.error('Error cancelling subscription:', error);
       toast({
         title: "Erro ao cancelar assinatura",
-        description: error.message || "Por favor, tente novamente mais tarde",
+        description: translateAuthError(error, "Por favor, tente novamente mais tarde"),
         variant: "destructive",
       });
     } finally {

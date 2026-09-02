@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { loginWithGoogle } from "@/lib/googleAuth";
+import { translateAuthError } from "@/lib/errors/translateAuthError";
 import { Loader2, Sparkles } from "lucide-react";
 import { useState } from "react";
 
@@ -53,7 +54,7 @@ export function SignupModal({
         } catch (error) {
           toast({
             title: 'Erro!',
-            description: error.message || 'Ocorreu um erro ao conectar com Google.',
+            description: translateAuthError(error, 'Ocorreu um erro ao conectar com Google.'),
             variant: 'destructive',
           });
           setLoading(false);

@@ -83,6 +83,7 @@ import {
   moodToGenresTV,
   genreCategories,
 } from "@/lib/recommendations/moodGenreData";
+import { translateAuthError } from "@/lib/errors/translateAuthError";
 
 // Mock user data - in a real app, this would come from authentication
 const mockUser = {
@@ -1093,7 +1094,7 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
       localStorage.removeItem("onboarding_data");
     } catch (error: any) {
       console.error("Signup error:", error);
-      setSignupError(error.message || "Erro ao criar conta. Tente novamente.");
+      setSignupError(translateAuthError(error, "Erro ao criar conta. Tente novamente."));
     } finally {
       setIsSigningUp(false);
     }

@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { useRecommendationResult } from "@/hooks/useRecommendationResult";
 import { usePremiumStatus } from "@/hooks/usePremiumStatus";
 import { lightImpact } from "@/lib/haptics";
+import { translateAuthError } from "@/lib/errors/translateAuthError";
 
 const isIOS = Capacitor.getPlatform() === "ios";
 
@@ -81,7 +82,7 @@ useEffect(() => {
   
       setShowSignupModal(false);
     } catch (error: any) {
-      setSignupError(error.message);
+      setSignupError(translateAuthError(error, "Erro ao criar conta. Tente novamente."));
     } finally {
       setIsSigningUp(false);
     }

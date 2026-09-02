@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/useAuth";
 import { Input } from "../ui/input";
 import { supabase } from "@/integrations/supabase/client";
+import { translateAuthError } from "@/lib/errors/translateAuthError";
 import { DialogClose } from "../ui/dialog";
 
 interface ChatStep {
@@ -468,7 +469,7 @@ export function HomeChat({ onClose }: { onClose?: () => void }) {
           ...prev,
           {
             id: Date.now().toString(),
-            text: error.message || "Erro ao criar conta. Tente novamente.",
+            text: translateAuthError(error, "Erro ao criar conta. Tente novamente."),
             sender: "ai",
             requiresInput: true,
             isPassword: true,

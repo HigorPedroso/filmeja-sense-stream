@@ -8,6 +8,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { deleteAccount } from "@/lib/account/deleteAccount";
+import { translateAuthError } from "@/lib/errors/translateAuthError";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -44,7 +45,7 @@ const DeleteAccountRequest = () => {
     } catch (error: any) {
       toast({
         title: "Erro ao entrar",
-        description: error.message || "Verifique seu e-mail e senha e tente novamente.",
+        description: translateAuthError(error, "Verifique seu e-mail e senha e tente novamente."),
         variant: "destructive",
       });
     } finally {

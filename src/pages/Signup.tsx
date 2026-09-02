@@ -8,6 +8,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { loginWithGoogle } from '@/lib/googleAuth';
 import { loginWithApple } from '@/lib/appleAuth';
+import { translateAuthError } from '@/lib/errors/translateAuthError';
 import { Capacitor } from '@capacitor/core';
 import { cn } from '@/lib/utils';
 
@@ -90,7 +91,7 @@ const Signup = () => {
     } catch (error) {
       toast({
         title: 'Erro!',
-        description: error.message || 'Ocorreu um erro durante a autenticação.',
+        description: translateAuthError(error, 'Ocorreu um erro durante a autenticação.'),
         variant: 'destructive',
       });
     } finally {
@@ -108,7 +109,7 @@ const Signup = () => {
     } catch (error) {
       toast({
         title: 'Erro!',
-        description: error.message || 'Ocorreu um erro ao conectar com Google.',
+        description: translateAuthError(error, 'Ocorreu um erro ao conectar com Google.'),
         variant: 'destructive',
       });
       setGoogleLoading(false);
@@ -124,7 +125,7 @@ const Signup = () => {
     } catch (error) {
       toast({
         title: 'Erro!',
-        description: error.message || 'Ocorreu um erro ao conectar com a Apple.',
+        description: translateAuthError(error, 'Ocorreu um erro ao conectar com a Apple.'),
         variant: 'destructive',
       });
       setAppleLoading(false);

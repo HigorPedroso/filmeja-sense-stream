@@ -11,6 +11,7 @@ import { ContentModal } from "@/components/ContentModal/ContentModal";
 import { fetchContentWithProviders, searchContentByTitle, describeAiRecommendationError } from "@/lib/utils/tmdb";
 import { getContentDetails } from "../lib/tmdb";
 import { toast } from "@/hooks/use-toast";
+import { translateAuthError } from "@/lib/errors/translateAuthError";
 import PremiumPaymentModal from "@/components/PremiumPaymentModal"; // Import the modal
 import {
   Dialog,
@@ -130,7 +131,7 @@ export function Sidebar({ isExpanded, setIsExpanded, onLogout }: SidebarProps) {
 
       setShowSignupModal(false);
     } catch (error: any) {
-      setSignupError(error.message);
+      setSignupError(translateAuthError(error, "Erro ao criar conta. Tente novamente."));
     } finally {
       setIsSigningUp(false);
     }
