@@ -38,6 +38,20 @@ const config: CapacitorConfig = {
       },
     },
   },
+  // iOS/WKWebView has no built-in equivalent of Android's adjustResize: by
+  // default it scrolls the whole page content to keep a focused input
+  // visible instead of resizing the viewport, which looks like the entire
+  // chat "jumping" instead of just the input riding above the keyboard.
+  // Scoped to iOS only via this platform override — Android already behaves
+  // correctly and gets no Keyboard config at all here.
+  ios: {
+    plugins: {
+      Keyboard: {
+        resize: 'body',
+        resizeOnFullScreen: true,
+      },
+    },
+  },
 };
 
 export default config;
