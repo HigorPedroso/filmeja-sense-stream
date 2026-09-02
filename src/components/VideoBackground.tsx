@@ -5,8 +5,9 @@ import { Capacitor } from '@capacitor/core';
 const TMDB_API_KEY = import.meta.env.VITE_TMDB_API_KEY;
 
 // See useTrailerHandler.ts for why this is iOS-only (YouTube error 153).
-const YOUTUBE_EMBED_HOST =
-  Capacitor.getPlatform() === 'ios' ? 'https://www.youtube-nocookie.com' : 'https://www.youtube.com';
+const isIOS = Capacitor.getPlatform() === 'ios';
+const YOUTUBE_EMBED_HOST = isIOS ? 'https://www.youtube-nocookie.com' : 'https://www.youtube.com';
+const YOUTUBE_ORIGIN_PARAM = isIOS ? `&origin=${encodeURIComponent(window.location.origin)}` : '';
 
 const VideoBackground = () => {
   const [videoLoaded, setVideoLoaded] = useState<boolean>(false);
@@ -28,7 +29,7 @@ const VideoBackground = () => {
         );
         const videoData = await videoResponse.json();
         const trailer = videoData.results.find((v: any) => v.type === "Trailer");
-        return trailer ? `${YOUTUBE_EMBED_HOST}/embed/${trailer.key}?autoplay=1&controls=0&mute=1&loop=1` : null;
+        return trailer ? `${YOUTUBE_EMBED_HOST}/embed/${trailer.key}?autoplay=1&controls=0&mute=1&loop=1${YOUTUBE_ORIGIN_PARAM}` : null;
       });
 
       const urls = (await Promise.all(trailerPromises)).filter(Boolean);

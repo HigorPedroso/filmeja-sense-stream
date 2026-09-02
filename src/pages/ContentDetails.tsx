@@ -11,8 +11,8 @@ import { Heart } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 
 // See useTrailerHandler.ts for why this is iOS-only (YouTube error 153).
-const YOUTUBE_EMBED_HOST =
-  Capacitor.getPlatform() === 'ios' ? 'https://www.youtube-nocookie.com' : 'https://www.youtube.com';
+const isIOS = Capacitor.getPlatform() === 'ios';
+const YOUTUBE_EMBED_HOST = isIOS ? 'https://www.youtube-nocookie.com' : 'https://www.youtube.com';
 
 const ContentDetails = () => {
   const { type, id } = useParams<{ type: string; id: string }>();
@@ -196,7 +196,7 @@ const ContentDetails = () => {
               <iframe 
                 width="100%" 
                 height="100%" 
-                src={`${YOUTUBE_EMBED_HOST}/embed/${content.trailer_key}`}
+                src={`${YOUTUBE_EMBED_HOST}/embed/${content.trailer_key}${isIOS ? `?origin=${encodeURIComponent(window.location.origin)}` : ""}`}
                 title={`${content.title} Trailer`}
                 frameBorder="0"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
