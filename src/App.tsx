@@ -12,6 +12,8 @@ import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
 import Welcome, { WELCOME_SEEN_KEY } from "./pages/Welcome";
 import RecommendationResult from "./pages/RecommendationResult";
+import MoodSelectPage from "./pages/MoodSelectPage";
+import GenreSelectPage from "./pages/GenreSelectPage";
 import FilminChat from "./pages/FilminChat";
 import FilminConversations from "./pages/FilminConversations";
 import Premium from "./pages/Premium";
@@ -208,6 +210,22 @@ const AppContent = ({ favoriteItems }) => {
         element={
           <ProtectedRoute>
             <RecommendationResult />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/mood-select"
+        element={
+          <ProtectedRoute>
+            <MoodSelectPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/genre-select"
+        element={
+          <ProtectedRoute>
+            <GenreSelectPage />
           </ProtectedRoute>
         }
       />

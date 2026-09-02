@@ -61,7 +61,7 @@ import { RecommendedByAI } from "@/components/RecommendedByAI/RecommendedByAI";
 import HeaderDashboard from "@/components/HeaderDashboard";
 import PremiumPaymentModal from "@/components/PremiumPaymentModal";
 import TopTrendingList from "@/components/TopMovies/TopMovies";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useLocation } from "react-router-dom";
 import PaymentSuccessModal from "@/components/PaymentSuccessModal";
 import { Sidebar } from "@/components/Sidebar";
 import { MobileSidebar } from "@/components/MobileSidebar";
@@ -76,6 +76,13 @@ import { useRecommendationResult } from "@/hooks/useRecommendationResult";
 import { usePremiumStatus } from "@/hooks/usePremiumStatus";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { lightImpact } from "@/lib/haptics";
+import {
+  moodNames,
+  moodEmojis,
+  moodToGenres,
+  moodToGenresTV,
+  genreCategories,
+} from "@/lib/recommendations/moodGenreData";
 
 // Mock user data - in a real app, this would come from authentication
 const mockUser = {
@@ -84,90 +91,9 @@ const mockUser = {
   isPremium: false, // Toggle this to test premium vs non-premium UI
 };
 
-const moodNames: Record<MoodType, string> = {
-  happy: "feliz",
-  sad: "triste",
-  excited: "animado",
-  relaxed: "relaxado",
-  romantic: "romântico",
-  scared: "assustado",
-  thoughtful: "pensativo",
-};
-
-const moodToGenres: Record<string, number[]> = {
-  happy: [35, 10402, 12, 16], // Comedy, Musical, Adventure, Animation
-  sad: [18, 36, 10749], // Drama, History, Romance
-  excited: [28, 878, 10770], // Action, Sci-Fi, TV Movie
-  relaxed: [99, 10751], // Documentary, Family
-  romantic: [10749, 10402], // Romance, Musical
-  scared: [27, 53, 9648], // Horror, Thriller, Mystery
-  thoughtful: [18, 878, 9648, 99], // Drama, Sci-Fi, Mystery, Documentary
-};
-
-const moodToGenresTV: Record<string, number[]> = {
-  happy: [35, 10762, 16], // Comedy, Kids, Animation
-  sad: [18, 10768, 10749], // Drama, War & Politics, Romance
-  excited: [10759, 9648, 10765], // Action & Adventure, Mystery, Sci-Fi & Fantasy
-  relaxed: [99, 10751], // Documentary, Family
-  romantic: [10749, 10766], // Romance, Soap
-  scared: [9648, 80, 10765], // Mystery, Crime, Sci-Fi & Fantasy (substitui Horror)
-  thoughtful: [18, 99, 9648], // Drama, Documentary, Mystery
-};
-
-const genreCategories = [
-  {
-    name: "Ação e Aventura",
-    icon: "🎬",
-    genres: [
-      { id: 28, name: "Ação", color: "bg-red-500/20" },
-      { id: 12, name: "Aventura", color: "bg-orange-500/20" },
-      { id: 53, name: "Thriller", color: "bg-yellow-500/20" },
-    ],
-  },
-  {
-    name: "Drama e Emoção",
-    icon: "🎭",
-    genres: [
-      { id: 18, name: "Drama", color: "bg-blue-500/20" },
-      { id: 10749, name: "Romance", color: "bg-pink-500/20" },
-      { id: 10751, name: "Família", color: "bg-green-500/20" },
-    ],
-  },
-  {
-    name: "Fantasia e Ficção",
-    icon: "✨",
-    genres: [
-      { id: 14, name: "Fantasia", color: "bg-purple-500/20" },
-      { id: 878, name: "Ficção Científica", color: "bg-indigo-500/20" },
-      { id: 16, name: "Animação", color: "bg-cyan-500/20" },
-    ],
-  },
-  {
-    name: "Outros Gêneros",
-    icon: "🎪",
-    genres: [
-      { id: 35, name: "Comédia", color: "bg-yellow-400/20" },
-      { id: 27, name: "Terror", color: "bg-red-900/20" },
-      { id: 9648, name: "Mistério", color: "bg-violet-500/20" },
-    ],
-  },
-];
-
-const moodEmojis: Record<string, string> = {
-  happy: "😊",
-  sad: "😢",
-  excited: "🤩",
-  relaxed: "😌",
-  romantic: "🥰",
-  thoughtful: "🤔",
-  energetic: "⚡",
-  nostalgic: "🌟",
-  adventurous: "🌎",
-  mysterious: "🔍",
-};
-
 const Dashboard = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const isMobile = useIsMobile();
   const { toast } = useToast();
   const [trendingContent, setTrendingContent] = useState<ContentItem[]>([]);
@@ -187,45 +113,11 @@ const Dashboard = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isExpanded, setIsExpanded] = useState(false);
   const [showTrailerModal, setShowTrailerModal] = useState(false);
-  const [showMoodOverlay, setShowMoodOverlay] = useState(false);
   const [isTrailerAnimating, setIsTrailerAnimating] = useState(false);
   const getMoodName = (mood: MoodType): string => {
     return moodNames[mood] || mood;
   };
-  const [showGenreModal, setShowGenreModal] = useState(false);
   const [genre, setGenre] = useState<{ id: number; name: string } | null>(null);
-
-  // iOS/WebKit lets a touch-scroll gesture drag position:fixed overlays
-  // along with the page behind them instead of keeping them pinned — happens
-  // even with a clean ancestor chain, seemingly tied to backdrop-filter on
-  // the fixed element. `overflow: hidden` alone does NOT stop touch
-  // scrolling on iOS Safari/WKWebView (a long-documented WebKit quirk) — the
-  // body must actually be taken out of the scrollable flow via
-  // position:fixed, with the scroll offset preserved and restored by hand,
-  // since fixing position resets it to the top.
-  useEffect(() => {
-    if (showMoodOverlay || showGenreModal) {
-      const scrollY = window.scrollY;
-      const body = document.body;
-      const previous = {
-        position: body.style.position,
-        top: body.style.top,
-        width: body.style.width,
-        overflow: body.style.overflow,
-      };
-      body.style.position = "fixed";
-      body.style.top = `-${scrollY}px`;
-      body.style.width = "100%";
-      body.style.overflow = "hidden";
-      return () => {
-        body.style.position = previous.position;
-        body.style.top = previous.top;
-        body.style.width = previous.width;
-        body.style.overflow = previous.overflow;
-        window.scrollTo(0, scrollY);
-      };
-    }
-  }, [showMoodOverlay, showGenreModal]);
   const [showAiChat, setShowAiChat] = useState(false);
   const [selectedContent, setSelectedContent] = useState<ContentItem | null>(
     null
@@ -470,6 +362,27 @@ const Dashboard = () => {
       }
     });
   };
+
+  // MoodSelectPage / GenreSelectPage are real pages (not modals — see their
+  // own comments for why), so a selection made there arrives back here as
+  // router state instead of a direct function call. Clearing the state
+  // (replace, no new history entry) stops the same selection re-firing on
+  // a later back/forward through this exact history entry.
+  useEffect(() => {
+    const state = location.state as { selectMood?: string; selectGenre?: { id: number; name: string } } | null;
+    if (!state?.selectMood && !state?.selectGenre) return;
+
+    if (state.selectMood) {
+      setSelectedMood(state.selectMood as MoodType);
+      trackEvent("mood_selected", { mood: state.selectMood, moodName: moodNames[state.selectMood as MoodType] });
+      handleMoodSelect(state.selectMood);
+    } else if (state.selectGenre) {
+      handleGenreSelect(state.selectGenre);
+    }
+
+    navigate(location.pathname, { replace: true, state: {} });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state]);
 
   const handleFirst = async () => {
     setIsLoadingRecommendation(true);
@@ -1255,7 +1168,7 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
                   if (isAnonymousUser) {
                     setShowSignupPromptModal(true);
                   } else {
-                    setShowMoodOverlay(true);
+                    navigate("/mood-select");
                   }
                 },
               },
@@ -1270,7 +1183,7 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
                   if (isAnonymousUser) {
                     setShowSignupPromptModal(true);
                   } else {
-                    setShowGenreModal(true);
+                    navigate("/genre-select");
                   }
                 },
               },
@@ -1338,66 +1251,6 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
           </div>
           </div>
         </div>
-        {showGenreModal && (
-          <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-filmeja-dark/90 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
-            >
-              <div className="p-6 md:p-8">
-                <div className="flex justify-between items-center mb-6 md:mb-8 sticky top-0 bg-filmeja-dark/90 py-2">
-                  <h2 className="text-xl md:text-2xl font-bold text-white">
-                    Escolha um Gênero
-                  </h2>
-                  <Button
-                    variant="ghost"
-                    onClick={() => setShowGenreModal(false)}
-                    className="text-gray-400 hover:text-white p-2 -mr-2"
-                  >
-                    <X className="w-6 h-6" />
-                  </Button>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-                  {genreCategories.map((category) => (
-                    <div key={category.name} className="space-y-4">
-                      <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                        <span>{category.icon}</span>
-                        {category.name}
-                      </h3>
-                      <div className="grid grid-cols-1 gap-3">
-                        {category.genres.map((genre) => (
-                          <motion.button
-                            key={genre.id}
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                            onClick={() => {
-                              handleGenreSelect(genre);
-                              setShowGenreModal(false);
-                            }}
-                            className={`${genre.color} p-4 rounded-xl text-left transition-all
-                           hover:bg-opacity-30 border border-white/10 backdrop-blur-sm
-                           group relative overflow-hidden`}
-                          >
-                            <div
-                              className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent
-                           translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500"
-                            />
-                            <span className="text-white font-medium">
-                              {genre.name}
-                            </span>
-                          </motion.button>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
         <ContentModal
           isOpen={showRecommendationModal}
           onOpenChange={setShowRecommendationModal}
@@ -1453,73 +1306,6 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
           </div>
         )}
 
-        {showMoodOverlay && (
-          <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-gradient-to-br from-filmeja-dark/90 to-black/90 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-white/10"
-            >
-              <div className="p-6 md:p-8">
-                <div className="flex justify-between items-center mb-8 md:mb-10">
-                  <div>
-                    <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">
-                      Como você está se sentindo hoje? ✨
-                    </h2>
-                    <p className="text-gray-400 text-sm md:text-base">
-                      Escolha seu humor e deixe-nos encontrar o filme perfeito
-                      para você
-                    </p>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    onClick={() => setShowMoodOverlay(false)}
-                    className="text-gray-400 hover:text-white"
-                  >
-                    <X className="w-6 h-6" />
-                  </Button>
-                </div>
-
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-5">
-                  {Object.entries(moodNames).map(([mood, name]) => (
-                    <motion.button
-                      key={mood}
-                      whileHover={{ scale: 1.03 }}
-                      whileTap={{ scale: 0.97 }}
-                      onClick={() => {
-                        lightImpact();
-                        setSelectedMood(mood as MoodType);
-                        trackEvent("mood_selected", { mood, moodName: name });
-                        handleMoodSelect(mood);
-                        setShowMoodOverlay(false);
-                      }}
-                      className="p-4 rounded-xl transition-all
-        bg-white/5 hover:bg-white/10 border border-white/10
-        backdrop-blur-sm group relative overflow-hidden
-        hover:border-filmeja-purple/50 hover:shadow-lg hover:shadow-filmeja-purple/20
-        min-h-[64px] flex items-center"
-                    >
-                      <div
-                        className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent
-        translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500"
-                      />
-                      <div className="flex items-center gap-2 w-full">
-                        <span className="text-2xl flex-shrink-0">
-                          {moodEmojis[mood] || "🎬"}
-                        </span>
-                        <span className="text-white font-medium text-base md:text-lg truncate">
-                          {name}
-                        </span>
-                      </div>
-                    </motion.button>
-                  ))}
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
-
         <PremiumPaymentModal
           isOpen={showPaymentModal}
           onClose={() => setShowPaymentModal(false)}
@@ -1548,7 +1334,6 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
           }}
           onContinueWithoutAccount={() => {
             setShowSignupPromptModal(false);
-            setShowMoodOverlay(false);
           }}
         />
 
