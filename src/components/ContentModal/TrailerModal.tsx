@@ -129,6 +129,7 @@ export const TrailerModal = ({
                         src={trailerUrl}
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                         allowFullScreen
+                        referrerPolicy="strict-origin-when-cross-origin"
                       />
                     </motion.div>
                   )}
@@ -197,6 +198,7 @@ export const TrailerModal = ({
                         src={trailerUrl}
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                         allowFullScreen
+                        referrerPolicy="strict-origin-when-cross-origin"
                       />
                     </motion.div>
                   )}

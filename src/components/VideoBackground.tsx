@@ -1,7 +1,12 @@
 
 import React, { useState, useEffect } from 'react';
+import { Capacitor } from '@capacitor/core';
 
 const TMDB_API_KEY = import.meta.env.VITE_TMDB_API_KEY;
+
+// See useTrailerHandler.ts for why this is iOS-only (YouTube error 153).
+const YOUTUBE_EMBED_HOST =
+  Capacitor.getPlatform() === 'ios' ? 'https://www.youtube-nocookie.com' : 'https://www.youtube.com';
 
 const VideoBackground = () => {
   const [videoLoaded, setVideoLoaded] = useState<boolean>(false);
@@ -23,7 +28,7 @@ const VideoBackground = () => {
         );
         const videoData = await videoResponse.json();
         const trailer = videoData.results.find((v: any) => v.type === "Trailer");
-        return trailer ? `https://www.youtube.com/embed/${trailer.key}?autoplay=1&controls=0&mute=1&loop=1` : null;
+        return trailer ? `${YOUTUBE_EMBED_HOST}/embed/${trailer.key}?autoplay=1&controls=0&mute=1&loop=1` : null;
       });
 
       const urls = (await Promise.all(trailerPromises)).filter(Boolean);
@@ -58,6 +63,7 @@ const VideoBackground = () => {
           allow="autoplay; encrypted-media"
           allowFullScreen
           frameBorder="0"
+          referrerPolicy="strict-origin-when-cross-origin"
         />
       )}
     </div>
