@@ -2,6 +2,8 @@ import { Capacitor } from "@capacitor/core";
 import { SocialLogin } from "@capgo/capacitor-social-login";
 import { supabase } from "@/integrations/supabase/client";
 
+const isIOS = Capacitor.getPlatform() === "ios";
+
 const GOOGLE_WEB_CLIENT_ID = import.meta.env.VITE_GOOGLE_WEB_CLIENT_ID as string | undefined;
 const GOOGLE_IOS_CLIENT_ID = import.meta.env.VITE_GOOGLE_IOS_CLIENT_ID as string | undefined;
 
@@ -49,9 +51,17 @@ async function loginWithGoogleNative() {
   // Don't pass custom `scopes` here: the Android provider rejects any custom
   // scope unless MainActivity implements ModifiedMainActivityForSocialLoginPlugin.
   // The default scopes (openid, email, profile) are enough for Supabase's idToken sign-in.
+  //
+  // iOS only: forcePrompt makes the native SDK always show the account
+  // picker. Without it, once there's a previous native sign-in cached on
+  // the device (e.g. from an earlier successful login), the plugin silently
+  // restores that session instead — a path that never sees the nonce we
+  // just generated above, so it either logs in with a stale/missing nonce
+  // or fails outright with no picker ever shown. Android has no such silent
+  // restore path, so this is left off there.
   const { result } = await SocialLogin.login({
     provider: "google",
-    options: { nonce: hashedNonce },
+    options: { nonce: hashedNonce, ...(isIOS ? { forcePrompt: true } : {}) },
   });
 
   const idToken = "idToken" in result ? result.idToken : undefined;
