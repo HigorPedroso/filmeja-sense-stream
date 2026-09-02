@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, type ReactNode } from "react";
+import { Capacitor } from "@capacitor/core";
 import { Button } from "@/components/ui/button";
 import { Send, Target, Clock, Users, Shuffle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -6,6 +7,12 @@ import { addToWatchHistory } from "@/lib/utils/watch-history";
 import { searchContentByTitle, fetchContentWithProviders } from "@/lib/utils/tmdb";
 import { supabase } from "@/integrations/supabase/client";
 import { getConversation, saveConversation, deriveTitle } from "@/lib/filminConversations";
+
+// iOS/WKWebView zooms the whole page in on focus whenever the focused
+// input's font-size is under 16px — Android has no such behavior. Forcing
+// 16px (text-base) only on iOS avoids the zoom without touching Android's
+// existing text-sm-on-mobile sizing.
+const isIOS = Capacitor.getPlatform() === "ios";
 
 // How many times we'll ask the AI for a different title before giving up and
 // showing a plain response with no recommendation attached. Each attempt
@@ -403,7 +410,9 @@ IMPORTANTE:
             onChange={(e) => setInput(e.target.value)}
             onKeyPress={(e) => e.key === "Enter" && handleSend()}
             placeholder="Pergunte qualquer coisa..."
-            className="flex-1 bg-transparent text-white py-2 text-sm md:text-base placeholder:text-gray-400 focus:outline-none"
+            className={`flex-1 bg-transparent text-white py-2 placeholder:text-gray-400 focus:outline-none ${
+              isIOS ? "text-base" : "text-sm md:text-base"
+            }`}
           />
           <button
             onClick={() => handleSend()}
