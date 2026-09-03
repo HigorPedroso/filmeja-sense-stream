@@ -1,0 +1,35 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<title>Trailer</title>
+<style>
+  html, body { margin: 0; padding: 0; background: #000; height: 100%; overflow: hidden; }
+  iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+</style>
+</head>
+<body>
+<script>
+  // Proxy page for YouTube embeds on iOS (see src/lib/youtubeEmbed.ts).
+  // Since July 2025, YouTube requires the embed's `origin` param to match a
+  // real, publicly resolvable domain — WKWebView's own origin under
+  // Capacitor (https://localhost) is rejected outright, which is what
+  // causes error 153. Serving this page from the real filmeja.com.br
+  // domain gives the nested YouTube iframe a legitimate origin/referrer.
+  var params = new URLSearchParams(window.location.search);
+  var videoId = params.get("v");
+  var embedQs = params.get("embed_qs") || "";
+  var embedPath = videoId ? "/embed/" + encodeURIComponent(videoId) : "/embed";
+  var embedParams = new URLSearchParams(embedQs);
+  embedParams.set("origin", window.location.origin);
+  var iframe = document.createElement("iframe");
+  iframe.src = "https://www.youtube-nocookie.com" + embedPath + "?" + embedParams.toString();
+  iframe.referrerPolicy = "strict-origin-when-cross-origin";
+  iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
+  iframe.allowFullscreen = true;
+  document.body.appendChild(iframe);
+</script>
+</body>
+</html>
