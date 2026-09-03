@@ -119,5 +119,11 @@ verify_jwt = false
 # matches ("X% compatible with you").
 [functions.send-title-compatibility]
 
+# Serves the YouTube-embed proxy HTML page loaded in an <iframe src="...">
+# on iOS (see src/lib/youtubeEmbed.ts) — a plain iframe navigation can't
+# attach an Authorization header, so this must stay publicly callable.
+[functions.youtube-embed]
+verify_jwt = false
+
 [realtime]
 enabled = false
