@@ -1,7 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Capacitor } from '@capacitor/core';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { getContentDetails } from '@/lib/tmdb';
@@ -9,10 +8,7 @@ import { Button } from '@/components/ui/button';
 import { ContentDetails as ContentDetailsType } from '@/types/movie';
 import { Heart } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-
-// See useTrailerHandler.ts for why this is iOS-only (YouTube error 153).
-const isIOS = Capacitor.getPlatform() === 'ios';
-const YOUTUBE_EMBED_HOST = isIOS ? 'https://www.youtube-nocookie.com' : 'https://www.youtube.com';
+import { buildYoutubeEmbedUrl } from '@/lib/youtubeEmbed';
 
 const ContentDetails = () => {
   const { type, id } = useParams<{ type: string; id: string }>();
@@ -196,7 +192,7 @@ const ContentDetails = () => {
               <iframe 
                 width="100%" 
                 height="100%" 
-                src={`${YOUTUBE_EMBED_HOST}/embed/${content.trailer_key}${isIOS ? `?origin=${encodeURIComponent(window.location.origin)}` : ""}`}
+                src={buildYoutubeEmbedUrl(content.trailer_key, "")}
                 title={`${content.title} Trailer`}
                 frameBorder="0"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"

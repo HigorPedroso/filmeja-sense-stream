@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { Capacitor } from "@capacitor/core";
+import { buildYoutubeEmbedUrl } from "@/lib/youtubeEmbed";
 
 interface ContentData {
   title?: string;
@@ -8,18 +8,6 @@ interface ContentData {
   videos?: { key: string }[];
   mediaType?: "movie" | "tv";
 }
-
-// Late-2025 YouTube change now requires a proper Referer header on embeds
-// (error 153, "video player configuration error"). iOS/WKWebView doesn't
-// send that header the same way a real browser does, unlike Android's
-// WebView. Switching to youtube-nocookie.com alone is unreliable on its
-// own (confirmed by multiple reports of the same fix) — the piece that
-// actually matters is an explicit `origin` param telling YouTube which
-// origin is legitimately embedding it, which WKWebView never supplies on
-// its own. Android already works and is left untouched.
-const isIOS = Capacitor.getPlatform() === "ios";
-const YOUTUBE_EMBED_HOST = isIOS ? "https://www.youtube-nocookie.com" : "https://www.youtube.com";
-const YOUTUBE_ORIGIN_PARAM = isIOS ? `&origin=${encodeURIComponent(window.location.origin)}` : "";
 
 export const useTrailerHandler = (contentData: ContentData) => {
   const [showTrailerModal, setShowTrailerModal] = useState(false);
@@ -34,7 +22,7 @@ export const useTrailerHandler = (contentData: ContentData) => {
     try {
       if (contentData.videos && contentData.videos.length > 0) {
         setTrailerSource("tmdb");
-        const url = `${YOUTUBE_EMBED_HOST}/embed/${contentData.videos[0]?.key}?autoplay=1${YOUTUBE_ORIGIN_PARAM}`;
+        const url = buildYoutubeEmbedUrl(contentData.videos[0]?.key ?? null, "autoplay=1");
         setTrailerUrl(url);
       } else {
         setTrailerSource("youtube");
@@ -50,7 +38,7 @@ export const useTrailerHandler = (contentData: ContentData) => {
 
   const getTrailerUrl = async () => {
     if (trailerSource === "tmdb" && contentData.videos && contentData.videos.length > 0) {
-      return `${YOUTUBE_EMBED_HOST}/embed/${contentData.videos[0]?.key}?autoplay=1${YOUTUBE_ORIGIN_PARAM}`;
+      return buildYoutubeEmbedUrl(contentData.videos[0]?.key ?? null, "autoplay=1");
     }
 
     const title = contentData.title || contentData.name || "";
@@ -68,13 +56,13 @@ export const useTrailerHandler = (contentData: ContentData) => {
 
       if (data.items && data.items.length > 0) {
         const videoId = data.items[0].id.videoId;
-        return `${YOUTUBE_EMBED_HOST}/embed/${videoId}?autoplay=1${YOUTUBE_ORIGIN_PARAM}`;
+        return buildYoutubeEmbedUrl(videoId, "autoplay=1");
       }
     } catch (error) {
       console.error("Error fetching trailer:", error);
     }
 
-    return `${YOUTUBE_EMBED_HOST}/embed?listType=search&list=${searchQuery}&autoplay=1${YOUTUBE_ORIGIN_PARAM}`;
+    return buildYoutubeEmbedUrl(null, `listType=search&list=${searchQuery}&autoplay=1`);
   };
 
   const closeTrailerModal = () => {
