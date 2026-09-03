@@ -16,7 +16,7 @@
   // Since July 2025, YouTube requires the embed's `origin` param to match a
   // real, publicly resolvable domain — WKWebView's own origin under
   // Capacitor (https://localhost) is rejected outright, which is what
-  // causes error 153. Serving this page from the real filmeja.com.br
+  // causes error 153. Serving this page from the real filmeja.netlify.app
   // domain gives the nested YouTube iframe a legitimate origin/referrer.
   var params = new URLSearchParams(window.location.search);
   var videoId = params.get("v");

@@ -3,14 +3,16 @@ import { Capacitor } from "@capacitor/core";
 const isIOS = Capacitor.getPlatform() === "ios";
 
 // public/youtube-embed.html — a static page (served from the real
-// filmeja.com.br domain via Netlify) embedding the real YouTube iframe.
-// A Supabase Edge Function was tried first, but Supabase forces HTML
+// filmeja.netlify.app domain, per README's "Hospedagem: Netlify" — the
+// filmeja.com.br apex domain turned out to point at an unrelated, older
+// site, not this Netlify deploy) embedding the real YouTube iframe. A
+// Supabase Edge Function was tried first, but Supabase forces HTML
 // responses on the shared *.supabase.co domain down to Content-Type:
 // text/plain with a locked-down CSP (an anti-phishing platform
 // restriction), so the browser rendered the proxy page as raw text
 // instead of an iframe. A static file on our own real domain has no such
 // restriction.
-const YOUTUBE_PROXY_BASE = "https://filmeja.com.br/youtube-embed.html";
+const YOUTUBE_PROXY_BASE = "https://filmeja.netlify.app/youtube-embed.html";
 
 // Builds a YouTube embed iframe src. `qs` is a raw, already-encoded query
 // string (e.g. "autoplay=1" or "listType=search&list=<encoded>&autoplay=1").
