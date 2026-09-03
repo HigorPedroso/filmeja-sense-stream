@@ -57,7 +57,14 @@ export async function logoutPurchases() {
 }
 
 export async function getCurrentOffering(): Promise<PurchasesOffering | null> {
-  if (!Capacitor.isNativePlatform() || !configurePromise) return null;
+  if (!Capacitor.isNativePlatform()) return null;
+  if (!configurePromise) {
+    // Purchases.configure() was never even attempted — the platform's API
+    // key came back empty from import.meta.env. Thrown (not returned as
+    // null) so callers can tell "SDK never configured" apart from "SDK
+    // configured but the store has no current offering".
+    throw new Error("RevenueCat API key ausente para esta plataforma (import.meta.env)");
+  }
   await configurePromise;
   const offerings = await Purchases.getOfferings();
   return offerings.current;

@@ -41,6 +41,7 @@ export function PremiumPaywallContent({ onClose, className }: PremiumPaywallCont
   const { toast } = useToast();
   const [selectedPlan, setSelectedPlan] = useState<"monthly" | "annual">("annual");
   const [offering, setOffering] = useState<PurchasesOffering | null>(null);
+  const [offeringError, setOfferingError] = useState<string | null>(null);
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
 
@@ -49,8 +50,20 @@ export function PremiumPaywallContent({ onClose, className }: PremiumPaywallCont
   useEffect(() => {
     if (!isNative) return;
     getCurrentOffering()
-      .then(setOffering)
-      .catch((error) => console.error("[purchases] failed to load offering", error));
+      .then((result) => {
+        setOffering(result);
+        if (!result) setOfferingError("Nenhuma offering \"current\" retornada pelo RevenueCat.");
+      })
+      .catch((error) => {
+        console.error("[purchases] failed to load offering", error);
+        // Temporary: surface the raw RevenueCat/StoreKit error on screen so we
+        // can diagnose the iOS "planos indisponíveis" report without device
+        // console access. Remove once the root cause is fixed.
+        const detail = [error?.code, error?.message || error?.underlyingErrorMessage]
+          .filter(Boolean)
+          .join(": ");
+        setOfferingError(detail || String(error));
+      });
   }, [isNative]);
 
   const monthlyPackage = offering?.monthly ?? null;
@@ -84,7 +97,9 @@ export function PremiumPaywallContent({ onClose, className }: PremiumPaywallCont
     if (!selectedPackage) {
       toast({
         title: "Planos indisponíveis",
-        description: "Não foi possível carregar os planos agora. Tente novamente em instantes.",
+        description: offeringError
+          ? `Não foi possível carregar os planos agora. Detalhe: ${offeringError}`
+          : "Não foi possível carregar os planos agora. Tente novamente em instantes.",
         variant: "destructive",
       });
       return;
@@ -250,6 +265,12 @@ export function PremiumPaywallContent({ onClose, className }: PremiumPaywallCont
           </div>
         </button>
       </div>
+
+      {offeringError && (
+        <p className="text-xs text-red-400 text-center mb-3 break-words">
+          Debug: {offeringError}
+        </p>
+      )}
 
       <Button
         onClick={handleSubscribe}
