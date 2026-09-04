@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { buildYoutubeEmbedUrl } from "@/lib/youtubeEmbed";
+import { getTmdbLanguage } from "@/lib/tmdbLanguage";
 
 interface ContentData {
   title?: string;
@@ -45,8 +46,11 @@ export const useTrailerHandler = (contentData: ContentData) => {
     const mediaType = contentData.mediaType || "movie";
 
     const apiKey = "AIzaSyB0F3SGk2QWvSg5pBr96a_mTu8SzZ4yAfA";
+    const isEnglish = getTmdbLanguage() === "en-US";
     const searchQuery = encodeURIComponent(
-      `${title} ${mediaType === "movie" ? "filme" : "série"} trailer oficial`
+      isEnglish
+        ? `${title} ${mediaType === "movie" ? "movie" : "show"} official trailer`
+        : `${title} ${mediaType === "movie" ? "filme" : "série"} trailer oficial`
     );
     const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=1&q=${searchQuery}&key=${apiKey}`;
 

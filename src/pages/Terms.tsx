@@ -1,29 +1,38 @@
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
+import { X } from "lucide-react";
 import Footer from "@/components/Footer";
 import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { ptBR, enUS, es } from "date-fns/locale";
+import { getTmdbLanguage } from "@/lib/tmdbLanguage";
 
 const Terms = () => {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
   const sections = [
     {
-      title: "1. Definições",
-      content: [
-        "FilmeJá: Serviço de software como serviço (SaaS), acessado por meio da internet, que oferece recomendações personalizadas de filmes e séries utilizando inteligência artificial.",
-        "Usuário: Qualquer pessoa física ou jurídica que acesse ou utilize os serviços do FilmeJá.",
-        "Assinatura: Plano pago que garante acesso às funcionalidades da plataforma."
-      ]
+      title: t("terms.sections.definitions.title"),
+      content: t("terms.sections.definitions.content", { returnObjects: true }) as string[],
     },
     {
-      title: "2. Aceitação dos Termos",
-      content: [
-        "Ao utilizar a Plataforma, você declara que leu, entendeu e concorda integralmente com estes Termos. Caso não concorde com alguma cláusula, você deve descontinuar imediatamente o uso da Plataforma."
-      ]
+      title: t("terms.sections.acceptance.title"),
+      content: t("terms.sections.acceptance.content", { returnObjects: true }) as string[],
     },
     // Add all other sections similarly...
   ];
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-filmeja-dark via-black to-filmeja-dark">
+      <button
+        type="button"
+        onClick={() => navigate(-1)}
+        aria-label={t("common.close")}
+        className="fixed z-50 right-4 w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm flex items-center justify-center text-white transition-colors"
+        style={{ top: "max(1rem, env(safe-area-inset-top))" }}
+      >
+        <X className="w-5 h-5" />
+      </button>
       <div className="max-w-4xl mx-auto px-4 py-16">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -31,10 +40,14 @@ const Terms = () => {
           className="text-center mb-16"
         >
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
-            Termos de Uso
+            {t("terms.title")}
           </h1>
           <p className="text-gray-400">
-            Última atualização: {format(new Date(), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+            {t("terms.lastUpdated", {
+              date: format(new Date(), "PPP", {
+                locale: getTmdbLanguage() === "en-US" ? enUS : getTmdbLanguage() === "es-MX" ? es : ptBR,
+              }),
+            })}
           </p>
         </motion.div>
 
@@ -45,9 +58,7 @@ const Terms = () => {
           className="bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 p-8 mb-8"
         >
           <p className="text-gray-300 leading-relaxed">
-            Bem-vindo ao FilmeJá! Ao acessar e utilizar a plataforma FilmeJá (doravante "Plataforma"), 
-            você concorda com os termos e condições descritos neste documento. Por favor, leia atentamente 
-            estes Termos de Uso antes de utilizar nossos serviços.
+            {t("terms.intro")}
           </p>
         </motion.div>
 
@@ -81,10 +92,9 @@ const Terms = () => {
           className="mt-8 text-center text-gray-400"
         >
           <p>
-            Para dúvidas, sugestões ou solicitações relacionadas aos Termos de Uso, 
-            entre em contato conosco pelo e-mail:{" "}
-            <a 
-              href="mailto:suporte@filmeja.com" 
+            {t("terms.contactPrefix")}{" "}
+            <a
+              href="mailto:suporte@filmeja.com"
               className="text-filmeja-purple hover:text-filmeja-purple/80 transition-colors"
             >
               suporte@filmeja.com

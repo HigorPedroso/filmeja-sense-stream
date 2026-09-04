@@ -1,12 +1,21 @@
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { genreCategories } from "@/lib/recommendations/moodGenreData";
 
+// Parallel to genreCategories (same order) — only for picking the display
+// translation key. genreCategories itself stays untouched (Portuguese
+// names) since the selected genre's `name` is fed straight into the AI
+// recommendation prompt in fetchGenreRecommendation; translating it there
+// would change what gets sent to the model, not just what's displayed.
+const CATEGORY_KEYS = ["actionAdventure", "dramaEmotion", "fantasySciFi", "more"] as const;
+
 // A real page instead of a fixed-position modal over the dashboard — see
 // MoodSelectPage.tsx for why.
 const GenreSelectPage = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   const handleSelect = (genre: { id: number; name: string }) => {
@@ -27,7 +36,7 @@ const GenreSelectPage = () => {
       <div className="max-w-4xl mx-auto">
         <div className="flex justify-between items-center mb-6 md:mb-8">
           <h1 className="text-xl md:text-2xl font-bold text-white">
-            Escolha um Gênero
+            {t("genreSelect.title")}
           </h1>
           <Button
             variant="ghost"
@@ -39,11 +48,11 @@ const GenreSelectPage = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-          {genreCategories.map((category) => (
+          {genreCategories.map((category, categoryIndex) => (
             <div key={category.name} className="space-y-4">
               <h3 className="text-lg font-semibold text-white flex items-center gap-2">
                 <span>{category.icon}</span>
-                {category.name}
+                {t(`genreCategory.${CATEGORY_KEYS[categoryIndex]}`, { defaultValue: category.name })}
               </h3>
               <div className="grid grid-cols-1 gap-3">
                 {category.genres.map((genre) => (
@@ -61,7 +70,7 @@ const GenreSelectPage = () => {
                    translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500"
                     />
                     <span className="text-white font-medium">
-                      {genre.name}
+                      {t(`genre.${genre.id}`, { defaultValue: genre.name })}
                     </span>
                   </motion.button>
                 ))}

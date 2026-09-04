@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Film, Home, Clock, Heart, Star, User, LogOut } from "lucide-react";
@@ -26,6 +27,7 @@ import { SignupPromptModal } from "./modals/SignupPromptModal";
 import { SignupModal } from "./modals/SignupModal";
 import { useRecommendationResult } from "@/hooks/useRecommendationResult";
 import { usePremiumStatus } from "@/hooks/usePremiumStatus";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 interface SidebarProps {
   isExpanded: boolean;
@@ -34,6 +36,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ isExpanded, setIsExpanded, onLogout }: SidebarProps) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [showAiChat, setShowAiChat] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -84,7 +87,7 @@ export function Sidebar({ isExpanded, setIsExpanded, onLogout }: SidebarProps) {
       const item = await searchContentByTitle(title, type, releaseYear);
       await fetchContentWithProviders(item, {
         showToast: false,
-        requireBrAvailability: true,
+        requireRegionAvailability: true,
         onContentFetched: setMoodRecommendation,
       });
     } catch (error) {
@@ -125,13 +128,13 @@ export function Sidebar({ isExpanded, setIsExpanded, onLogout }: SidebarProps) {
       if (error) throw error;
 
       toast({
-        title: "Conta criada com sucesso!",
-        description: "Enviamos um link de confirmação para o seu e-mail.",
+        title: t("sidebar.signupToast.title"),
+        description: t("sidebar.signupToast.description"),
       });
 
       setShowSignupModal(false);
     } catch (error: any) {
-      setSignupError(translateAuthError(error, "Erro ao criar conta. Tente novamente."));
+      setSignupError(translateAuthError(error, t("sidebar.signupErrorFallback")));
     } finally {
       setIsSigningUp(false);
     }
@@ -176,12 +179,12 @@ export function Sidebar({ isExpanded, setIsExpanded, onLogout }: SidebarProps) {
                 <Button
                   variant="ghost"
                   className="w-full justify-center py-3 text-gray-300 hover:bg-white/10 hover:text-white transition-colors"
-                  title="Início"
+                  title={t("sidebar.home")}
                   onClick={() => navigate("/dashboard")}
                 >
                   <Home className="w-5 h-5" />
                   {isExpanded && (
-                    <span className="ml-3 text-sm font-medium">Início</span>
+                    <span className="ml-3 text-sm font-medium">{t("sidebar.home")}</span>
                   )}
                 </Button>
 
@@ -201,7 +204,7 @@ export function Sidebar({ isExpanded, setIsExpanded, onLogout }: SidebarProps) {
                 <Button
                   variant="ghost"
                   className="w-full justify-center py-3 text-gray-300 hover:bg-white/10 hover:text-white transition-colors"
-                  title="Minha Lista"
+                  title={t("sidebar.myList")}
                   onClick={() => {
                     if (isAnonymousUser) {
                       setShowSignupPromptModal(true);
@@ -212,14 +215,14 @@ export function Sidebar({ isExpanded, setIsExpanded, onLogout }: SidebarProps) {
                 >
                   <Heart className="w-5 h-5" />
                   {isExpanded && (
-                    <span className="text-sm font-medium">Minha Lista</span>
+                    <span className="text-sm font-medium">{t("sidebar.myList")}</span>
                   )}
                 </Button>
 
                 <Button
                   variant="ghost"
                   className="w-full justify-center py-3 text-gray-300 hover:bg-white/10 hover:text-white transition-colors"
-                  title="Chat com IA"
+                  title={t("sidebar.aiChat")}
                   onClick={() => {
                     if (isAnonymousUser) {
                       setShowSignupPromptModal(true);
@@ -233,7 +236,7 @@ export function Sidebar({ isExpanded, setIsExpanded, onLogout }: SidebarProps) {
                   <MessageSquare className="w-5 h-5" />
                   {isExpanded && (
                     <span className="text-sm font-medium">
-                      Converse com Filmin.AI
+                      {t("sidebar.aiChat")}
                     </span>
                   )}
                 </Button>
@@ -254,7 +257,7 @@ export function Sidebar({ isExpanded, setIsExpanded, onLogout }: SidebarProps) {
             <Button
               variant="ghost"
               className="w-full justify-center py-3 text-gray-300 hover:bg-white/10 hover:text-white transition-colors"
-              title="Minha Conta"
+              title={t("sidebar.myAccount")}
               onClick={() => {
                 if (isAnonymousUser) {
                   setShowSignupPromptModal(true);
@@ -265,7 +268,7 @@ export function Sidebar({ isExpanded, setIsExpanded, onLogout }: SidebarProps) {
             >
               <User className="w-5 h-5" />
               {isExpanded && (
-                <span className="text-sm font-medium">Minha Conta</span>
+                <span className="text-sm font-medium">{t("sidebar.myAccount")}</span>
               )}
             </Button>
 
@@ -279,7 +282,7 @@ export function Sidebar({ isExpanded, setIsExpanded, onLogout }: SidebarProps) {
                   <LogOut className="w-5 h-5 group-hover:text-filmeja-purple transition-colors" />
                   {isExpanded && (
                     <span className="text-sm font-medium group-hover:text-filmeja-purple transition-colors">
-                      Criar Conta
+                      {t("sidebar.createAccount")}
                     </span>
                   )}
                 </>
@@ -288,12 +291,17 @@ export function Sidebar({ isExpanded, setIsExpanded, onLogout }: SidebarProps) {
                   <LogOut className="w-5 h-5 group-hover:text-filmeja-purple transition-colors" />
                   {isExpanded && (
                     <span className="text-sm font-medium group-hover:text-filmeja-purple transition-colors">
-                      Sair
+                      {t("sidebar.signOut")}
                     </span>
                   )}
                 </>
               )}
             </Button>
+
+            <LanguageSwitcher
+              showLabel={isExpanded}
+              className="w-full flex items-center justify-center gap-2 py-3 mt-1 text-gray-300 hover:bg-white/10 hover:text-white transition-colors rounded-md"
+            />
           </div>
         </div>
         <Dialog open={showSignupModal} onOpenChange={setShowSignupModal}>
@@ -301,31 +309,27 @@ export function Sidebar({ isExpanded, setIsExpanded, onLogout }: SidebarProps) {
             <DialogHeader>
               <DialogTitle className="text-2xl font-bold flex items-center gap-2">
                 <Sparkles className="w-6 h-6 text-filmeja-purple" />
-                Crie sua conta
+                {t("sidebar.signupDialog.title")}
               </DialogTitle>
               <DialogDescription className="text-gray-300">
-                Salve suas preferências e continue descobrindo filmes e séries
-                incríveis!
+                {t("sidebar.signupDialog.description")}
               </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-4 py-2">
-              <p>
-                Você está usando uma conta temporária. Crie uma conta permanente
-                para:
-              </p>
+              <p>{t("sidebar.signupDialog.intro")}</p>
               <ul className="space-y-2">
                 <li className="flex items-center gap-2">
                   <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
-                  <span>Salvar suas preferências e histórico</span>
+                  <span>{t("sidebar.signupDialog.benefitSaveHistory")}</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
-                  <span>Criar sua lista de favoritos</span>
+                  <span>{t("sidebar.signupDialog.benefitFavorites")}</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
-                  <span>Receber recomendações personalizadas</span>
+                  <span>{t("sidebar.signupDialog.benefitPersonalizedRecs")}</span>
                 </li>
               </ul>
             </div>
@@ -338,14 +342,14 @@ export function Sidebar({ isExpanded, setIsExpanded, onLogout }: SidebarProps) {
                 }}
                 className="flex-1 bg-gradient-to-r from-filmeja-purple to-filmeja-blue"
               >
-                Criar minha conta
+                {t("sidebar.signupDialog.createAccountCta")}
               </Button>
               <Button
                 variant="outline"
                 onClick={() => setShowSignupModal(false)}
                 className="flex-1 border-white/20 text-white hover:bg-white/10"
               >
-                Continuar como visitante
+                {t("sidebar.signupDialog.continueAsGuest")}
               </Button>
             </DialogFooter>
           </DialogContent>

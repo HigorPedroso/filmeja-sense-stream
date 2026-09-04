@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -10,32 +11,7 @@ import { cn } from "@/lib/utils";
 // unused) taste-preferences questionnaire shown after login.
 export const WELCOME_SEEN_KEY = "filmeja_welcome_seen";
 
-const slides = [
-  {
-    heroImage: "/onboarding1.png",
-    title: "Descubra seu próximo filme ou série",
-    accent: "filme ou série",
-    description: "Recomendações personalizadas em segundos, sem ficar horas rolando o catálogo.",
-  },
-  {
-    heroImage: "/onboarding2.png",
-    title: "Por humor ou por gênero",
-    accent: "humor ou por gênero",
-    description: "Escolha como você está se sentindo ou seu gênero favorito, e a IA encontra a sugestão certa.",
-  },
-  {
-    heroImage: "/onboarding3.png",
-    title: "Converse com o Filmin.IA",
-    accent: "Filmin.IA",
-    description: "Bate um papo com nossa IA e receba indicações sob medida, na hora, do jeito que você pedir.",
-  },
-  {
-    heroImage: "/onboarding4.png",
-    title: "Assista na hora certa",
-    accent: "hora certa",
-    description: "Veja exatamente onde está disponível — Netflix, Prime Video, Max e mais.",
-  },
-];
+const SLIDE_IMAGES = ["/onboarding1.png", "/onboarding2.png", "/onboarding3.png", "/onboarding4.png"];
 
 // Splits a title around its accent phrase and wraps that phrase in a
 // gradient highlight, so each slide has one punchy focal word instead of a
@@ -56,9 +32,16 @@ function AccentedTitle({ title, accent }: { title: string; accent?: string }) {
 }
 
 const Welcome = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
   const [direction, setDirection] = useState(1);
+  const translatedSlides = t("welcome.slides", { returnObjects: true }) as {
+    title: string;
+    accent: string;
+    description: string;
+  }[];
+  const slides = translatedSlides.map((slide, index) => ({ ...slide, heroImage: SLIDE_IMAGES[index] }));
   const isLastStep = step === slides.length - 1;
 
   const finish = () => {
@@ -112,7 +95,7 @@ const Welcome = () => {
             onClick={finish}
             className="ml-4 text-sm text-gray-400 hover:text-white shrink-0"
           >
-            Pular
+            {t("welcome.skip")}
           </button>
         )}
       </div>
@@ -157,7 +140,7 @@ const Welcome = () => {
           className="w-full h-14 text-lg font-semibold bg-gradient-to-r from-filmeja-purple to-filmeja-blue hover:opacity-90 shadow-lg shadow-filmeja-purple/30"
           onClick={goNext}
         >
-          {isLastStep ? "Começar" : "Próximo"}
+          {isLastStep ? t("welcome.getStarted") : t("welcome.next")}
         </Button>
       </div>
     </div>

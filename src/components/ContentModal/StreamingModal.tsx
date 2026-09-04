@@ -1,5 +1,6 @@
 
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { X, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ContentType } from "./types";
@@ -107,6 +108,7 @@ function getStreamingAppTarget(providerName: string): StreamingAppTarget | null 
 }
 
 export const StreamingModal = ({ isOpen, onClose, content }: StreamingModalProps) => {
+  const { t } = useTranslation();
   const [isClicking, setIsClicking] = useState(false);
   const { toast } = useToast();
 
@@ -133,8 +135,8 @@ export const StreamingModal = ({ isOpen, onClose, content }: StreamingModalProps
         console.error("canOpenUrl/openUrl threw", error);
       }
       toast({
-        title: `Você não tem o ${target.appName} instalado`,
-        description: "Instale o app para assistir diretamente por lá.",
+        title: t("result.streamingModal.appNotInstalledToast.title", { appName: target.appName }),
+        description: t("result.streamingModal.appNotInstalledToast.description"),
       });
       return;
     }
@@ -176,7 +178,7 @@ export const StreamingModal = ({ isOpen, onClose, content }: StreamingModalProps
         </Button>
 
         <h3 className="text-lg sm:text-xl font-semibold text-white mb-4 sm:mb-5">
-          Onde Assistir
+          {t("result.streamingModal.title")}
         </h3>
 
         <div className="space-y-3">
@@ -214,7 +216,7 @@ export const StreamingModal = ({ isOpen, onClose, content }: StreamingModalProps
 
         <div className="flex items-center justify-center my-4">
           <span className="text-white/60 text-sm font-medium px-4 py-2 rounded-full border border-white/10 bg-white/5">
-            ou
+            {t("result.streamingModal.or")}
           </span>
         </div>
 
@@ -232,7 +234,7 @@ export const StreamingModal = ({ isOpen, onClose, content }: StreamingModalProps
             transition={{ duration: 0.2 }}
           >
             <span className="text-lg font-semibold">
-              Tente alugar agora mesmo
+              {t("result.streamingModal.tryRenting")}
             </span>
           </motion.div>
           <motion.div

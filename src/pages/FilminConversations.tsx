@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import { ChevronLeft, ChevronRight, MessageSquare, Plus, Search, Trash2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { ptBR, enUS, es } from "date-fns/locale";
+import { getTmdbLanguage } from "@/lib/tmdbLanguage";
 import {
   getConversations,
   createConversation,
@@ -24,8 +26,21 @@ interface ConversationRowProps {
 }
 
 const ConversationRow = ({ conversation, isOpen, onOpenChange, onSelect, onDelete }: ConversationRowProps) => {
+  const { t } = useTranslation();
   const lastMessage = conversation.messages[conversation.messages.length - 1];
   const coverPosterPath = getConversationCoverPosterPath(conversation);
+  const tmdbLang = getTmdbLanguage();
+  // pt-BR's date-fns locale doesn't prefix a relative string the way
+  // en/es do with addSuffix, so it's built manually here — en-US and
+  // es-MX both read naturally with addSuffix (e.g. "5 minutes ago",
+  // "hace 5 minutos").
+  const relativeTime =
+    tmdbLang === "pt-BR"
+      ? `há ${formatDistanceToNow(new Date(conversation.updatedAt), { locale: ptBR }).replace(/^cerca de /, "")}`
+      : formatDistanceToNow(new Date(conversation.updatedAt), {
+          locale: tmdbLang === "es-MX" ? es : enUS,
+          addSuffix: true,
+        });
   // framer-motion's own tap/drag gesture resolution (info.offset /
   // info.velocity from onDragEnd + onTap) turned out unreliable on real
   // touch hardware — plain taps kept getting misread as drags. This tracks
@@ -45,7 +60,7 @@ const ConversationRow = ({ conversation, isOpen, onOpenChange, onSelect, onDelet
           className="w-full h-full flex flex-col items-center justify-center gap-1 text-white"
         >
           <Trash2 className="w-5 h-5" />
-          <span className="text-xs font-medium">Excluir</span>
+          <span className="text-xs font-medium">{t("filminChat.deleteAction")}</span>
         </button>
       </div>
 
@@ -93,12 +108,9 @@ const ConversationRow = ({ conversation, isOpen, onOpenChange, onSelect, onDelet
         <div className="flex-1 min-w-0">
           <h3 className="text-white font-semibold truncate">{conversation.title}</h3>
           <p className="text-gray-400 text-sm truncate">
-            {lastMessage ? lastMessage.text : "Nenhuma mensagem ainda"}
+            {lastMessage ? lastMessage.text : t("filminChat.noMessagesYet")}
           </p>
-          <p className="text-gray-500 text-xs mt-0.5">
-            há{" "}
-            {formatDistanceToNow(new Date(conversation.updatedAt), { locale: ptBR }).replace(/^cerca de /, "")}
-          </p>
+          <p className="text-gray-500 text-xs mt-0.5">{relativeTime}</p>
         </div>
         <ChevronRight className="w-4 h-4 text-gray-600 flex-shrink-0" />
       </motion.div>
@@ -107,6 +119,7 @@ const ConversationRow = ({ conversation, isOpen, onOpenChange, onSelect, onDelet
 };
 
 const FilminConversations = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [conversations, setConversations] = useState<FilminConversation[]>([]);
   const [query, setQuery] = useState("");
@@ -160,7 +173,7 @@ const FilminConversations = () => {
         >
           <ChevronLeft className="w-6 h-6" />
         </button>
-        <h1 className="text-lg font-semibold text-white">Conversas</h1>
+        <h1 className="text-lg font-semibold text-white">{t("filminChat.conversationsTitle")}</h1>
         <button
           onClick={handleNewChat}
           className="w-9 h-9 rounded-full bg-gradient-to-br from-filmeja-purple to-filmeja-blue flex items-center justify-center text-white flex-shrink-0"
@@ -176,7 +189,7 @@ const FilminConversations = () => {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Buscar em conversas"
+            placeholder={t("filminChat.searchPlaceholder")}
             className="flex-1 bg-transparent text-white text-sm placeholder:text-gray-400 focus:outline-none"
           />
         </div>
@@ -187,21 +200,21 @@ const FilminConversations = () => {
           conversations.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center px-6">
               <MessageSquare className="w-16 h-16 text-gray-600 mb-6" strokeWidth={1.5} />
-              <h2 className="text-xl font-bold text-white mb-2">Inicie sua primeira conversa</h2>
+              <h2 className="text-xl font-bold text-white mb-2">{t("filminChat.emptyState.title")}</h2>
               <p className="text-gray-400 text-sm mb-6 max-w-xs">
-                Toque no botão + para criar sua próxima conversa
+                {t("filminChat.emptyState.description")}
               </p>
               <button
                 onClick={handleNewChat}
                 className="flex items-center gap-1.5 text-filmeja-purple font-medium"
               >
                 <Plus className="w-4 h-4" />
-                Novo Chat
+                {t("filminChat.newChat")}
               </button>
             </div>
           ) : (
             <p className="text-gray-400 text-sm text-center py-8">
-              Nenhuma conversa encontrada para "{query}"
+              {t("filminChat.noSearchResults", { query })}
             </p>
           )
         ) : (

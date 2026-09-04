@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { Trans, useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Link, useNavigate } from 'react-router-dom';
@@ -19,6 +20,7 @@ const isNative = Capacitor.isNativePlatform();
 const isIOS = Capacitor.getPlatform() === 'ios';
 
 const Signup = () => {
+  const { t } = useTranslation();
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -64,8 +66,8 @@ const Signup = () => {
         if (error) throw error;
 
         toast({
-          title: 'Login bem-sucedido!',
-          description: 'Redirecionando para a dashboard...',
+          title: t('auth.toasts.loginSuccess.title'),
+          description: t('auth.toasts.loginSuccess.description'),
         });
       } else {
         // Sign up with email and password
@@ -82,16 +84,16 @@ const Signup = () => {
         if (error) throw error;
 
         toast({
-          title: 'Conta criada com sucesso!',
-          description: 'Verifique seu email e confirme sua conta...',
+          title: t('auth.toasts.signupSuccess.title'),
+          description: t('auth.toasts.signupSuccess.description'),
         });
       }
 
       // The redirect will happen automatically via onAuthStateChange
     } catch (error) {
       toast({
-        title: 'Erro!',
-        description: translateAuthError(error, 'Ocorreu um erro durante a autenticação.'),
+        title: t('auth.toasts.genericErrorTitle'),
+        description: translateAuthError(error, t('auth.toasts.authErrorFallback')),
         variant: 'destructive',
       });
     } finally {
@@ -108,8 +110,8 @@ const Signup = () => {
       // and the onAuthStateChange effect above navigates to /dashboard.
     } catch (error) {
       toast({
-        title: 'Erro!',
-        description: translateAuthError(error, 'Ocorreu um erro ao conectar com Google.'),
+        title: t('auth.toasts.genericErrorTitle'),
+        description: translateAuthError(error, t('auth.toasts.googleErrorFallback')),
         variant: 'destructive',
       });
       setGoogleLoading(false);
@@ -124,8 +126,8 @@ const Signup = () => {
       // navigates to /dashboard.
     } catch (error) {
       toast({
-        title: 'Erro!',
-        description: translateAuthError(error, 'Ocorreu um erro ao conectar com a Apple.'),
+        title: t('auth.toasts.genericErrorTitle'),
+        description: translateAuthError(error, t('auth.toasts.appleErrorFallback')),
         variant: 'destructive',
       });
       setAppleLoading(false);
@@ -147,7 +149,7 @@ const Signup = () => {
           className="absolute top-[max(1rem,env(safe-area-inset-top))] left-4 z-10 inline-flex items-center gap-1 text-sm text-gray-400 hover:text-white transition-colors"
         >
           <ChevronLeft className="h-4 w-4" />
-          Voltar ao site
+          {t('auth.backToSite')}
         </Link>
       )}
 
@@ -181,7 +183,7 @@ const Signup = () => {
                 isLogin ? 'bg-filmeja-purple text-white shadow' : 'text-gray-400 hover:text-white'
               )}
             >
-              Entrar
+              {t('auth.tabs.login')}
             </button>
             <button
               type="button"
@@ -192,17 +194,15 @@ const Signup = () => {
                 !isLogin ? 'bg-filmeja-purple text-white shadow' : 'text-gray-400 hover:text-white'
               )}
             >
-              Criar conta
+              {t('auth.tabs.signup')}
             </button>
           </div>
 
           <h2 className="text-lg font-bold text-white text-center mb-1">
-            {isLogin ? 'Bem-vindo de volta!' : 'Crie sua conta'}
+            {isLogin ? t('auth.welcomeBack') : t('auth.createAccountTitle')}
           </h2>
           <p className="text-sm text-gray-400 text-center mb-6">
-            {isLogin
-              ? 'Entre para continuar sua jornada cinematográfica'
-              : 'Comece sua jornada por apenas R$9,99/mês'}
+            {isLogin ? t('auth.subtitleLogin') : t('auth.subtitleSignup')}
           </p>
 
           <Button
@@ -217,7 +217,7 @@ const Signup = () => {
             ) : (
               <img src="/google.png" alt="" className="w-5 h-5 mr-2" />
             )}
-            Continuar com Google
+            {t('auth.continueWithGoogle')}
           </Button>
 
           {isIOS && (
@@ -233,7 +233,7 @@ const Signup = () => {
               ) : (
                 <Apple className="w-5 h-5 mr-2 fill-white" />
               )}
-              Continuar com Apple
+              {t('auth.continueWithApple')}
             </Button>
           )}
 
@@ -242,7 +242,7 @@ const Signup = () => {
               <span className="w-full border-t border-white/10" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-[#17131f] px-2 text-gray-500">ou continue com email</span>
+              <span className="bg-[#17131f] px-2 text-gray-500">{t('auth.orContinueWithEmail')}</span>
             </div>
           </div>
 
@@ -251,7 +251,7 @@ const Signup = () => {
               <div className="relative">
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
-                  placeholder="Nome completo"
+                  placeholder={t('auth.fullNamePlaceholder')}
                   className="h-12 pl-10 rounded-xl bg-white/5 border-white/10 text-white"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
@@ -265,7 +265,7 @@ const Signup = () => {
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
                 type="email"
-                placeholder="Email"
+                placeholder={t('auth.emailPlaceholder')}
                 className="h-12 pl-10 rounded-xl bg-white/5 border-white/10 text-white"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -279,7 +279,7 @@ const Signup = () => {
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
                 type={showPassword ? 'text' : 'password'}
-                placeholder="Senha"
+                placeholder={t('auth.passwordPlaceholder')}
                 className="h-12 pl-10 pr-10 rounded-xl bg-white/5 border-white/10 text-white"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -305,24 +305,22 @@ const Signup = () => {
               {loading ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
               ) : isLogin ? (
-                'Entrar'
+                t('auth.tabs.login')
               ) : (
-                'Criar conta'
+                t('auth.tabs.signup')
               )}
             </Button>
           </form>
         </div>
 
         <p className="text-xs text-gray-500 text-center mt-6 max-w-sm">
-          Ao continuar, você concorda com nossos{' '}
-          <Link to="/termos" className="text-filmeja-purple hover:underline">
-            Termos de Uso
-          </Link>{' '}
-          e{' '}
-          <Link to="/privacidade" className="text-filmeja-purple hover:underline">
-            Política de Privacidade
-          </Link>
-          .
+          <Trans
+            i18nKey="auth.termsAgreement"
+            components={{
+              terms: <Link to="/termos" className="text-filmeja-purple hover:underline" />,
+              privacy: <Link to="/privacidade" className="text-filmeja-purple hover:underline" />,
+            }}
+          />
         </p>
       </div>
     </div>

@@ -1,6 +1,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { Star, Heart, Check, Eye, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ContentType } from "./types";
@@ -29,6 +30,7 @@ export const ContentDetails = ({
   onNextSuggestion,
   onClose // Add this prop
 }: ContentDetailsProps) => {
+  const { t } = useTranslation();
   return (
     <div className="relative z-10">
       {/* Add close button at the top */}
@@ -58,7 +60,7 @@ export const ContentDetails = ({
                     : "bg-filmeja-blue text-white"
                 }`}
               >
-                {content.mediaType === "movie" ? "Filme" : "Série"}
+                {content.mediaType === "movie" ? t("result.badge.movie") : t("result.badge.tv")}
               </motion.div>
             </div>
             <img
@@ -110,15 +112,15 @@ export const ContentDetails = ({
 
           <div className="mt-4 space-y-2 text-xs md:text-sm">
             <div className="flex items-center justify-between text-sm text-gray-300">
-              <span>Lançamento:</span>
+              <span>{t("result.labels.release")}</span>
               <span>{content.release_date ? new Date(content.release_date).getFullYear() : 'N/A'}</span>
             </div>
             <div className="flex items-center justify-between text-sm text-gray-300">
-              <span>Duração:</span>
-              <span>{content.runtime ? `${content.runtime} minutos` : 'N/A'}</span>
+              <span>{t("result.labels.runtime")}</span>
+              <span>{content.runtime ? t("result.labels.runtimeMinutes", { count: content.runtime }) : 'N/A'}</span>
             </div>
             <div className="flex items-center justify-between text-sm text-gray-300">
-              <span>Idioma:</span>
+              <span>{t("result.labels.language")}</span>
               <span>{content.original_language?.toUpperCase() || 'N/A'}</span>
             </div>
           </div>
@@ -171,7 +173,7 @@ export const ContentDetails = ({
           {content.providers?.flatrate && content.providers.flatrate.length > 0 && (
             <div className="mb-6">
               <h3 className="text-white font-semibold mb-2">
-                Disponível em:
+                {t("result.availableOn")}
               </h3>
               <div className="flex flex-wrap gap-3">
                 {content.providers.flatrate.map((provider) => (
@@ -200,11 +202,11 @@ export const ContentDetails = ({
               disabled={!content.providers?.flatrate?.length && !content.isInTheaters}
             >
               <Play className="w-4 h-4 mr-2" />
-              {content.providers?.flatrate?.length 
-                ? "Assistir Agora" 
-                : content.isInTheaters 
-                  ? "Somente nos cinemas" 
-                  : "Assistir Agora"}
+              {content.providers?.flatrate?.length
+                ? t("result.watchNow")
+                : content.isInTheaters
+                  ? t("result.inTheatersOnly")
+                  : t("result.watchNow")}
             </Button>
             <motion.div whileTap={{ scale: 0.95 }} className="relative">
               <motion.div
@@ -236,7 +238,7 @@ export const ContentDetails = ({
                   transition={{ type: "spring", stiffness: 400, damping: 10 }}
                 >
                   <Play className="w-4 h-4 mr-2" />
-                  Ver Trailer
+                  {t("result.watchTrailer")}
                 </motion.div>
               </Button>
             </motion.div>
@@ -257,7 +259,7 @@ export const ContentDetails = ({
                     isFavorite ? "fill-filmeja-purple" : ""
                   }`}
                 />
-                {isFavorite ? "Remover dos Favoritos" : "Adicionar à Lista"}
+                {isFavorite ? t("result.removeFromList") : t("result.addToList")}
               </motion.div>
             </Button>
             <Button
@@ -280,11 +282,11 @@ export const ContentDetails = ({
                 <span className="ml-2">
                   {isWatched
                     ? content?.mediaType === "tv"
-                      ? "Já assisti todas as temporadas"
-                      : "Já assisti este filme"
+                      ? t("result.watchedAllSeasons")
+                      : t("result.watchedMovie")
                     : content?.mediaType === "tv"
-                    ? "Marcar todas temporadas como vistas"
-                    : "Marcar filme como visto"}
+                    ? t("result.markAllSeasonsWatched")
+                    : t("result.markMovieWatched")}
                 </span>
               </motion.div>
             </Button>
@@ -294,7 +296,7 @@ export const ContentDetails = ({
                 className="border-white/20 hover:bg-white/10"
                 onClick={onNextSuggestion}
               >
-                Próxima Sugestão
+                {t("result.nextSuggestion")}
               </Button>
             )}
           </div>

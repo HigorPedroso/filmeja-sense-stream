@@ -1,11 +1,13 @@
 
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { ContentType } from "./types";
 import { trackEvent } from "@/lib/analytics/trackEvent";
 
 export const useContentActions = (content: ContentType) => {
+  const { t } = useTranslation();
   const [isWatched, setIsWatched] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
   const [showStreamingModal, setShowStreamingModal] = useState(false);
@@ -52,8 +54,8 @@ export const useContentActions = (content: ContentType) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         toast({
-          title: "Erro",
-          description: "Você precisa estar logado para favoritar",
+          title: t("result.toasts.favoriteLoginRequired.title"),
+          description: t("result.toasts.favoriteLoginRequired.description"),
           variant: "destructive",
         });
         return;
@@ -68,8 +70,8 @@ export const useContentActions = (content: ContentType) => {
 
         setIsFavorite(false);
         toast({
-          title: "Removido",
-          description: "Conteúdo removido dos favoritos",
+          title: t("result.toasts.favoriteRemoved.title"),
+          description: t("result.toasts.favoriteRemoved.description"),
         });
       } else {
         await supabase.from("favorite_content").insert({
@@ -86,15 +88,15 @@ export const useContentActions = (content: ContentType) => {
           mediaType: content.mediaType,
         });
         toast({
-          title: "Adicionado",
-          description: "Conteúdo adicionado aos favoritos",
+          title: t("result.toasts.favoriteAdded.title"),
+          description: t("result.toasts.favoriteAdded.description"),
         });
       }
     } catch (error) {
       console.error("Error toggling favorite:", error);
       toast({
-        title: "Erro",
-        description: "Não foi possível atualizar os favoritos",
+        title: t("result.toasts.favoriteError.title"),
+        description: t("result.toasts.favoriteError.description"),
         variant: "destructive",
       });
     }
@@ -105,8 +107,8 @@ export const useContentActions = (content: ContentType) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         toast({
-          title: "Erro",
-          description: "Você precisa estar logado para marcar como assistido",
+          title: t("dashboard.toasts.watchedRequiresLogin.title"),
+          description: t("dashboard.toasts.watchedRequiresLogin.description"),
           variant: "destructive",
         });
         return;
@@ -121,8 +123,8 @@ export const useContentActions = (content: ContentType) => {
 
         setIsWatched(false);
         toast({
-          title: "Removido",
-          description: "Conteúdo removido da sua lista de assistidos",
+          title: t("result.toasts.watchedRemoved.title"),
+          description: t("result.toasts.watchedRemoved.description"),
         });
       } else {
         await supabase.from("watched_content").insert({
@@ -135,15 +137,15 @@ export const useContentActions = (content: ContentType) => {
 
         setIsWatched(true);
         toast({
-          title: "Marcado como assistido",
-          description: "Conteúdo adicionado à sua lista de assistidos",
+          title: t("result.toasts.watchedAdded.title"),
+          description: t("result.toasts.watchedAdded.description"),
         });
       }
     } catch (error) {
       console.error("Error marking content as watched:", error);
       toast({
-        title: "Erro",
-        description: "Não foi possível atualizar o status do conteúdo",
+        title: t("result.toasts.watchedError.title"),
+        description: t("result.toasts.watchedError.description"),
         variant: "destructive",
       });
     }
@@ -159,9 +161,8 @@ export const useContentActions = (content: ContentType) => {
       });
     } else {
       toast({
-        title: "Indisponível",
-        description:
-          "Este conteúdo não está disponível em nenhum serviço de streaming no momento.",
+        title: t("result.toasts.streamingUnavailable.title"),
+        description: t("result.toasts.streamingUnavailable.description"),
         variant: "destructive",
       });
     }

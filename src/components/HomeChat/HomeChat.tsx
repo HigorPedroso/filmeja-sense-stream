@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -27,77 +28,6 @@ interface Message {
   selectionStep?: number; // Add this line
 }
 
-const chatSteps: ChatStep[] = [
-  {
-    id: "favorite-genres",
-    question:
-      "Quais tipos de filmes ou séries você mais gosta de assistir? Selecione quantos quiser",
-    options: [
-      { value: "action", label: "Ação" },
-      { value: "comedy", label: "Comédia" },
-      { value: "romance", label: "Romance" },
-      { value: "horror", label: "Terror" },
-      { value: "psychological", label: "Drama" },
-      { value: "fantasy", label: "Fantasia" },
-      { value: "scifi", label: "Ficção" },
-      { value: "mystery", label: "Mistério" },
-      { value: "documentary", label: "Documentário" },
-      { value: "family", label: "Família" },
-    ],
-    multiSelect: true,
-  },
-  {
-    id: "content-preference",
-    question: "Você prefere?",
-    options: [
-      { value: "movies", label: "Filmes" },
-      { value: "series", label: "Séries" },
-      { value: "both", label: "Tanto faz" },
-    ],
-  },
-  {
-    id: "watch-duration",
-    question: "Por quanto tempo você geralmente assiste?",
-    options: [
-      { value: "30min", label: "Menos de 30 minutos" },
-      { value: "1h", label: "Até uma hora" },
-      { value: "1h+", label: "Mais de uma hora" },
-      { value: "exploring", label: "Estou só explorando" },
-    ],
-  },
-  {
-    id: "watch-time",
-    question: "Em que horário costuma assistir com mais frequência?",
-    options: [
-      { value: "morning", label: "Manhã" },
-      { value: "afternoon", label: "Tarde" },
-      { value: "night", label: "Noite" },
-      { value: "dawn", label: "Madrugada" },
-    ],
-  },
-];
-
-const signupSteps = {
-  method: {
-    question: "Como você prefere criar sua conta?",
-    options: [
-      { value: "google", label: "Continuar com Google" },
-      { value: "email", label: "Usar meu e-mail" },
-    ],
-  },
-  email: { question: "Digite seu melhor e-mail:" },
-  name: { question: "Como podemos te chamar?" },
-  password: { question: "Crie uma senha segura:" },
-};
-
-// Replace signupSteps with recommendationStep
-const recommendationStep = {
-  question: "Já tenho uma recomendação perfeita para você! 🎬",
-  options: [
-    { value: "get_recommendation", label: "Ver minha recomendação" }
-  ]
-};
-
 interface SignupData {
   email: string;
   name: string;
@@ -107,7 +37,10 @@ interface SignupData {
 // Add this import at the top
 import { useNavigate } from "react-router-dom";
 
+type SignupStepId = "method" | "email" | "name" | "password" | "recommendation";
+
 export function HomeChat({ onClose }: { onClose?: () => void }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentStep, setCurrentStep] = useState(-1);
@@ -115,9 +48,7 @@ export function HomeChat({ onClose }: { onClose?: () => void }) {
   const chatEndRef = useRef<HTMLDivElement>(null);
   const [signupData, setSignupData] = useState<Partial<SignupData>>({});
   const [inputValues, setInputValues] = useState<Record<string, string>>({});
-  const [currentSignupStep, setCurrentSignupStep] = useState<
-    keyof typeof signupSteps | null
-  >(null);
+  const [currentSignupStep, setCurrentSignupStep] = useState<SignupStepId | null>(null);
   const [inputValue, setInputValue] = useState("");
   // Add a state to store the user avatar URL
   const [userAvatar] = useState<string>(() => {
@@ -138,18 +69,76 @@ export function HomeChat({ onClose }: { onClose?: () => void }) {
     return `https://api.dicebear.com/7.x/${randomStyle}/svg?seed=${randomSeed}`;
   });
 
+  // Built from t() (not a module-level constant) so the questions/options
+  // reflect the current language — mirrors the QUICK_STARTERS pattern in
+  // AiChat.tsx. Option ids stay fixed across languages (they're stored in
+  // Supabase user metadata and localStorage as the onboarding business
+  // data), only the labels shown to the user change.
+  const chatSteps: ChatStep[] = [
+    {
+      id: "favorite-genres",
+      question: t("landingChat.questions.favoriteGenres.question"),
+      options: Object.entries(
+        t("landingChat.questions.favoriteGenres.options", { returnObjects: true }) as Record<string, string>
+      ).map(([value, label]) => ({ value, label })),
+      multiSelect: true,
+    },
+    {
+      id: "content-preference",
+      question: t("landingChat.questions.contentPreference.question"),
+      options: Object.entries(
+        t("landingChat.questions.contentPreference.options", { returnObjects: true }) as Record<string, string>
+      ).map(([value, label]) => ({ value, label })),
+    },
+    {
+      id: "watch-duration",
+      question: t("landingChat.questions.watchDuration.question"),
+      options: Object.entries(
+        t("landingChat.questions.watchDuration.options", { returnObjects: true }) as Record<string, string>
+      ).map(([value, label]) => ({ value, label })),
+    },
+    {
+      id: "watch-time",
+      question: t("landingChat.questions.watchTime.question"),
+      options: Object.entries(
+        t("landingChat.questions.watchTime.options", { returnObjects: true }) as Record<string, string>
+      ).map(([value, label]) => ({ value, label })),
+    },
+  ];
+
+  const signupSteps = {
+    method: {
+      question: t("landingChat.signup.method.question"),
+      options: [
+        { value: "google", label: t("landingChat.signup.method.google") },
+        { value: "email", label: t("landingChat.signup.method.email") },
+      ],
+    },
+    email: { question: t("landingChat.signup.email.question") },
+    name: { question: t("landingChat.signup.name.question") },
+    password: { question: t("landingChat.signup.password.question") },
+  };
+
+  const recommendationStep = {
+    question: t("landingChat.recommendation.message"),
+    options: [{ value: "get_recommendation", label: t("landingChat.recommendation.cta") }],
+  };
+
   useEffect(() => {
     // Initial welcome message
     setTimeout(() => {
       setMessages([
         {
           id: "0",
-          text: "Olá! Eu sou o Filmin.AI, sua inteligência recomendadora de filmes e séries. Posso te ajudar a escolher algo incrível hoje? Vamos lá!",
+          text: t("landingChat.greeting"),
           sender: "ai",
         },
       ]);
       setTimeout(() => addNextQuestion(0), 1000);
     }, 500);
+    // Runs once on mount only — t() below reads the language current at
+    // that moment, same as everywhere else this pattern is used.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const addNextQuestion = (step: number) => {
@@ -158,7 +147,7 @@ export function HomeChat({ onClose }: { onClose?: () => void }) {
         ...prev,
         {
           id: Date.now().toString(),
-          text: "Já tenho uma recomendação perfeita para você! 🎬\n\nClique no botão abaixo para ver o que escolhi especialmente para você:",
+          text: t("landingChat.recommendation.message"),
           sender: "ai",
           options: recommendationStep.options,
           currentStep: -1,
@@ -203,7 +192,7 @@ export function HomeChat({ onClose }: { onClose?: () => void }) {
           ...prev,
           {
             id: Date.now().toString(),
-            text: `São esses: ${selectedLabels.join(", ")}`,
+            text: t("landingChat.selectedSummary", { list: selectedLabels.join(", ") }),
             sender: "user",
             selectionStep: step,
           },
@@ -223,12 +212,12 @@ export function HomeChat({ onClose }: { onClose?: () => void }) {
             ...prev,
             {
               id: `continue-${step}`,
-              text: "Ótimo! Clique em continuar quando estiver pronto.",
+              text: t("landingChat.continuePrompt"),
               sender: "ai",
               options: [
                 {
                   value: "continue",
-                  label: "Continuar",
+                  label: t("landingChat.continueButton"),
                 },
               ],
               currentStep: step,
@@ -270,7 +259,7 @@ export function HomeChat({ onClose }: { onClose?: () => void }) {
         ...prev,
         {
           id: Date.now().toString(),
-          text: "Processando sua recomendação personalizada...",
+          text: t("landingChat.recommendation.processing"),
           sender: "ai",
         },
       ]);
@@ -296,7 +285,7 @@ export function HomeChat({ onClose }: { onClose?: () => void }) {
             ...prev,
             {
               id: Date.now().toString(),
-              text: "Ótimo! Redirecionando para o login com Google...",
+              text: t("landingChat.signup.googleRedirecting"),
               sender: "ai",
             },
           ]);
@@ -305,7 +294,7 @@ export function HomeChat({ onClose }: { onClose?: () => void }) {
             ...prev,
             {
               id: Date.now().toString(),
-              text: "Ops! Algo deu errado. Tente novamente ou use seu e-mail.",
+              text: t("landingChat.signup.googleError"),
               sender: "ai",
               options: signupSteps.method.options,
             },
@@ -333,7 +322,7 @@ export function HomeChat({ onClose }: { onClose?: () => void }) {
           ...prev,
           {
             id: Date.now().toString(),
-            text: "Por favor, digite um e-mail válido.",
+            text: t("landingChat.signup.email.invalid"),
             sender: "ai",
             requiresInput: true,
           },
@@ -356,7 +345,7 @@ export function HomeChat({ onClose }: { onClose?: () => void }) {
             },
             {
               id: Date.now().toString() + "1",
-              text: "Parece que você já tem uma conta! Vamos te redirecionar para o login...",
+              text: t("landingChat.signup.existingAccount"),
               sender: "ai",
             },
           ]);
@@ -393,7 +382,7 @@ export function HomeChat({ onClose }: { onClose?: () => void }) {
           ...prev,
           {
             id: Date.now().toString(),
-            text: "Por favor, digite um nome válido.",
+            text: t("landingChat.signup.name.invalid"),
             sender: "ai",
             requiresInput: true,
           },
@@ -460,7 +449,7 @@ export function HomeChat({ onClose }: { onClose?: () => void }) {
           ...prev,
           {
             id: Date.now().toString(),
-            text: "Cadastro realizado com sucesso! Verifique seu e-mail para confirmar sua conta. Após confirmar, faça login para continuar.",
+            text: t("landingChat.signup.success"),
             sender: "ai",
           },
         ]);
@@ -469,7 +458,7 @@ export function HomeChat({ onClose }: { onClose?: () => void }) {
           ...prev,
           {
             id: Date.now().toString(),
-            text: translateAuthError(error, "Erro ao criar conta. Tente novamente."),
+            text: translateAuthError(error, t("landingChat.signup.genericError")),
             sender: "ai",
             requiresInput: true,
             isPassword: true,
@@ -490,7 +479,7 @@ export function HomeChat({ onClose }: { onClose?: () => void }) {
           ...prev,
           {
             id: Date.now().toString(),
-            text: "Ops! Tivemos um problema ao processar sua recomendação. Por favor, tente novamente.",
+            text: t("landingChat.recommendation.error"),
             sender: "ai",
             options: recommendationStep.options,
           },
@@ -517,7 +506,7 @@ export function HomeChat({ onClose }: { onClose?: () => void }) {
         ...prev,
         {
           id: Date.now().toString(),
-          text: "Ocorreu um erro inesperado. Por favor, tente novamente mais tarde.",
+          text: t("landingChat.unexpectedError"),
           sender: "ai",
         },
       ]);
@@ -529,14 +518,14 @@ export function HomeChat({ onClose }: { onClose?: () => void }) {
       <div className="sticky top-0 z-20 border-b border-white/10 flex items-center gap-2 bg-black/80 backdrop-blur-xl p-4">
         <img src="/mascote.png" alt="Filmin.IA" className="w-6 h-6 object-contain" />
         <h3 className="text-lg font-semibold text-white flex-1">
-          Filmin.AI te ajuda
+          {t("landingChat.header.title")}
         </h3>
         <DialogClose asChild>
           <Button
             variant="ghost"
             className="ml-auto text-white hover:bg-white/10"
           >
-            <span className="sr-only">Fechar</span>
+            <span className="sr-only">{t("landingChat.header.close")}</span>
             <svg
               width="20"
               height="20"
@@ -708,7 +697,9 @@ export function HomeChat({ onClose }: { onClose?: () => void }) {
                         }}
                         className="bg-white/5 border-white/10 text-white"
                         placeholder={
-                          message.isPassword ? "********" : "Digite aqui..."
+                          message.isPassword
+                            ? t("landingChat.signup.password.placeholder")
+                            : t("landingChat.inputPlaceholder")
                         }
                       />
                       <Button
@@ -723,7 +714,7 @@ export function HomeChat({ onClose }: { onClose?: () => void }) {
                           }
                         }}
                       >
-                        Continuar
+                        {t("landingChat.continueButton")}
                       </Button>
                     </div>
                   )}

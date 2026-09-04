@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { buildYoutubeEmbedUrl } from '@/lib/youtubeEmbed';
+import { getTmdbLanguage } from '@/lib/tmdbLanguage';
 
 const TMDB_API_KEY = import.meta.env.VITE_TMDB_API_KEY;
 
@@ -13,7 +14,7 @@ const VideoBackground = () => {
     try {
       // Fetch popular movies first
       const response = await fetch(
-        `https://api.themoviedb.org/3/movie/popular?api_key=${TMDB_API_KEY}&language=pt-BR`
+        `https://api.themoviedb.org/3/movie/popular?api_key=${TMDB_API_KEY}&language=${getTmdbLanguage()}`
       );
       const data = await response.json();
       

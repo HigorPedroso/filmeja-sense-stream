@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ContentType } from "./types";
@@ -19,6 +20,7 @@ export const TrailerModal = ({
   trailerUrl,
   isTransitioning
 }: TrailerModalProps) => {
+  const { t } = useTranslation();
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   useEffect(() => {
     const handleResize = () => {
@@ -113,7 +115,7 @@ export const TrailerModal = ({
                     >
                       <div className="text-white text-center">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-filmeja-purple mx-auto mb-2" />
-                        <p className="text-sm">Buscando trailer...</p>
+                        <p className="text-sm">{t("result.trailer.loading")}</p>
                       </div>
                     </motion.div>
                   ) : (
@@ -182,7 +184,7 @@ export const TrailerModal = ({
                     >
                       <div className="text-white text-center">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-filmeja-purple mx-auto mb-2" />
-                        <p className="text-sm">Buscando trailer...</p>
+                        <p className="text-sm">{t("result.trailer.loading")}</p>
                       </div>
                     </motion.div>
                   ) : (

@@ -6,6 +6,9 @@ import { showInterstitialAd } from "@/lib/ads";
 import { refundDailyView } from "@/lib/recommendations/refundDailyView";
 import { getLocalDateString } from "@/lib/utils/date";
 import { trackEvent } from "@/lib/analytics/trackEvent";
+import { getTmdbLanguage, getTmdbRegion } from "@/lib/tmdbLanguage";
+import { callGeminiForText } from "@/lib/geminiClient";
+import i18n from "@/i18n";
 
 // Combined daily cap for free (non-premium) users across mood + genre
 // recommendations. Query 1 is ad-free; queries 2 and 3 show an interstitial.
@@ -191,7 +194,7 @@ export async function fetchMoodRecommendation(params: MoodRecommendationParams):
           const response = await fetch(
             `https://api.themoviedb.org/3/${item.media_type}/${item.tmdb_id}?api_key=${
               import.meta.env.VITE_TMDB_API_KEY
-            }&language=pt-BR`
+            }&language=${getTmdbLanguage()}`
           );
           const data = await response.json();
           return {
@@ -211,23 +214,68 @@ export async function fetchMoodRecommendation(params: MoodRecommendationParams):
     const mediaType = shouldFetchMovies ? "movie" : "tv";
 
     const genres = mediaType === "movie" ? moodToGenres[mood] : moodToGenresTV[mood];
-    const genreNames = genres.map(id => 
-      genreCategories.flatMap(cat => cat.genres).find(g => g.id === id)?.name
-    ).filter(Boolean);
+    // Display-language versions just for prompt wording — moodNames/
+    // genreCategories themselves stay the original Portuguese business
+    // data (also used for analytics), so this is purely so the prompt
+    // reads as one consistent language instead of an English sentence
+    // wrapped around Portuguese genre/mood words.
+    const genreNames = genres.map(id => {
+      const fallbackName = genreCategories.flatMap(cat => cat.genres).find(g => g.id === id)?.name;
+      return i18n.t(`genre.${id}`, { defaultValue: fallbackName });
+    }).filter(Boolean);
+    const moodDisplayName = i18n.t(`mood.${mood}.name`, { defaultValue: moodNames[mood as MoodType] });
 
     const currentYear = new Date().getFullYear();
     const minReleaseYear = currentYear - 5;
+    const tmdbLang = getTmdbLanguage();
+    const promptLang: "en" | "es" | "pt" = tmdbLang === "en-US" ? "en" : tmdbLang === "es-MX" ? "es" : "pt";
 
-    const prompt = `
+    const prompt = promptLang === "en" ? `
+      You are an assistant that responds only in valid JSON.
+      The user is feeling "${moodDisplayName}" and enjoys the following genres: ${genreNames.join(", ")}.
+      The user has already watched the following titles:
+      ${JSON.stringify(validWatchedContent)}
+
+      Recent recommendations (do not recommend these titles again):
+      ${JSON.stringify(recentTitles)}
+
+      Provide a list of 15 well-rated ${mediaType === "movie" ? "movies" : "TV shows"} that match the user's mood.
+      IMPORTANT: prioritize recent releases — from ${minReleaseYear} to ${currentYear}. Avoid old classics or overused picks; the list should feel current, not a "most famous of all time" selection.
+      DO NOT INCLUDE titles the user has already watched or that were recently recommended.
+      Must be available on major streaming services: Netflix, Max, Amazon Prime Video, Disney, etc.
+
+      Respond in the following JSON format:
+      [
+        { "title": "Title", "tmdbId": 12345, "description": "Movie or show description", "imgUrl": "image url", "tipo": "movie or tv", "releaseYear": 2024 }
+      ]
+    ` : promptLang === "es" ? `
+      Eres un asistente que responde solo en JSON válido.
+      El usuario se siente "${moodDisplayName}" y le gustan los siguientes géneros: ${genreNames.join(", ")}.
+      El usuario ya vio los siguientes títulos:
+      ${JSON.stringify(validWatchedContent)}
+
+      Recomendaciones recientes (no recomiendes estos títulos de nuevo):
+      ${JSON.stringify(recentTitles)}
+
+      Dame una lista de 15 ${mediaType === "movie" ? "películas" : "series"} bien calificadas que coincidan con el estado de ánimo del usuario.
+      IMPORTANTE: prioriza estrenos recientes — de ${minReleaseYear} a ${currentYear}. Evita clásicos antiguos o elecciones muy repetidas; la lista debe sentirse actual, no una selección de "los más famosos de todos los tiempos".
+      NO INCLUYAS títulos que el usuario ya vio o que fueron recomendados recientemente.
+      Debe estar disponible en los principales servicios de streaming: Netflix, Max, Amazon Prime Video, Disney, etc.
+
+      Responde en el siguiente formato JSON:
+      [
+        { "title": "Título", "tmdbId": 12345, "description": "Descripción de la película o serie", "imgUrl": "url de la imagen", "tipo": "movie o tv", "releaseYear": 2024 }
+      ]
+    ` : `
       Você é um assistente que responde apenas em JSON válido.
-      O usuário está se sentindo "${moodNames[mood as MoodType]}" e gosta dos seguintes gêneros: ${genreNames.join(", ")}.
+      O usuário está se sentindo "${moodDisplayName}" e gosta dos seguintes gêneros: ${genreNames.join(", ")}.
       O usuário já assistiu os seguintes títulos:
       ${JSON.stringify(validWatchedContent)}
 
       Últimas recomendações (não recomendar estes títulos também):
       ${JSON.stringify(recentTitles)}
 
-      Forneça uma lista de 10 ${mediaType === "movie" ? "filmes" : "séries"} bem avaliados que correspondem ao humor do usuário.
+      Forneça uma lista de 15 ${mediaType === "movie" ? "filmes" : "séries"} bem avaliados que correspondem ao humor do usuário.
       IMPORTANTE: priorize lançamentos recentes — de ${minReleaseYear} até ${currentYear}. Evite indicar clássicos antigos ou títulos muito batidos; a lista deve parecer atual, não uma seleção de "os mais famosos de sempre".
       NÃO INCLUA os títulos que o usuário já assistiu ou que foram recomendados recentemente.
       Tem que estar presente nos principais streamings: Netflix, Max, Amazon Prime Video, Disney, etc.
@@ -238,35 +286,14 @@ export async function fetchMoodRecommendation(params: MoodRecommendationParams):
       ]
     `;
 
-    const geminiResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${
-        import.meta.env.VITE_GEMINI_API_KEY
-      }`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ 
-            parts: [{ 
-              text: prompt + "\nResponda apenas com o JSON, sem texto adicional." 
-            }] 
-          }],
-          tools: [{ google_search: {} }],
-          generationConfig: {
-            temperature: 0.7,
-            topK: 40,
-            topP: 0.95,
-            maxOutputTokens: 2048,
-            thinkingConfig: { thinkingBudget: 0 },
-          },
-        }),
-      }
-    );
+    const promptSuffix =
+      promptLang === "en"
+        ? "\nRespond only with the JSON, no additional text."
+        : promptLang === "es"
+          ? "\nResponde únicamente con el JSON, sin texto adicional."
+          : "\nResponda apenas com o JSON, sem texto adicional.";
 
-    const geminiData = await geminiResponse.json();
-    const raw = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text;
-
-    if (!raw) throw new Error("Resposta vazia do Gemini");
+    const raw = await callGeminiForText(prompt + promptSuffix);
 
     const parsedSuggestions = extractJsonFromResponse(raw) || [];
     // Ensure we're working with a properly typed array of ContentSuggestion objects
@@ -289,7 +316,7 @@ export async function fetchMoodRecommendation(params: MoodRecommendationParams):
           const searchResponse = await fetch(
             `https://api.themoviedb.org/3/search/${searchType}?api_key=${
               import.meta.env.VITE_TMDB_API_KEY
-            }&query=${encodeURIComponent(suggestion.title)}&language=pt-BR`
+            }&query=${encodeURIComponent(suggestion.title)}&language=${getTmdbLanguage()}`
           );
           const searchData = await searchResponse.json();
 
@@ -315,17 +342,17 @@ export async function fetchMoodRecommendation(params: MoodRecommendationParams):
           fetch(
             `https://api.themoviedb.org/3/${suggestion.tipo}/${suggestion.tmdbId}?api_key=${
               import.meta.env.VITE_TMDB_API_KEY
-            }&language=pt-BR`
+            }&language=${getTmdbLanguage()}`
           ).then(r => r.json()),
           fetch(
             `https://api.themoviedb.org/3/${suggestion.tipo}/${suggestion.tmdbId}/videos?api_key=${
               import.meta.env.VITE_TMDB_API_KEY
-            }&language=pt-BR`
+            }&language=${getTmdbLanguage()}`
           ).then(r => r.json()),
           fetch(
             `https://api.themoviedb.org/3/${suggestion.tipo}/${suggestion.tmdbId}/similar?api_key=${
               import.meta.env.VITE_TMDB_API_KEY
-            }&language=pt-BR`
+            }&language=${getTmdbLanguage()}`
           ).then(r => r.json()),
           fetch(
             `https://api.themoviedb.org/3/${suggestion.tipo}/${suggestion.tmdbId}/watch/providers?api_key=${
@@ -334,11 +361,11 @@ export async function fetchMoodRecommendation(params: MoodRecommendationParams):
           ).then(r => r.json()),
         ]);
 
-        if (providers.results?.BR?.flatrate) {
+        if (providers.results?.[getTmdbRegion()]?.flatrate) {
           availableContent.push({
             ...details,
             videos: videos.results,
-            providers: providers.results?.BR,
+            providers: providers.results?.[getTmdbRegion()],
             similar: similar.results,
             mediaType: suggestion.tipo,
           });

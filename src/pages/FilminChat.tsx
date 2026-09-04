@@ -28,7 +28,7 @@ const FilminChat = () => {
     try {
       const item = await searchContentByTitle(title, type, releaseYear);
       await fetchContentWithProviders(item, {
-        requireBrAvailability: true,
+        requireRegionAvailability: true,
         onLoadingChange: setIsLoadingRecommendation,
         onContentFetched: setMoodRecommendation,
       });

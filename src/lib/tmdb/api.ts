@@ -1,5 +1,6 @@
 
 import { createClient } from '@supabase/supabase-js';
+import { getTmdbLanguage } from '@/lib/tmdbLanguage';
 
 // Initialize Supabase client to access TMDB API key from edge functions
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://yynlzhfibeozrwrtrjbs.supabase.co';
@@ -8,7 +9,6 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Base TMDB API URL
 export const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
-export const LANGUAGE = 'pt-BR'; // Portuguese Brazil
 
 // Function to fetch from TMDB API
 export async function fetchFromTMDB(endpoint: string, params: Record<string, string> = {}) {
@@ -28,7 +28,7 @@ export async function fetchFromTMDB(endpoint: string, params: Record<string, str
     // Build query params
     const queryParams = new URLSearchParams({
       api_key: apiKey,
-      language: LANGUAGE,
+      language: getTmdbLanguage(),
       ...params
     });
     

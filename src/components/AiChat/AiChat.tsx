@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { Capacitor } from "@capacitor/core";
 import { Button } from "@/components/ui/button";
 import { Send, Target, Clock, Users, Shuffle } from "lucide-react";
@@ -7,6 +8,7 @@ import { addToWatchHistory } from "@/lib/utils/watch-history";
 import { searchContentByTitle, fetchContentWithProviders } from "@/lib/utils/tmdb";
 import { supabase } from "@/integrations/supabase/client";
 import { getConversation, saveConversation, deriveTitle } from "@/lib/filminConversations";
+import { getTmdbLanguage } from "@/lib/tmdbLanguage";
 
 // iOS/WKWebView zooms the whole page in on focus whenever the focused
 // input's font-size is under 16px — Android has no such behavior. Forcing
@@ -19,15 +21,13 @@ const isIOS = Capacitor.getPlatform() === "ios";
 // costs a real TMDB lookup, so this stays small.
 const MAX_RECOMMENDATION_ATTEMPTS = 3;
 
-// Quick conversation starters shown on the empty state. Humor and gênero
+// Quick conversation starters shown on the empty state. Mood and genre
 // already have their own dedicated pickers on the dashboard, so these lean
-// into what only the chat can do: specific, contextual requests.
-const QUICK_STARTERS = [
-  { icon: Target, label: "Algo parecido com o que eu gostei", message: "Quero algo parecido com um filme ou série que eu gostei muito" },
-  { icon: Clock, label: "Tenho pouco tempo hoje", message: "Quero um filme curto, tenho pouco tempo hoje" },
-  { icon: Users, label: "Pra assistir em família", message: "Quero algo pra assistir em família" },
-  { icon: Shuffle, label: "Me surpreenda", message: "Me surpreenda com uma recomendação" },
-];
+// into what only the chat can do: specific, contextual requests. Built
+// inside the component (not as a module-level constant) since the label/
+// message text depends on the current language.
+const QUICK_STARTER_ICONS = [Target, Clock, Users, Shuffle];
+const QUICK_STARTER_KEYS = ["similar", "shortOnTime", "family", "surpriseMe"] as const;
 
 export interface Message {
   id: string;
@@ -63,6 +63,12 @@ export function AiChat({
   fullScreen = false,
   headerLeft,
 }: AiChatProps) {
+  const { t } = useTranslation();
+  const QUICK_STARTERS = QUICK_STARTER_KEYS.map((key, index) => ({
+    icon: QUICK_STARTER_ICONS[index],
+    label: t(`filminChat.quickStarters.${key}.label`),
+    message: t(`filminChat.quickStarters.${key}.message`),
+  }));
   const [messages, setMessages] = useState<Message[]>(
     () => getConversation(conversationId)?.messages || []
   );
@@ -80,21 +86,23 @@ export function AiChat({
 
   const extractRecommendation = (text: string): Message["recommendation"] | null => {
     const titleMatch = text.match(/["']([^"']+)["']/);
-    const typeMatch = text.toLowerCase().includes("série") ? "tv" : "movie";
+    const lowerText = text.toLowerCase();
+    const typeMatch = /série|series|show/.test(lowerText) ? "tv" : "movie";
     return titleMatch ? { title: titleMatch[1], type: typeMatch as "movie" | "tv" } : null;
   };
 
   // Ground truth check: is this title actually on a streaming platform in
-  // Brazil right now? The prompt tells the AI to only recommend available
-  // titles, but that's advisory — the model can still get it wrong, and this
-  // is a premium feature, so we verify against TMDB before ever showing a
-  // recommendation to the user instead of trusting the AI's word for it.
-  // Also returns the poster, already fetched as part of this same check, so
-  // the recommendation can double as this conversation's cover image.
-  const checkAvailabilityInBrazil = async (title: string, type: "movie" | "tv", releaseYear?: number) => {
+  // the user's region right now? The prompt tells the AI to only recommend
+  // available titles, but that's advisory — the model can still get it
+  // wrong, and this is a premium feature, so we verify against TMDB before
+  // ever showing a recommendation to the user instead of trusting the AI's
+  // word for it. Also returns the poster, already fetched as part of this
+  // same check, so the recommendation can double as this conversation's
+  // cover image.
+  const checkRegionAvailability = async (title: string, type: "movie" | "tv", releaseYear?: number) => {
     try {
       const item = await searchContentByTitle(title, type, releaseYear);
-      const details = await fetchContentWithProviders(item, { showToast: false, requireBrAvailability: true });
+      const details = await fetchContentWithProviders(item, { showToast: false, requireRegionAvailability: true });
       return { available: true, posterPath: details?.poster_path as string | undefined };
     } catch {
       return { available: false, posterPath: undefined };
@@ -114,12 +122,16 @@ export function AiChat({
       sender: "user",
       timestamp: new Date(),
     };
+    const tmdbLang = getTmdbLanguage();
+    const chatLang: "en" | "es" | "pt" = tmdbLang === "en-US" ? "en" : tmdbLang === "es-MX" ? "es" : "pt";
+    const userLabel = chatLang === "en" ? "User" : chatLang === "es" ? "Usuario" : "Usuário";
+
     // Last turns of the actual conversation (before this new message), so
     // the model has real context instead of treating every message as a
     // fresh, isolated request.
     const conversationHistory = messages
       .slice(-12)
-      .map((m) => `${m.sender === "user" ? "Usuário" : "Filmin.IA"}: ${m.text}`)
+      .map((m) => `${m.sender === "user" ? userLabel : "Filmin.IA"}: ${m.text}`)
       .join("\n");
 
     setMessages((prev) => [...prev, userMessage]);
@@ -149,13 +161,85 @@ export function AiChat({
         .join(", ");
 
       const today = new Date();
-      const todayFormatted = today.toLocaleDateString("pt-BR", {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      });
+      const todayFormatted = today.toLocaleDateString(
+        chatLang === "en" ? "en-US" : chatLang === "es" ? "es-MX" : "pt-BR",
+        {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        }
+      );
 
-      const buildPrompt = (excludedTitles: string[]) => `Você é o Filmin.IA, um assistente de descoberta de filmes e séries. Converse de forma natural e simpática, como um amigo cinéfilo — não como um robô que só cospe recomendações.
+      // Bilingual system prompt — the model's "chat" reply is shown to the
+      // user verbatim (unlike the mood/genre recommendation prompts, whose
+      // Gemini-authored text is discarded in favor of TMDB's own overview),
+      // so this has to actually be written in the target language, not just
+      // instructed to answer in it.
+      const buildPrompt = (excludedTitles: string[]) => chatLang === "en" ? `You are Filmin.IA, a movie and TV show discovery assistant. Talk naturally and warmly, like a movie-loving friend — not like a robot that just spits out recommendations.
+
+${userName ? `You're chatting with ${userName}. Feel free to use their name once in a while to keep things personal, without overdoing it.` : ""}
+
+Today's date is ${todayFormatted}. This is the real, current date — ignore any assumption about "the current year" based on your training data, and use Google search when you need to confirm recent or upcoming releases.
+
+Rules:
+- If the person just said hi or hasn't given any hint of what they want to watch yet, you can ask ONE question to get a sense of their taste (mood, genre, time available, etc.) before recommending.
+- As soon as the person gives any preference at all (mood, genre, length, "something tense", "a comedy", etc.), that's enough — recommend a specific title in that same reply. Don't chain clarifying questions; at most ONE follow-up question in the whole conversation before recommending.
+- Never recommend titles the person has already watched or that were already recommended before (lists below), and don't repeat a title already suggested in this conversation.
+- NEVER recommend movies or shows that haven't been released yet (announced, "in production", with a future release date). Only recommend titles that have already premiered and can be watched today. If you're unsure whether something has released, use Google search to confirm before recommending — when in doubt, prefer an older title that's confirmed available.
+- Only recommend titles available on a paid streaming platform in the US (Netflix, Prime Video, Max, Disney+, Hulu, Apple TV+, etc.). Avoid festival releases, titles exclusive to another country, or theatrical-only releases — if you're not sure it's streaming in the US, prefer a more popular, confirmed-available title.${
+        excludedTitles.length
+          ? `\n- The following titles have ALREADY BEEN CHECKED and are NOT available on any streaming service in the US — don't suggest any of them again: ${excludedTitles.join(", ")}.`
+          : ""
+      }
+- Keep it short (2-4 sentences) and use emoji sparingly.
+
+Titles the person has already watched: ${watchedTitles || "none"}.
+Recent recommendations already made (don't repeat): ${recentTitles || "none"}.
+
+Conversation so far:
+${conversationHistory || "(start of conversation)"}
+User: "${textToSend}"
+
+ALWAYS respond in valid JSON, with no text outside the JSON, in this exact format:
+{
+  "chat": "your reply to the person, in English",
+  "recommendation": { "title": "Exact title name", "type": "movie or tv", "releaseYear": 2019 } or null if you're not recommending anything right now
+}
+IMPORTANT:
+- "type" has to reflect what you're actually recommending: "movie" for a movie, "tv" for a show. NEVER default to "movie" — if it's a show, it's "tv". Getting this wrong makes the app search the wrong category and show a completely different title to the person.
+- "releaseYear" is the title's REAL release year (the year it premiered) — without it we can't tell apart remakes and reboots that reuse the same name (e.g. "Dune" 2021 vs 1984), so always include it whenever there's a recommendation.` : chatLang === "es" ? `Eres Filmin.IA, un asistente para descubrir películas y series. Habla de forma natural y cercana, como un amigo cinéfilo — no como un robot que solo suelta recomendaciones.
+
+${userName ? `Estás charlando con ${userName}. Puedes usar su nombre de vez en cuando para que la conversación se sienta más personal, sin exagerar.` : ""}
+
+Hoy es ${todayFormatted}. Esta es la fecha real y actual — ignora cualquier suposición sobre "el año actual" basada en tus datos de entrenamiento, y usa la búsqueda de Google cuando necesites confirmar estrenos recientes o próximos.
+
+Reglas:
+- Si la persona solo saludó o todavía no dio ninguna pista de qué quiere ver, puedes hacer UNA pregunta para conocer su gusto (ánimo, género, tiempo disponible, etc.) antes de recomendar.
+- En cuanto la persona dé cualquier preferencia (ánimo, género, duración, "algo tenso", "una comedia", etc.), ya es suficiente — recomienda un título específico en esa misma respuesta. No encadenes preguntas de aclaración; como máximo UNA pregunta de seguimiento en toda la conversación antes de recomendar.
+- Nunca recomiendes títulos que la persona ya vio o que ya fueron recomendados antes (listas abajo), ni repitas un título ya sugerido en esta conversación.
+- NUNCA recomiendes películas o series que todavía no se hayan estrenado (anunciadas, "en producción", con fecha de estreno futura). Solo recomienda títulos que ya se estrenaron y que se pueden ver hoy. Si tienes dudas sobre si algo ya se estrenó, usa la búsqueda de Google para confirmarlo antes de recomendar — en caso de duda, prefiere un título más antiguo y con disponibilidad confirmada.
+- Solo recomienda títulos disponibles en alguna plataforma de streaming por suscripción en México (Netflix, Prime Video, Max, Disney+, Star+, Apple TV+, etc.). Evita estrenos de festival, exclusivos de otro país o solo en cines — si no estás seguro de la disponibilidad en streaming en México, prefiere un título más popular y con disponibilidad confirmada.${
+        excludedTitles.length
+          ? `\n- Los siguientes títulos YA FUERON VERIFICADOS y NO están disponibles en ningún streaming en México — no sugieras ninguno de nuevo: ${excludedTitles.join(", ")}.`
+          : ""
+      }
+- Sé breve (2-4 frases) y usa emojis con moderación.
+
+Títulos que la persona ya vio: ${watchedTitles || "ninguno"}.
+Últimas recomendaciones ya hechas (no repetir): ${recentTitles || "ninguna"}.
+
+Conversación hasta ahora:
+${conversationHistory || "(inicio de la conversación)"}
+Usuario: "${textToSend}"
+
+Responde SIEMPRE en JSON válido, sin ningún texto fuera del JSON, en este formato exacto:
+{
+  "chat": "tu respuesta para la persona, en español",
+  "recommendation": { "title": "Nombre exacto del título", "type": "movie o tv", "releaseYear": 2019 } o null si no estás recomendando nada ahora
+}
+IMPORTANTE:
+- "type" tiene que reflejar lo que realmente estás recomendando: "movie" para película, "tv" para serie. NUNCA pongas "movie" por defecto — si es una serie, es "tv". Si te equivocas, la app busca en la categoría equivocada y le muestra a la persona un título completamente distinto.
+- "releaseYear" es el año de estreno REAL del título (el año en que se estrenó) — sin él no podemos distinguir remakes y reboots que usan el mismo nombre (por ejemplo, "Dune" 2021 vs 1984), así que inclúyelo siempre que haya una recomendación.` : `Você é o Filmin.IA, um assistente de descoberta de filmes e séries. Converse de forma natural e simpática, como um amigo cinéfilo — não como um robô que só cospe recomendações.
 
 ${userName ? `Você está conversando com ${userName}. Pode chamá-lo(a) pelo nome de vez em quando para deixar a conversa mais pessoal, sem exagerar.` : ""}
 
@@ -239,10 +323,9 @@ IMPORTANTE:
       };
 
       // Ask up to MAX_RECOMMENDATION_ATTEMPTS times, excluding any title that
-      // fails the Brazil-availability check, until we get a clean answer.
+      // fails the region-availability check, until we get a clean answer.
       const excludedTitles: string[] = [];
-      let finalChat =
-        "Hmm, não encontrei um título certeiro disponível em streaming agora. Me conta mais um detalhe do que você quer assistir? 🤔";
+      let finalChat = t("filminChat.fallbackReply");
       let finalRecommendation: Message["recommendation"];
 
       for (let attempt = 0; attempt < MAX_RECOMMENDATION_ATTEMPTS; attempt++) {
@@ -256,7 +339,7 @@ IMPORTANTE:
           break;
         }
 
-        const { available, posterPath } = await checkAvailabilityInBrazil(
+        const { available, posterPath } = await checkRegionAvailability(
           result.recommendation.title,
           result.recommendation.type,
           result.recommendation.releaseYear
@@ -321,7 +404,7 @@ IMPORTANTE:
         <h3 className="text-base md:text-lg font-semibold text-white flex items-center gap-2 min-w-0">
           {headerLeft}
           <img src="/mascote.png" alt="Filmin.IA" className="w-6 h-6 object-contain flex-shrink-0" />
-          <span className="truncate">Filmin.AI te ajuda</span>
+          <span className="truncate">{t("filminChat.headerSubtitle")}</span>
         </h3>
       </div>
 
@@ -330,9 +413,9 @@ IMPORTANTE:
           <div className="pt-4 px-2">
             <img src="/mascote.png" alt="Filmin.IA" className="w-14 h-14 object-contain mb-3" />
             <h2 className="text-3xl font-bold text-white mb-1">
-              Oi{userName ? ` ${userName.split(" ")[0]}` : ""}
+              {t("filminChat.greeting")}{userName ? ` ${userName.split(" ")[0]}` : ""}
             </h2>
-            <p className="text-gray-400 text-lg mb-6">Vamos escolher algo bom pra assistir!</p>
+            <p className="text-gray-400 text-lg mb-6">{t("filminChat.greetingSubtitle")}</p>
 
             <div className="space-y-3">
               {QUICK_STARTERS.map((starter) => (
@@ -376,7 +459,7 @@ IMPORTANTE:
                       }}
                       className="mt-3 bg-filmeja-purple/20 hover:bg-filmeja-purple/40 text-white text-sm px-4 py-2 rounded-full"
                     >
-                      Ver detalhes do título
+                      {t("filminChat.viewDetails")}
                     </Button>
                   )}
                 </div>
@@ -409,7 +492,7 @@ IMPORTANTE:
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyPress={(e) => e.key === "Enter" && handleSend()}
-            placeholder="Pergunte qualquer coisa..."
+            placeholder={t("filminChat.inputPlaceholder")}
             className={`flex-1 bg-transparent text-white py-2 placeholder:text-gray-400 focus:outline-none ${
               isIOS ? "text-base" : "text-sm md:text-base"
             }`}

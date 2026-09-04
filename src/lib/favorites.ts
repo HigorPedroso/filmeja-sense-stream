@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { getTmdbLanguage } from "@/lib/tmdbLanguage";
 
 export interface FavoriteItem {
   id: number;
@@ -29,7 +30,7 @@ export async function getUserFavorites(): Promise<FavoriteItem[]> {
         const response = await fetch(
           `https://api.themoviedb.org/3/${fav.media_type}/${fav.tmdb_id}?api_key=${
             import.meta.env.VITE_TMDB_API_KEY
-          }&language=pt-BR`
+          }&language=${getTmdbLanguage()}`
         );
         const details = await response.json();
         return {

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Trans, useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { Mail, Lock, Eye, EyeOff, Loader2, ShieldAlert, CheckCircle2 } from "lucide-react";
@@ -26,6 +27,7 @@ import {
 // of their account/data without needing the app installed. Login here is
 // the same Supabase auth used by the app; it does not require the app.
 const DeleteAccountRequest = () => {
+  const { t } = useTranslation();
   const { session, user, isLoading } = useAuth();
   const { toast } = useToast();
 
@@ -44,8 +46,8 @@ const DeleteAccountRequest = () => {
       if (error) throw error;
     } catch (error: any) {
       toast({
-        title: "Erro ao entrar",
-        description: translateAuthError(error, "Verifique seu e-mail e senha e tente novamente."),
+        title: t("deleteAccountPage.loginErrorTitle"),
+        description: translateAuthError(error, t("deleteAccountPage.loginErrorFallback")),
         variant: "destructive",
       });
     } finally {
@@ -61,8 +63,8 @@ const DeleteAccountRequest = () => {
     } catch (error) {
       console.error("Error deleting account:", error);
       toast({
-        title: "Erro ao excluir conta",
-        description: "Não foi possível excluir sua conta agora. Tente novamente ou entre em contato conosco.",
+        title: t("profile.toasts.accountDeleteFailed.title"),
+        description: t("deleteAccountPage.deleteErrorFallback"),
         variant: "destructive",
       });
     } finally {
@@ -91,15 +93,15 @@ const DeleteAccountRequest = () => {
         >
           <h2 className="text-lg font-bold text-white text-center mb-1 flex items-center justify-center gap-2">
             <ShieldAlert className="w-5 h-5 text-red-400" />
-            Excluir conta
+            {t("deleteAccountPage.heading")}
           </h2>
 
           {isDeleted ? (
             <div className="text-center py-6">
               <CheckCircle2 className="w-12 h-12 text-green-400 mx-auto mb-4" />
-              <p className="text-white font-medium mb-2">Conta excluída com sucesso</p>
+              <p className="text-white font-medium mb-2">{t("deleteAccountPage.deletedTitle")}</p>
               <p className="text-sm text-gray-400">
-                Sua conta e todos os seus dados foram removidos permanentemente do FilmeJá.
+                {t("deleteAccountPage.deletedDescription")}
               </p>
             </div>
           ) : isLoading ? (
@@ -108,38 +110,36 @@ const DeleteAccountRequest = () => {
             </div>
           ) : session && user ? (
             <div className="pt-2">
-              <p className="text-sm text-gray-400 text-center mb-1">Conta conectada:</p>
+              <p className="text-sm text-gray-400 text-center mb-1">{t("deleteAccountPage.connectedAccount")}</p>
               <p className="text-sm text-white text-center font-medium mb-6">{user.email}</p>
 
               <p className="text-sm text-gray-400 leading-relaxed mb-6">
-                Ao confirmar, seu perfil, preferências, histórico de recomendações, favoritos,
-                token de notificações e assinatura serão excluídos permanentemente. Essa ação
-                não pode ser desfeita.
+                {t("deleteAccountPage.confirmDescription")}
               </p>
 
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button className="w-full h-12 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold">
-                    Excluir minha conta
+                    {t("deleteAccountPage.deleteMyAccount")}
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent className="bg-filmeja-dark border-white/10">
                   <AlertDialogHeader>
-                    <AlertDialogTitle className="text-white">Tem certeza?</AlertDialogTitle>
+                    <AlertDialogTitle className="text-white">{t("deleteAccountPage.areYouSure")}</AlertDialogTitle>
                     <AlertDialogDescription className="text-gray-400">
-                      Essa ação é permanente e não pode ser desfeita. Todos os seus dados serão excluídos.
+                      {t("deleteAccountPage.areYouSureDescription")}
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel className="bg-transparent border-white/10 text-white hover:bg-white/5 hover:text-white">
-                      Cancelar
+                      {t("profile.deleteAccount.cancel")}
                     </AlertDialogCancel>
                     <AlertDialogAction
                       onClick={handleDelete}
                       disabled={isDeleting}
                       className="bg-red-600 hover:bg-red-700 text-white"
                     >
-                      {isDeleting ? "Excluindo..." : "Excluir permanentemente"}
+                      {isDeleting ? t("profile.deleteAccount.deleting") : t("profile.deleteAccount.confirm")}
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
@@ -148,14 +148,14 @@ const DeleteAccountRequest = () => {
           ) : (
             <>
               <p className="text-sm text-gray-400 text-center mb-6">
-                Entre com sua conta FilmeJá para solicitar a exclusão permanente dos seus dados.
+                {t("deleteAccountPage.loginPrompt")}
               </p>
               <form onSubmit={handleLogin} className="space-y-3">
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input
                     type="email"
-                    placeholder="Email"
+                    placeholder={t("auth.emailPlaceholder")}
                     className="h-12 pl-10 rounded-xl bg-white/5 border-white/10 text-white"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -168,7 +168,7 @@ const DeleteAccountRequest = () => {
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input
                     type={showPassword ? "text" : "password"}
-                    placeholder="Senha"
+                    placeholder={t("auth.passwordPlaceholder")}
                     className="h-12 pl-10 pr-10 rounded-xl bg-white/5 border-white/10 text-white"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -190,7 +190,7 @@ const DeleteAccountRequest = () => {
                   type="submit"
                   disabled={loginLoading}
                 >
-                  {loginLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Entrar"}
+                  {loginLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : t("auth.tabs.login")}
                 </Button>
               </form>
             </>
@@ -198,15 +198,13 @@ const DeleteAccountRequest = () => {
         </motion.div>
 
         <p className="text-xs text-gray-500 text-center mt-6 max-w-sm">
-          Prefere não usar esta página? Envie um e-mail para{" "}
-          <a href="mailto:privacidade@filmeja.com" className="text-filmeja-purple hover:underline">
-            privacidade@filmeja.com
-          </a>{" "}
-          solicitando a exclusão da sua conta. Veja também nossa{" "}
-          <Link to="/privacidade" className="text-filmeja-purple hover:underline">
-            Política de Privacidade
-          </Link>
-          .
+          <Trans
+            i18nKey="deleteAccountPage.footerText"
+            components={{
+              email: <a href="mailto:privacidade@filmeja.com" className="text-filmeja-purple hover:underline" />,
+              privacy: <Link to="/privacidade" className="text-filmeja-purple hover:underline" />,
+            }}
+          />
         </p>
       </div>
     </div>

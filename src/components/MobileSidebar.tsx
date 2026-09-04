@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Home, Heart, Star, User, MessageSquare } from "lucide-react";
 import { motion } from "framer-motion";
@@ -18,6 +19,7 @@ import { translateAuthError } from "@/lib/errors/translateAuthError";
 const isIOS = Capacitor.getPlatform() === "ios";
 
 export function MobileSidebar() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const isActive = (path: string) => location.pathname === path;
@@ -76,13 +78,13 @@ useEffect(() => {
       if (error) throw error;
   
       toast({
-        title: "Conta criada com sucesso!",
-        description: "Enviamos um link de confirmação para o seu e-mail.",
+        title: t("sidebar.signupToast.title"),
+        description: t("sidebar.signupToast.description"),
       });
-  
+
       setShowSignupModal(false);
     } catch (error: any) {
-      setSignupError(translateAuthError(error, "Erro ao criar conta. Tente novamente."));
+      setSignupError(translateAuthError(error, t("sidebar.signupErrorFallback")));
     } finally {
       setIsSigningUp(false);
     }
@@ -138,7 +140,7 @@ useEffect(() => {
           {[
             {
               key: "home",
-              label: "Início",
+              label: t("mobileNav.home"),
               icon: Home,
               // On native, the app opens at "/" which renders the same
               // Dashboard as "/dashboard" — both count as the home tab.
@@ -147,7 +149,7 @@ useEffect(() => {
             },
             {
               key: "favorites",
-              label: "Minha Lista",
+              label: t("mobileNav.myList"),
               icon: Heart,
               active: isActive("/favorites"),
               onClick: () => {
@@ -160,7 +162,7 @@ useEffect(() => {
             },
             {
               key: "ai",
-              label: "Filmin.IA",
+              label: t("mobileNav.ai"),
               icon: MessageSquare,
               active: isActive("/filmin-ia"),
               onClick: () => {
@@ -175,7 +177,7 @@ useEffect(() => {
             },
             {
               key: "profile",
-              label: "Perfil",
+              label: t("mobileNav.profile"),
               icon: User,
               active: isActive("/profile"),
               onClick: () => {

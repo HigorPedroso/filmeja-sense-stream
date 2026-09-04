@@ -1,4 +1,6 @@
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 import { Star, Film, Tv } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { useState, useEffect } from "react";
@@ -64,6 +66,8 @@ interface FavoritesPageProps {
 }
 
 export function FavoritesPage({ title, items }: FavoritesPageProps) {
+    const { t } = useTranslation();
+    const navigate = useNavigate();
     const [currentBgIndex, setCurrentBgIndex] = useState(0);
     const [isExpanded, setIsExpanded] = useState(false);
   const {
@@ -72,7 +76,7 @@ export function FavoritesPage({ title, items }: FavoritesPageProps) {
     showRecommendationModal: isModalOpen,
     setShowRecommendationModal: setIsModalOpen,
   } = useRecommendationResult();
-  const getTitle = (item: ContentItem) => item.title || item.name || "Sem título";
+  const getTitle = (item: ContentItem) => item.title || item.name || t("favorites.untitledFallback");
   const getYear = (item: ContentItem) => {
     const date = item.release_date || item.first_air_date;
     return date ? new Date(date).getFullYear() : "";
@@ -99,15 +103,15 @@ export function FavoritesPage({ title, items }: FavoritesPageProps) {
       if (error) throw error;
 
       toast({
-        title: "Saindo...",
-        description: "Você foi desconectado com sucesso",
+        title: t("dashboard.toasts.loggingOut.title"),
+        description: t("dashboard.toasts.loggingOut.description"),
       });
 
-      Navigate("/");
+      navigate("/");
     } catch (error) {
       toast({
-        title: "Erro ao sair",
-        description: "Não foi possível fazer logout. Tente novamente.",
+        title: t("dashboard.toasts.logoutError.title"),
+        description: t("dashboard.toasts.logoutError.description"),
         variant: "destructive",
       });
     }
@@ -230,7 +234,7 @@ export function FavoritesPage({ title, items }: FavoritesPageProps) {
                         rounded-xl text-white text-xs md:text-sm font-medium transition-colors
                         hover:shadow-lg hover:shadow-filmeja-purple/20"
                       >
-                        Ver Detalhes
+                        {t("favorites.viewDetails")}
                       </motion.button>
 
                       {/* Add the modal at the end of the component, before the closing div */}
@@ -259,10 +263,10 @@ export function FavoritesPage({ title, items }: FavoritesPageProps) {
               className="flex flex-col items-center justify-center py-12 md:py-20"
             >
               <div className="text-gray-400 text-base md:text-lg mb-3 md:mb-4">
-                Nenhum conteúdo encontrado
+                {t("favorites.emptyState.title")}
               </div>
               <p className="text-gray-500 text-center text-sm md:text-base max-w-md px-4">
-                Adicione alguns itens à sua lista para vê-los aqui.
+                {t("favorites.emptyState.description")}
               </p>
             </motion.div>
           )}

@@ -1,5 +1,6 @@
 import { useAuth } from "@/hooks/useAuth";
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import AvatarSelectionModal from "./AvatarSelectionModal";
 import { Coins, Crown } from "lucide-react";
 import { Badge } from "./ui/badge";
@@ -13,6 +14,7 @@ import { usePremiumStatus } from "@/hooks/usePremiumStatus";
 import { DAILY_FREE_LIMIT } from "@/lib/recommendations/fetchMoodRecommendation";
 
 const HeaderDashboard = () => {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
   const [isPremiumModalOpen, setIsPremiumModalOpen] = useState(false);
@@ -40,9 +42,8 @@ const HeaderDashboard = () => {
       checkCredits();
     } else if (paymentStatus === "canceled") {
       toast({
-        title: "Pagamento cancelado",
-        description:
-          "O processo de pagamento foi cancelado. Você pode tentar novamente quando quiser.",
+        title: t("header.paymentCanceled.title"),
+        description: t("header.paymentCanceled.description"),
         variant: "destructive",
       });
 
@@ -50,7 +51,7 @@ const HeaderDashboard = () => {
       const newUrl = window.location.pathname;
       window.history.replaceState({}, "", newUrl);
     }
-  }, [location.search, toast]);
+  }, [location.search, toast, t]);
 
   // Add these new states at the top with other states
   const [dailyCredits, setDailyCredits] = useState<number | null>(null);
@@ -154,7 +155,7 @@ const HeaderDashboard = () => {
               {isPremium ? (
                 <Badge className="bg-filmeja-purple text-white flex items-center gap-1 text-xs">
                   <Crown className="w-3 h-3" />
-                  Premium
+                  {t("header.premiumBadge")}
                 </Badge>
               ) : (
                 <div className="flex flex-col items-end">
@@ -163,11 +164,12 @@ const HeaderDashboard = () => {
                     className="text-xs text-filmeja-purple hover:underline flex items-center gap-1"
                   >
                     <Crown className="w-3 h-3" />
-                    Assinar Premium
+                    {t("header.subscribePremium")}
                   </button>
                   <span className="text-xs text-gray-400 flex items-center gap-1">
                     <Coins className="w-3 h-3 text-yellow-500" />
-                    {dailyCredits !== null && `${dailyCredits} de ${DAILY_FREE_LIMIT} hoje`}
+                    {dailyCredits !== null &&
+                      t("header.creditsRemaining", { count: dailyCredits, total: DAILY_FREE_LIMIT })}
                   </span>
                 </div>
               )}
@@ -181,7 +183,7 @@ const HeaderDashboard = () => {
             >
               <img
                 src={user.user_metadata?.avatar_url || defaultAvatar}
-                alt="Avatar"
+                alt={t("header.avatarAlt")}
                 className="w-full h-full object-cover"
               />
             </div>

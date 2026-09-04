@@ -6,6 +6,7 @@ import { ContentItem } from '@/types/movie';
 import MovieCard from './MovieCard';
 import { Play, Pause } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { getTmdbLanguage } from '@/lib/tmdbLanguage';
 
 const RandomWheel: React.FC = () => {
   const { toast } = useToast();
@@ -20,8 +21,8 @@ const RandomWheel: React.FC = () => {
       try {
         // Fetch both top movies and TV shows
         const [moviesResponse, tvResponse] = await Promise.all([
-          fetch(`https://api.themoviedb.org/3/movie/top_rated?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=pt-BR&page=1`),
-          fetch(`https://api.themoviedb.org/3/tv/top_rated?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=pt-BR&page=1`)
+          fetch(`https://api.themoviedb.org/3/movie/top_rated?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=${getTmdbLanguage()}&page=1`),
+          fetch(`https://api.themoviedb.org/3/tv/top_rated?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=${getTmdbLanguage()}&page=1`)
         ]);
 
         const [moviesData, tvData] = await Promise.all([

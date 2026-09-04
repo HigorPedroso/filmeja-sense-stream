@@ -1,11 +1,11 @@
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import { ChevronLeft } from "lucide-react";
 import { MoodType } from "@/types/movie";
 import {
   moodNames,
   moodEmojis,
-  moodDescriptions,
   moodColors,
 } from "@/lib/recommendations/moodGenreData";
 import { trackEvent } from "@/lib/analytics/trackEvent";
@@ -17,6 +17,7 @@ import { lightImpact } from "@/lib/haptics";
 // overflow-hidden/body-locking couldn't fully suppress). A page navigation
 // sidesteps the whole bug class instead of chasing it further.
 const MoodSelectPage = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   const handleSelect = (mood: MoodType) => {
@@ -48,7 +49,7 @@ const MoodSelectPage = () => {
             className="inline-flex items-center gap-1 text-sm text-gray-400 hover:text-white transition-colors mb-6"
           >
             <ChevronLeft className="h-4 w-4" />
-            Voltar
+            {t("moodSelect.back")}
           </button>
 
           <motion.div
@@ -57,16 +58,15 @@ const MoodSelectPage = () => {
             className="mb-8 md:mb-10 text-center"
           >
             <h1 className="text-2xl md:text-4xl font-bold text-white mb-3">
-              Como você está se sentindo hoje?
+              {t("moodSelect.title")}
             </h1>
             <p className="text-gray-400 text-sm md:text-base max-w-md mx-auto">
-              Escolha seu humor e deixe a gente encontrar o filme perfeito
-              para você
+              {t("moodSelect.subtitle")}
             </p>
           </motion.div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
-            {Object.entries(moodNames).map(([mood, name], index) => {
+            {Object.keys(moodNames).map((mood, index) => {
               const colors = moodColors[mood as MoodType];
               return (
                 <motion.button
@@ -97,10 +97,10 @@ const MoodSelectPage = () => {
 
                   <div className="relative flex-1 min-w-0">
                     <h3 className="text-white font-semibold text-base md:text-lg capitalize">
-                      {name}
+                      {t(`mood.${mood}.name`)}
                     </h3>
                     <p className="text-gray-400 text-xs md:text-sm truncate">
-                      {moodDescriptions[mood as MoodType]}
+                      {t(`mood.${mood}.description`)}
                     </p>
                   </div>
                 </motion.button>

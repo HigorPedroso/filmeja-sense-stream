@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { useState } from "react";
 import {
   User,
@@ -13,6 +14,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { getTmdbLanguage } from "@/lib/tmdbLanguage";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -35,7 +37,7 @@ import PremiumPaymentModal from "@/components/PremiumPaymentModal";
 import { Sidebar } from "@/components/Sidebar";
 import { MobileSidebar } from "@/components/MobileSidebar";
 import { formatDistanceToNow } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { ptBR, enUS, es } from "date-fns/locale";
 import ImageBackground from "@/components/ImageBackground";
 import { fetchContentWithProviders } from "@/lib/utils/tmdb";
 import { ContentModal } from "@/components/ContentModal/ContentModal";
@@ -70,6 +72,7 @@ interface UserProfile {
 }
 
 export function ProfilePage() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
@@ -97,7 +100,7 @@ export function ProfilePage() {
     try {
       // Search for the content first to get TMDB ID
       const searchResponse = await fetch(
-        `https://api.themoviedb.org/3/search/${item.content_type}?api_key=${import.meta.env.VITE_TMDB_API_KEY}&query=${encodeURIComponent(item.title)}&language=pt-BR`
+        `https://api.themoviedb.org/3/search/${item.content_type}?api_key=${import.meta.env.VITE_TMDB_API_KEY}&query=${encodeURIComponent(item.title)}&language=${getTmdbLanguage()}`
       );
       
       const searchData = await searchResponse.json();
@@ -161,7 +164,7 @@ export function ProfilePage() {
         setProfile({
           id: user.id,
           email: user.email!,
-          full_name: profileData?.full_name || user.user_metadata?.full_name || 'Usuário',
+          full_name: profileData?.full_name || user.user_metadata?.full_name || t("profile.defaultName"),
           avatar_url: profileData?.avatar_url || user.user_metadata?.avatar_url,
           // Same source of truth as usePremiumStatus: profiles.is_premium.
           isPremium: !!profileData?.is_premium,
@@ -187,7 +190,7 @@ export function ProfilePage() {
           (historyData || []).map(async (item) => {
             try {
               const response = await fetch(
-                `https://api.themoviedb.org/3/search/${item.content_type}?api_key=${import.meta.env.VITE_TMDB_API_KEY}&query=${encodeURIComponent(item.title)}&language=pt-BR`
+                `https://api.themoviedb.org/3/search/${item.content_type}?api_key=${import.meta.env.VITE_TMDB_API_KEY}&query=${encodeURIComponent(item.title)}&language=${getTmdbLanguage()}`
               );
               const data = await response.json();
               const result = data.results[0];
@@ -208,8 +211,8 @@ export function ProfilePage() {
       } catch (error) {
         console.error('Error fetching profile:', error);
         toast({
-          title: "Erro ao carregar perfil",
-          description: "Por favor, tente novamente mais tarde",
+          title: t("profile.toasts.loadProfileFailed.title"),
+          description: t("profile.toasts.loadProfileFailed.description"),
           variant: "destructive",
         });
         setIsLoading(false);
@@ -217,6 +220,10 @@ export function ProfilePage() {
     };
 
     fetchUserProfile();
+    // t() reads the current language at call time regardless of closure —
+    // adding it here would just re-fetch the whole profile on every
+    // language switch for no benefit.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate, toast]);
 
   const handlePreferencesUpdate = async (newPreferences: { 
@@ -255,14 +262,14 @@ export function ProfilePage() {
       } : null);
   
       toast({
-        title: "Preferências atualizadas",
-        description: "Suas preferências foram salvas com sucesso.",
+        title: t("profile.toasts.preferencesUpdated.title"),
+        description: t("profile.toasts.preferencesUpdated.description"),
       });
     } catch (error) {
       console.error('Error updating preferences:', error);
       toast({
-        title: "Erro ao atualizar preferências",
-        description: "Por favor, tente novamente mais tarde.",
+        title: t("profile.toasts.preferencesUpdateFailed.title"),
+        description: t("profile.toasts.preferencesUpdateFailed.description"),
         variant: "destructive",
       });
     }
@@ -294,16 +301,16 @@ export function ProfilePage() {
       if (error) throw error;
 
       setShowSubscriptionModal(false);
-      
+
       toast({
-        title: "Assinatura cancelada",
-        description: "Sua assinatura será cancelada ao fim do período atual.",
+        title: t("profile.toasts.subscriptionCanceled.title"),
+        description: t("profile.toasts.subscriptionCanceled.description"),
       });
     } catch (error) {
       console.error('Error cancelling subscription:', error);
       toast({
-        title: "Erro ao cancelar assinatura",
-        description: "Ocorreu um erro ao processar sua solicitação. Tente novamente mais tarde.",
+        title: t("profile.toasts.subscriptionCancelFailed.title"),
+        description: t("profile.toasts.subscriptionCancelFailed.description"),
         variant: "destructive",
       });
     }
@@ -322,16 +329,16 @@ export function ProfilePage() {
       // Then update the profile state
       setProfile(prev => prev ? { ...prev, isPremium: true } : null);
       setShowSubscriptionModal(false);
-      
+
       toast({
-        title: "Assinatura ativada",
-        description: "Bem-vindo ao plano Premium!",
+        title: t("profile.toasts.subscriptionActivated.title"),
+        description: t("profile.toasts.subscriptionActivated.description"),
       });
     } catch (error) {
       console.error('Error upgrading subscription:', error);
       toast({
-        title: "Erro ao ativar assinatura",
-        description: "Ocorreu um erro ao processar sua solicitação. Tente novamente mais tarde.",
+        title: t("profile.toasts.subscriptionActivateFailed.title"),
+        description: t("profile.toasts.subscriptionActivateFailed.description"),
         variant: "destructive",
       });
     }
@@ -342,15 +349,15 @@ export function ProfilePage() {
     try {
       await deleteAccount();
       toast({
-        title: "Conta excluída",
-        description: "Sua conta e todos os seus dados foram removidos permanentemente.",
+        title: t("profile.toasts.accountDeleted.title"),
+        description: t("profile.toasts.accountDeleted.description"),
       });
       navigate("/");
     } catch (error) {
       console.error("Error deleting account:", error);
       toast({
-        title: "Erro ao excluir conta",
-        description: "Não foi possível excluir sua conta. Tente novamente mais tarde.",
+        title: t("profile.toasts.accountDeleteFailed.title"),
+        description: t("profile.toasts.accountDeleteFailed.description"),
         variant: "destructive",
       });
     } finally {
@@ -365,15 +372,15 @@ export function ProfilePage() {
       if (error) throw error;
 
       toast({
-        title: "Saindo...",
-        description: "Você foi desconectado com sucesso",
+        title: t("dashboard.toasts.loggingOut.title"),
+        description: t("dashboard.toasts.loggingOut.description"),
       });
 
       navigate("/");
     } catch (error) {
       toast({
-        title: "Erro ao sair",
-        description: "Não foi possível fazer logout. Tente novamente.",
+        title: t("dashboard.toasts.logoutError.title"),
+        description: t("dashboard.toasts.logoutError.description"),
         variant: "destructive",
       });
     }
@@ -440,7 +447,7 @@ export function ProfilePage() {
                       onClick={() => setShowSubscriptionModal(true)}
                       className="px-2 py-1 bg-filmeja-purple/20 rounded-full text-xs font-medium text-filmeja-purple hover:bg-filmeja-purple/30"
                     >
-                      Premium
+                      {t("header.premiumBadge")}
                     </Button>
                   )}
                 </div>
@@ -454,7 +461,7 @@ export function ProfilePage() {
                   rounded-xl text-white text-sm font-medium flex items-center gap-2 group"
                 >
                   <Sparkles className="w-4 h-4" />
-                  Seja Premium
+                  {t("profile.goPremium")}
                   <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                 </motion.button>
                 )}
@@ -472,43 +479,45 @@ export function ProfilePage() {
         >
           <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
             <Heart className="w-5 h-5 text-filmeja-purple" />
-            Suas Preferências
+            {t("profile.preferencesTitle")}
           </h2>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <h3 className="text-gray-400 text-sm mb-2">Gêneros Favoritos</h3>
+              <h3 className="text-gray-400 text-sm mb-2">{t("profile.favoriteGenres")}</h3>
               <div className="flex flex-wrap gap-2">
                 {profile.preferences?.genres.map((genre) => (
                   <span
                     key={genre}
                     className="px-3 py-1 bg-filmeja-purple/20 rounded-full text-sm text-white"
                   >
-                    {GENRE_OPTIONS[genre]?.label ?? genre}
+                    {t(`onboarding.genres.${genre}`, { defaultValue: GENRE_OPTIONS[genre]?.label ?? genre })}
                   </span>
                 ))}
               </div>
             </div>
-            
+
             <div>
-              <h3 className="text-gray-400 text-sm mb-2">Tipo preferido</h3>
+              <h3 className="text-gray-400 text-sm mb-2">{t("profile.preferredType")}</h3>
               <div className="flex flex-wrap gap-2">
                   <span
                     className="px-3 py-1 bg-filmeja-blue/20 rounded-full text-sm text-white"
                   >
-                    {CONTENT_TYPE_OPTIONS[profile.preferences?.content_type ?? ""]?.label ?? profile.preferences?.content_type}
+                    {t(`onboarding.contentTypes.${profile.preferences?.content_type}`, {
+                      defaultValue: CONTENT_TYPE_OPTIONS[profile.preferences?.content_type ?? ""]?.label ?? profile.preferences?.content_type,
+                    })}
                   </span>
               </div>
             </div>
           </div>
-          
+
           <Button
             variant="outline"
             className="mt-4 border-white/10 hover:bg-white/5"
             onClick={() => setShowPreferencesModal(true)}
           >
             <Settings className="w-4 h-4 mr-2" />
-            Editar Preferências
+            {t("profile.editPreferences")}
           </Button>
           
           {/* Add the Onboarding component at the end of the return statement */}
@@ -536,7 +545,7 @@ export function ProfilePage() {
 >
   <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
     <History className="w-5 h-5 text-filmeja-purple" />
-    Histórico de Recomendações
+    {t("profile.historyTitle")}
   </h2>
   
   {profile.isPremium ? (
@@ -569,7 +578,7 @@ export function ProfilePage() {
                   <p className="text-xs text-gray-400 mt-1 text-left">
                     {formatDistanceToNow(new Date(item.created_at), {
                       addSuffix: true,
-                      locale: ptBR,
+                      locale: getTmdbLanguage() === "en-US" ? enUS : getTmdbLanguage() === "es-MX" ? es : ptBR,
                     })}
                   </p>
                 </div>
@@ -579,7 +588,7 @@ export function ProfilePage() {
         ))
       ) : (
         <p className="text-gray-400 col-span-full text-center py-8">
-          Nenhuma recomendação no histórico ainda
+          {t("profile.emptyHistory")}
         </p>
       )}
     </div>
@@ -587,17 +596,17 @@ export function ProfilePage() {
     <div className="text-center py-8">
       <Crown className="w-12 h-12 text-filmeja-purple mx-auto mb-4" />
       <h3 className="text-lg font-semibold text-white mb-2">
-        Recurso Premium
+        {t("profile.premiumFeature.title")}
       </h3>
       <p className="text-gray-400 mb-6 max-w-md mx-auto">
-        Mantenha um histórico completo de todas as suas recomendações e acesse-as a qualquer momento com o plano Premium.
+        {t("profile.premiumFeature.description")}
       </p>
       <Button
         onClick={() => setShowPaymentModal(true)}
         className="bg-gradient-to-r from-filmeja-purple to-filmeja-blue text-white hover:opacity-90"
       >
         <Crown className="w-4 h-4 mr-2" />
-        Assinar Premium
+        {t("header.subscribePremium")}
       </Button>
     </div>
   )}
@@ -624,7 +633,7 @@ export function ProfilePage() {
             className="text-gray-400 hover:text-white hover:bg-white/10 w-full sm:w-auto px-4 py-6 sm:py-2 text-base sm:text-sm"
           >
             <LogOut className="w-5 h-5 sm:w-4 sm:h-4 mr-2" />
-            Sair da Conta
+            {t("profile.signOut")}
           </Button>
         </motion.div>
 
@@ -642,27 +651,26 @@ export function ProfilePage() {
                 className="text-red-400/70 hover:text-red-400 hover:bg-red-500/10 w-full sm:w-auto px-4 py-6 sm:py-2 text-base sm:text-sm"
               >
                 <Trash2 className="w-5 h-5 sm:w-4 sm:h-4 mr-2" />
-                Excluir Conta
+                {t("profile.deleteAccount.button")}
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent className="bg-filmeja-dark border-white/10">
               <AlertDialogHeader>
-                <AlertDialogTitle className="text-white">Excluir sua conta?</AlertDialogTitle>
+                <AlertDialogTitle className="text-white">{t("profile.deleteAccount.dialogTitle")}</AlertDialogTitle>
                 <AlertDialogDescription className="text-gray-400">
-                  Essa ação é permanente. Todos os seus dados — perfil, preferências, histórico,
-                  favoritos e assinatura — serão excluídos e não poderão ser recuperados.
+                  {t("profile.deleteAccount.dialogDescription")}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel className="bg-transparent border-white/10 text-white hover:bg-white/5 hover:text-white">
-                  Cancelar
+                  {t("profile.deleteAccount.cancel")}
                 </AlertDialogCancel>
                 <AlertDialogAction
                   onClick={handleDeleteAccount}
                   disabled={isDeletingAccount}
                   className="bg-red-600 hover:bg-red-700 text-white"
                 >
-                  {isDeletingAccount ? "Excluindo..." : "Excluir permanentemente"}
+                  {isDeletingAccount ? t("profile.deleteAccount.deleting") : t("profile.deleteAccount.confirm")}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>

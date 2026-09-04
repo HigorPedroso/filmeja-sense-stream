@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getRecommendationsFromGemini } from "@/lib/gemini";
+import { getTmdbLanguage } from "@/lib/tmdbLanguage";
 
 interface ContentItem {
   id: number;
@@ -41,7 +42,7 @@ export function RecommendedByAI({ watchedContent, onItemClick }: Props) {
             const response = await fetch(
               `https://api.themoviedb.org/3/search/${rec.type}?api_key=${
                 import.meta.env.VITE_TMDB_API_KEY
-              }&query=${encodeURIComponent(rec.title)}&language=pt-BR`
+              }&query=${encodeURIComponent(rec.title)}&language=${getTmdbLanguage()}`
             );
             const data = await response.json();
             return {

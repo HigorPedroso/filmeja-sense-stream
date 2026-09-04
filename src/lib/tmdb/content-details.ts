@@ -2,6 +2,7 @@
 import { ContentDetails as ContentDetailsType } from "@/types/movie";
 import { fetchFromTMDB } from "./api";
 import { MOCK_MOVIES, MOCK_STREAMING_PROVIDERS } from "./mock-data";
+import { getTmdbRegion } from "@/lib/tmdbLanguage";
 
 // Function to get content details
 export const getContentDetails = async (id: number, type: 'movie' | 'tv'): Promise<ContentDetailsType> => {
@@ -38,12 +39,12 @@ export const getContentDetails = async (id: number, type: 'movie' | 'tv'): Promi
     
     // Extract streaming providers
     let streamingProviders: any[] = [];
-    if (watchProvidersData && watchProvidersData.results && watchProvidersData.results['BR']) {
-      // Get Brazilian providers (flatrate = subscription)
-      const brProviders = watchProvidersData.results['BR'];
-      
-      if (brProviders.flatrate) {
-        streamingProviders = brProviders.flatrate.map((provider: any) => ({
+    const region = getTmdbRegion();
+    if (watchProvidersData && watchProvidersData.results && watchProvidersData.results[region]) {
+      const regionProviders = watchProvidersData.results[region];
+
+      if (regionProviders.flatrate) {
+        streamingProviders = regionProviders.flatrate.map((provider: any) => ({
           provider_id: provider.provider_id,
           provider_name: provider.provider_name,
           logo_path: provider.logo_path

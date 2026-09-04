@@ -1,4 +1,6 @@
 import { toast } from "@/components/ui/use-toast";
+import { getTmdbLanguage, getTmdbRegion } from "@/lib/tmdbLanguage";
+import i18n from "@/i18n";
 
 interface ContentItem {
   id: number;
@@ -10,10 +12,11 @@ interface FetchContentOptions {
   onLoadingChange?: (loading: boolean) => void;
   onContentFetched?: (content: any) => void;
   showToast?: boolean;
-  // When true, throws NotAvailableInBrazilError instead of returning content
-  // that has no BR streaming provider. Used for AI-suggested titles, where
+  // When true, throws NotAvailableInRegionError instead of returning content
+  // that has no streaming provider in the current region (BR for pt-BR, US
+  // for en-US — see getTmdbRegion). Used for AI-suggested titles, where
   // there's no other guarantee the recommendation is actually watchable.
-  requireBrAvailability?: boolean;
+  requireRegionAvailability?: boolean;
 }
 
 // Thrown by searchContentByTitle when the AI suggested a title that hasn't
@@ -21,18 +24,18 @@ interface FetchContentOptions {
 // nothing to watch.
 export class NotReleasedError extends Error {
   constructor(title: string) {
-    super(`"${title}" ainda não foi lançado.`);
+    super(i18n.t("recommendationErrors.notReleasedYet.message", { title }));
     this.name = "NotReleasedError";
   }
 }
 
-// Thrown by fetchContentWithProviders (with requireBrAvailability) when a
-// released title still isn't on any streaming platform in Brazil — festival
-// titles, region-locked releases, theatrical-only, etc.
-export class NotAvailableInBrazilError extends Error {
+// Thrown by fetchContentWithProviders (with requireRegionAvailability) when
+// a released title still isn't on any streaming platform in the current
+// region — festival titles, region-locked releases, theatrical-only, etc.
+export class NotAvailableInRegionError extends Error {
   constructor(title: string) {
-    super(`"${title}" não está disponível em nenhuma plataforma de streaming no Brasil no momento.`);
-    this.name = "NotAvailableInBrazilError";
+    super(i18n.t("recommendationErrors.notAvailableInRegion.message", { title }));
+    this.name = "NotAvailableInRegionError";
   }
 }
 
@@ -41,14 +44,14 @@ export class NotAvailableInBrazilError extends Error {
 // duplicate the same if/else.
 export function describeAiRecommendationError(error: unknown): { title: string; description: string } {
   if (error instanceof NotReleasedError) {
-    return { title: "Ainda não foi lançado", description: error.message };
+    return { title: i18n.t("recommendationErrors.notReleasedYet.toastTitle"), description: error.message };
   }
-  if (error instanceof NotAvailableInBrazilError) {
-    return { title: "Não disponível no Brasil", description: error.message };
+  if (error instanceof NotAvailableInRegionError) {
+    return { title: i18n.t("recommendationErrors.notAvailableInRegion.toastTitle"), description: error.message };
   }
   return {
-    title: "Conteúdo não encontrado",
-    description: "Não foi possível encontrar o título especificado",
+    title: i18n.t("recommendationErrors.contentNotFound.toastTitle"),
+    description: i18n.t("recommendationErrors.contentNotFound.description"),
   };
 }
 
@@ -151,12 +154,12 @@ export async function searchContentByTitle(title: string, type?: "movie" | "tv",
     fetch(
       `https://api.themoviedb.org/3/search/movie?api_key=${
         import.meta.env.VITE_TMDB_API_KEY
-      }&query=${encodeURIComponent(cleanTitle)}&language=pt-BR`
+      }&query=${encodeURIComponent(cleanTitle)}&language=${getTmdbLanguage()}`
     ).then((r) => r.json()),
     fetch(
       `https://api.themoviedb.org/3/search/tv?api_key=${
         import.meta.env.VITE_TMDB_API_KEY
-      }&query=${encodeURIComponent(cleanTitle)}&language=pt-BR`
+      }&query=${encodeURIComponent(cleanTitle)}&language=${getTmdbLanguage()}`
     ).then((r) => r.json()),
   ]);
   const searchResults = [
@@ -183,7 +186,12 @@ export async function fetchContentWithProviders(
   item: ContentItem,
   options: FetchContentOptions = {}
 ) {
-  const { onLoadingChange, onContentFetched, showToast = true, requireBrAvailability = false } = options;
+  const { onLoadingChange, onContentFetched, showToast = true, requireRegionAvailability = false } = options;
+  const region = getTmdbRegion();
+  // Second country to check when the primary one has no listing at all —
+  // the US catalog is the broadest fallback for both BR and MX; BR is the
+  // fallback for US since that pairing predates the es-419/MX language.
+  const otherRegion = region === "BR" ? "US" : region === "MX" ? "US" : "BR";
 
   try {
     onLoadingChange?.(true);
@@ -197,25 +205,27 @@ export async function fetchContentWithProviders(
       fetch(
         `https://api.themoviedb.org/3/${item.media_type}/${item.id}?api_key=${
           import.meta.env.VITE_TMDB_API_KEY
-        }&language=pt-BR`
+        }&language=${getTmdbLanguage()}`
       ).then(r => r.json()),
       fetch(
         `https://api.themoviedb.org/3/${item.media_type}/${item.id}/videos?api_key=${
           import.meta.env.VITE_TMDB_API_KEY
-        }&language=pt-BR`
+        }&language=${getTmdbLanguage()}`
       ).then(r => r.json()),
       fetch(
         `https://api.themoviedb.org/3/${item.media_type}/${item.id}/similar?api_key=${
           import.meta.env.VITE_TMDB_API_KEY
-        }&language=pt-BR`
+        }&language=${getTmdbLanguage()}`
       ).then(r => r.json()),
     ]);
 
-    if (requireBrAvailability) {
-      const brProviders = providersData?.results?.BR;
-      const hasBrStreaming = !!(brProviders?.flatrate || brProviders?.free);
-      if (!hasBrStreaming) {
-        throw new NotAvailableInBrazilError(details?.title || details?.name || item.title || item.name || "Este título");
+    if (requireRegionAvailability) {
+      const regionProviders = providersData?.results?.[region];
+      const hasRegionStreaming = !!(regionProviders?.flatrate || regionProviders?.free);
+      if (!hasRegionStreaming) {
+        throw new NotAvailableInRegionError(
+          details?.title || details?.name || item.title || item.name || i18n.t("recommendationErrors.genericTitleFallback")
+        );
       }
     }
 
@@ -223,14 +233,14 @@ export async function fetchContentWithProviders(
     let isInTheaters = false;
 
     if (providersData?.results) {
-      providers = providersData.results?.BR || providersData.results?.US || null;
-      
+      providers = providersData.results?.[region] || providersData.results?.[otherRegion] || null;
+
       if (!providers?.flatrate && !providers?.free) {
         const allProviders = {
-          ...providersData.results?.BR,
-          ...providersData.results?.US
+          ...providersData.results?.[region],
+          ...providersData.results?.[otherRegion]
         };
-        
+
         if (allProviders?.rent || allProviders?.buy) {
           providers = allProviders;
         }
@@ -242,7 +252,7 @@ export async function fetchContentWithProviders(
       const nowPlayingResponse = await fetch(
         `https://api.themoviedb.org/3/movie/now_playing?api_key=${
           import.meta.env.VITE_TMDB_API_KEY
-        }&language=pt-BR&region=BR`
+        }&language=${getTmdbLanguage()}&region=${region}`
       );
       const nowPlayingData = await nowPlayingResponse.json();
       
@@ -268,8 +278,8 @@ export async function fetchContentWithProviders(
     console.error("Error fetching content details:", error);
     if (showToast) {
       toast({
-        title: "Erro",
-        description: "Não foi possível carregar os detalhes do conteúdo",
+        title: i18n.t("recommendationErrors.loadDetailsFailed.title"),
+        description: i18n.t("recommendationErrors.loadDetailsFailed.description"),
         variant: "destructive",
       });
     }

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -79,6 +80,7 @@ export const Onboarding = ({
   onComplete,
   isEditing = false,
 }: OnboardingProps) => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState(0);
@@ -115,48 +117,48 @@ export const Onboarding = ({
   const steps = [
     {
       key: "genres",
-      title: "Quais tipos de filmes ou séries você mais gosta de assistir?",
-      subtitle: "Selecione quantos quiser",
-      options: Object.entries(GENRE_OPTIONS).map(([id, { label, icon }]) => ({ id, label, icon })),
+      title: t("onboarding.steps.genres.title"),
+      subtitle: t("onboarding.steps.genres.subtitle"),
+      options: Object.entries(GENRE_OPTIONS).map(([id, { icon }]) => ({ id, label: t(`onboarding.genres.${id}`), icon })),
       type: "multiple" as "multiple" | "single",
     },
     {
       key: "contentType",
-      title: "Você prefere assistir...",
-      options: Object.entries(CONTENT_TYPE_OPTIONS).map(([id, { label, icon }]) => ({ id, label, icon })),
+      title: t("onboarding.steps.contentType.title"),
+      options: Object.entries(CONTENT_TYPE_OPTIONS).map(([id, { icon }]) => ({ id, label: t(`onboarding.contentTypes.${id}`), icon })),
       type: "single" as "multiple" | "single",
     },
     {
       key: "watchDuration",
-      title: "Por quanto tempo você geralmente assiste?",
+      title: t("onboarding.steps.watchDuration.title"),
       options: [
-        { id: "short", label: "Menos de 30 minutos", icon: "🕐" },
-        { id: "medium", label: "Até 1 hora", icon: "🕒" },
-        { id: "long", label: "Mais de 1 hora", icon: "🕕" },
-        { id: "exploring", label: "Estou só explorando", icon: "📆" },
+        { id: "short", label: t("onboarding.watchDuration.short"), icon: "🕐" },
+        { id: "medium", label: t("onboarding.watchDuration.medium"), icon: "🕒" },
+        { id: "long", label: t("onboarding.watchDuration.long"), icon: "🕕" },
+        { id: "exploring", label: t("onboarding.watchDuration.exploring"), icon: "📆" },
       ],
       type: "single" as "multiple" | "single",
     },
     {
       key: "languages",
-      title: "Quais idiomas você prefere para assistir?",
-      subtitle: "Selecione um ou mais idiomas",
+      title: t("onboarding.steps.languages.title"),
+      subtitle: t("onboarding.steps.languages.subtitle"),
       options: [
-        { id: "pt", label: "Português", icon: "🇧🇷" },
-        { id: "en", label: "Inglês", icon: "🇺🇸" },
-        { id: "es", label: "Espanhol", icon: "🇪🇸" },
-        { id: "any", label: "Sem preferência", icon: "🌍" },
+        { id: "pt", label: t("onboarding.languages.pt"), icon: "🇧🇷" },
+        { id: "en", label: t("onboarding.languages.en"), icon: "🇺🇸" },
+        { id: "es", label: t("onboarding.languages.es"), icon: "🇪🇸" },
+        { id: "any", label: t("onboarding.languages.any"), icon: "🌍" },
       ],
       type: "multiple" as "multiple" | "single",
     },
     {
       key: "watchTime",
-      title: "Em que horário costuma assistir com mais frequência?",
+      title: t("onboarding.steps.watchTime.title"),
       options: [
-        { id: "morning", label: "Manhã (6h-12h)", icon: "🌅" },
-        { id: "afternoon", label: "Tarde (12h-18h)", icon: "🌞" },
-        { id: "evening", label: "Noite (18h-24h)", icon: "🌙" },
-        { id: "dawn", label: "Madrugada (0h-6h)", icon: "🌠" },
+        { id: "morning", label: t("onboarding.watchTime.morning"), icon: "🌅" },
+        { id: "afternoon", label: t("onboarding.watchTime.afternoon"), icon: "🌞" },
+        { id: "evening", label: t("onboarding.watchTime.evening"), icon: "🌙" },
+        { id: "dawn", label: t("onboarding.watchTime.dawn"), icon: "🌠" },
       ],
       type: "single" as "multiple" | "single",
     },
@@ -223,8 +225,8 @@ export const Onboarding = ({
         } = await supabase.auth.getUser();
         if (!user) {
           toast({
-            title: "Erro de autenticação",
-            description: "Por favor, faça login novamente.",
+            title: t("onboarding.toasts.authError.title"),
+            description: t("onboarding.toasts.authError.description"),
             variant: "destructive",
           });
           navigate("/login");
@@ -249,16 +251,16 @@ export const Onboarding = ({
       }
 
       toast({
-        title: isEditing ? "Preferências atualizadas!" : "Preferências salvas!",
+        title: isEditing ? t("onboarding.toasts.updated.title") : t("onboarding.toasts.saved.title"),
         description: isEditing
-          ? "Suas preferências foram atualizadas com sucesso."
-          : "Seu perfil foi configurado com sucesso.",
+          ? t("onboarding.toasts.updated.description")
+          : t("onboarding.toasts.saved.description"),
       });
     } catch (error) {
       console.error("Error saving preferences:", error);
       toast({
-        title: "Erro ao salvar preferências",
-        description: "Por favor, tente novamente.",
+        title: t("onboarding.toasts.saveError.title"),
+        description: t("onboarding.toasts.saveError.description"),
         variant: "destructive",
       });
     } finally {
@@ -304,7 +306,7 @@ export const Onboarding = ({
             disabled={currentStep === 0}
             className="text-xs sm:text-base px-2 sm:px-4"
           >
-            Voltar
+            {t("onboarding.buttons.back")}
           </Button>
 
           {isLastStep ? (
@@ -313,14 +315,14 @@ export const Onboarding = ({
               onClick={savePreferences}
               disabled={isSaving}
             >
-              {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Concluir"}
+              {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : t("onboarding.buttons.finish")}
             </Button>
           ) : (
             <Button
               className="bg-filmeja-purple hover:bg-filmeja-purple/90 text-xs sm:text-base px-2 sm:px-4"
               onClick={goNext}
             >
-              Continuar
+              {t("onboarding.buttons.continue")}
             </Button>
           )}
         </div>
@@ -403,7 +405,7 @@ export const Onboarding = ({
           onClick={isLastStep ? savePreferences : goNext}
           disabled={!canContinue || isSaving}
         >
-          {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : isLastStep ? "Concluir" : "Continuar"}
+          {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : isLastStep ? t("onboarding.buttons.finish") : t("onboarding.buttons.continue")}
         </Button>
       </div>
     </div>

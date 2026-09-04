@@ -1,16 +1,12 @@
 
 import { motion, AnimatePresence } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { Skeleton } from "@/components/ui/skeleton";
 
-const loadingPhrases = [
-  "🎬 Preparando a próxima aventura...",
-  "✨ Carregando um universo épico...",
-  "🍿 Quase lá...",
-  "🎥 Revelando histórias incríveis...",
-  "🌟 Aquecendo os motores...",
-];
-
 export const ContentModalSkeleton = () => {
+  const { t } = useTranslation();
+  const loadingPhrases = t("result.skeleton.loadingPhrases", { returnObjects: true }) as string[];
+
   return (
     <div className="relative">
       <div className="flex flex-col md:flex-row gap-6">

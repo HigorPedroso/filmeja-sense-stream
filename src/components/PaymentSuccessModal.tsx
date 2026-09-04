@@ -1,5 +1,6 @@
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { Button } from "./ui/button";
 import { Check, Sparkles, Star, Crown, Rocket } from "lucide-react";
 import confetti from 'canvas-confetti';
@@ -10,9 +11,21 @@ interface PaymentSuccessModalProps {
   onClose: () => void;
 }
 
+const ITEM_ICONS = [
+  <Crown className="w-5 h-5 text-filmeja-purple" />,
+  <Sparkles className="w-5 h-5 text-filmeja-purple" />,
+  <Star className="w-5 h-5 text-filmeja-purple" />,
+  <Rocket className="w-5 h-5 text-filmeja-purple" />,
+];
+
 const PaymentSuccessModal = ({ isOpen, onClose }: PaymentSuccessModalProps) => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
-  
+  const items = (t("paymentSuccessModal.items", { returnObjects: true }) as string[]).map((text, index) => ({
+    icon: ITEM_ICONS[index],
+    text,
+  }));
+
   const launchConfetti = () => {
     confetti({
       particleCount: 100,
@@ -90,30 +103,13 @@ const PaymentSuccessModal = ({ isOpen, onClose }: PaymentSuccessModalProps) => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
             >
-              <h2 className="text-2xl font-bold">Bem-vindo ao Premium! 🎉</h2>
+              <h2 className="text-2xl font-bold">{t("paymentSuccessModal.title")}</h2>
               <p className="text-gray-400">
-                Prepare-se para uma experiência incrível de entretenimento!
+                {t("paymentSuccessModal.subtitle")}
               </p>
 
               <div className="space-y-4 mt-6">
-                {[
-                  {
-                    icon: <Crown className="w-5 h-5 text-filmeja-purple" />,
-                    text: "Acesso Premium Ativado"
-                  },
-                  {
-                    icon: <Sparkles className="w-5 h-5 text-filmeja-purple" />,
-                    text: "Recomendações Personalizadas Desbloqueadas"
-                  },
-                  {
-                    icon: <Star className="w-5 h-5 text-filmeja-purple" />,
-                    text: "Recursos Exclusivos Disponíveis"
-                  },
-                  {
-                    icon: <Rocket className="w-5 h-5 text-filmeja-purple" />,
-                    text: "Suporte Prioritário Ativo"
-                  }
-                ].map((item, index) => (
+                {items.map((item, index) => (
                   <motion.div
                     key={index}
                     className="flex items-center justify-center space-x-2"
@@ -147,7 +143,7 @@ const PaymentSuccessModal = ({ isOpen, onClose }: PaymentSuccessModalProps) => {
                   }}
                   className="w-full bg-gradient-to-r from-filmeja-purple to-filmeja-blue hover:opacity-90 transition-all"
                 >
-                  Começar a Explorar
+                  {t("paymentSuccessModal.startExploring")}
                 </Button>
               </motion.div>
         </AnimatePresence>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 const streamingServices = [
   { name: 'Star+', logo: '/streaming/star-plus.svg' },
@@ -12,6 +13,7 @@ const streamingServices = [
 ];
 
 const StreamingServices = () => {
+  const { t } = useTranslation();
   const [activeIndex, setActiveIndex] = useState(0);
 
   useEffect(() => {
@@ -25,7 +27,7 @@ const StreamingServices = () => {
     <section className="py-16 bg-filmeja-dark">
       <div className="container mx-auto px-4">
         <h2 className="text-2xl md:text-3xl text-white text-center font-bold mb-12">
-          A nossa IA recomenda os melhores filmes e séries de todas streamings para você assistir
+          {t("streaming.heading")}
         </h2>
         
         <div className="relative overflow-hidden">

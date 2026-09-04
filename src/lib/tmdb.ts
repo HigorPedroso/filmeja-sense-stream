@@ -2,6 +2,7 @@
 // This file now serves as a re-export of the new modular structure
 
 import { ContentItem } from '@/types/movie';
+import { getTmdbLanguage } from '@/lib/tmdbLanguage';
 
 // to maintain backward compatibility with existing imports
 export * from './tmdb/index';
@@ -12,7 +13,7 @@ const BASE_URL = 'https://api.themoviedb.org/3';
 export async function getTrending() {
   try {
     const response = await fetch(
-      `${BASE_URL}/trending/all/week?api_key=${TMDB_API_KEY}&language=pt-BR`
+      `${BASE_URL}/trending/all/week?api_key=${TMDB_API_KEY}&language=${getTmdbLanguage()}`
     );
     
     if (!response.ok) {
@@ -30,7 +31,7 @@ export async function getTrending() {
 export async function getUpcoming2025() {
   try {
     const response = await fetch(
-      `${BASE_URL}/discover/movie?api_key=${TMDB_API_KEY}&language=pt-BR&primary_release_year=2025&sort_by=popularity.desc`
+      `${BASE_URL}/discover/movie?api_key=${TMDB_API_KEY}&language=${getTmdbLanguage()}&primary_release_year=2025&sort_by=popularity.desc`
     );
     
     if (!response.ok) {
@@ -82,10 +83,10 @@ export const getMoviesByMood = async (mood: string) => {
   // Fetch both movies and TV shows
   const [movieResponse, tvResponse] = await Promise.all([
     fetch(
-      `https://api.themoviedb.org/3/discover/movie?api_key=${import.meta.env.VITE_TMDB_API_KEY}&with_genres=${genres.join(',')}&sort_by=popularity.desc&language=pt-BR`
+      `https://api.themoviedb.org/3/discover/movie?api_key=${import.meta.env.VITE_TMDB_API_KEY}&with_genres=${genres.join(',')}&sort_by=popularity.desc&language=${getTmdbLanguage()}`
     ),
     fetch(
-      `https://api.themoviedb.org/3/discover/tv?api_key=${import.meta.env.VITE_TMDB_API_KEY}&with_genres=${genres.join(',')}&sort_by=popularity.desc&language=pt-BR`
+      `https://api.themoviedb.org/3/discover/tv?api_key=${import.meta.env.VITE_TMDB_API_KEY}&with_genres=${genres.join(',')}&sort_by=popularity.desc&language=${getTmdbLanguage()}`
     )
   ]);
 
@@ -106,7 +107,7 @@ export const getMoviesByMood = async (mood: string) => {
 
 export const getUpcomingTVShows = async () => {
   const response = await fetch(
-    `${BASE_URL}/trending/tv/week?api_key=${TMDB_API_KEY}&language=pt-BR`
+    `${BASE_URL}/trending/tv/week?api_key=${TMDB_API_KEY}&language=${getTmdbLanguage()}`
   );
   const data = await response.json();
   return data.results.map((show: any) => ({
@@ -135,7 +136,7 @@ const mapToContentItem = (item: any): ContentItem => {
 export const getTopRatedMovies = async (): Promise<ContentItem[]> => {
   try {
     const response = await fetch(
-      `${BASE_URL}/movie/upcoming?api_key=${TMDB_API_KEY}&language=pt-BR`
+      `${BASE_URL}/movie/upcoming?api_key=${TMDB_API_KEY}&language=${getTmdbLanguage()}`
     );
     const data = await response.json();
     return data.results.map(mapToContentItem);
@@ -150,7 +151,7 @@ export const getRecommendationsByMood = async (mood: string): Promise<ContentIte
     const genres = moodGenreMap[mood as keyof typeof moodGenreMap] || [];
     
     const response = await fetch(
-      `${BASE_URL}/discover/movie?api_key=${TMDB_API_KEY}&with_genres=${genres.join(',')}&sort_by=popularity.desc&language=pt-BR`
+      `${BASE_URL}/discover/movie?api_key=${TMDB_API_KEY}&with_genres=${genres.join(',')}&sort_by=popularity.desc&language=${getTmdbLanguage()}`
     );
 
     if (!response.ok) {

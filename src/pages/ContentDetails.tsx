@@ -1,6 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { getContentDetails } from '@/lib/tmdb';
@@ -11,6 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { buildYoutubeEmbedUrl } from '@/lib/youtubeEmbed';
 
 const ContentDetails = () => {
+  const { t } = useTranslation();
   const { type, id } = useParams<{ type: string; id: string }>();
   const [content, setContent] = useState<ContentDetailsType | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -30,13 +32,14 @@ const ContentDetails = () => {
         setContent(details);
       } catch (err) {
         console.error('Failed to load content details:', err);
-        setError('Não foi possível carregar os detalhes do conteúdo');
+        setError(t('recommendationErrors.loadDetailsFailed.description'));
       } finally {
         setIsLoading(false);
       }
     };
     
     loadContentDetails();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, type]);
   
   const getImageUrl = (path: string, size = 'original') => {
@@ -71,8 +74,8 @@ const ContentDetails = () => {
       <div className="min-h-screen bg-filmeja-dark flex flex-col">
         <Navbar />
         <div className="container mx-auto px-4 py-24 md:py-28 text-center">
-          <h1 className="text-2xl font-bold text-white mb-4">Conteúdo não encontrado</h1>
-          <p className="text-gray-300">{error || "Este título não está disponível no momento."}</p>
+          <h1 className="text-2xl font-bold text-white mb-4">{t('recommendationErrors.contentNotFound.toastTitle')}</h1>
+          <p className="text-gray-300">{error || t('contentDetailsPage.notAvailableNow')}</p>
         </div>
         <Footer />
       </div>
@@ -118,12 +121,12 @@ const ContentDetails = () => {
                 </div>
                 {content.media_type === 'movie' && content.runtime && (
                   <div className="text-gray-300">
-                    {content.runtime} minutos
+                    {t('result.labels.runtimeMinutes', { count: content.runtime })}
                   </div>
                 )}
                 {content.media_type === 'tv' && content.number_of_seasons && (
                   <div className="text-gray-300">
-                    {content.number_of_seasons} temporadas
+                    {t('contentDetailsPage.seasons', { count: content.number_of_seasons })}
                   </div>
                 )}
                 <div className="flex flex-wrap gap-1">
@@ -136,13 +139,13 @@ const ContentDetails = () => {
               </div>
               
               <div className="mb-6">
-                <h2 className="text-xl font-semibold text-white mb-2">Sinopse</h2>
+                <h2 className="text-xl font-semibold text-white mb-2">{t('contentDetailsPage.overview')}</h2>
                 <p className="text-gray-300">{content.overview}</p>
               </div>
               
               {content.streaming_providers.length > 0 && (
                 <div className="mb-6">
-                  <h2 className="text-xl font-semibold text-white mb-3">Disponível em</h2>
+                  <h2 className="text-xl font-semibold text-white mb-3">{t('contentDetailsPage.availableOn')}</h2>
                   <div className="flex flex-wrap gap-3">
                     {content.streaming_providers.map(provider => (
                       <a 
@@ -171,12 +174,12 @@ const ContentDetails = () => {
                       element?.scrollIntoView({ behavior: 'smooth' });
                     }}
                   >
-                    Assistir Trailer
+                    {t('contentDetailsPage.watchTrailer')}
                   </Button>
                 )}
                 <Button variant="outline" className="border-white/20 text-white hover:bg-white/10">
                   <Heart className="h-4 w-4 mr-2" />
-                  Adicionar aos Favoritos
+                  {t('contentDetailsPage.addToFavorites')}
                 </Button>
               </div>
             </div>
@@ -187,7 +190,7 @@ const ContentDetails = () => {
       {content.trailer_key && (
         <div id="trailer-section" className="container mx-auto px-4 py-8">
           <div className="mb-8">
-            <h2 className="text-2xl font-bold text-white mb-4">Trailer</h2>
+            <h2 className="text-2xl font-bold text-white mb-4">{t('contentDetailsPage.trailer')}</h2>
             <div className="aspect-video max-w-4xl mx-auto">
               <iframe 
                 width="100%" 

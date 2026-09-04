@@ -1,4 +1,5 @@
 import type { Message } from "@/components/AiChat/AiChat";
+import i18n from "@/i18n";
 
 export interface FilminConversation {
   id: string;
@@ -14,7 +15,7 @@ const LEGACY_MESSAGES_KEY = "chat_messages";
 
 export function deriveTitle(messages: Message[]): string {
   const firstUserMessage = messages.find((m) => m.sender === "user");
-  if (!firstUserMessage) return "Nova conversa";
+  if (!firstUserMessage) return i18n.t("filminChat.newConversationTitle");
   const text = firstUserMessage.text.trim();
   return text.length > 40 ? `${text.slice(0, 40)}…` : text;
 }
@@ -91,7 +92,7 @@ export function deleteConversation(id: string) {
 export function createConversation(): FilminConversation {
   const conversation: FilminConversation = {
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    title: "Nova conversa",
+    title: i18n.t("filminChat.newConversationTitle"),
     messages: [],
     updatedAt: Date.now(),
   };

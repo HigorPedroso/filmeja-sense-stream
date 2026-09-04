@@ -13,6 +13,7 @@ import { loginWithGoogle } from "@/lib/googleAuth";
 import { translateAuthError } from "@/lib/errors/translateAuthError";
 import { Loader2, Sparkles } from "lucide-react";
 import { useState } from "react";
+import { Trans, useTranslation } from "react-i18next";
 
 interface SignupModalProps {
   isOpen: boolean;
@@ -41,7 +42,7 @@ export function SignupModal({
   signupError,
   isSigningUp,
 }: SignupModalProps) {
-
+    const { t } = useTranslation();
     const [loading, setLoading] = useState(false);
 
     const handleGoogleLogin = async () => {
@@ -53,13 +54,13 @@ export function SignupModal({
           // directly and the caller's auth listener picks it up.
         } catch (error) {
           toast({
-            title: 'Erro!',
-            description: translateAuthError(error, 'Ocorreu um erro ao conectar com Google.'),
+            title: t('auth.toasts.genericErrorTitle'),
+            description: translateAuthError(error, t('auth.toasts.googleErrorFallback')),
             variant: 'destructive',
           });
           setLoading(false);
         }
-      };    
+      };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -72,32 +73,32 @@ export function SignupModal({
             <DialogHeader className="mb-6">
               <DialogTitle className="text-2xl font-bold flex items-center gap-2">
                 <Sparkles className="w-6 h-6 text-filmeja-purple" />
-                Crie sua conta
+                {t('auth.createAccountTitle')}
               </DialogTitle>
               <DialogDescription className="text-gray-300">
-                Junte-se ao FilmeJá e descubra filmes e séries perfeitos para você.
+                {t('signupModal.description')}
               </DialogDescription>
             </DialogHeader>
 
             <form onSubmit={onSubmit} className="space-y-4">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="w-full bg-white/5 border-white/10 text-white hover:bg-white/10"
               onClick={handleGoogleLogin}
               type="button"
               disabled={loading}
             >
               <img src="/google.png" alt="Google" className="w-5 h-5 mr-2" />
-              Continuar com Google
+              {t('auth.continueWithGoogle')}
             </Button>
 
               <div className="space-y-2">
                 <Label htmlFor="name" className="text-sm font-medium text-gray-200">
-                  Nome
+                  {t('signupModal.nameLabel')}
                 </Label>
                 <Input
                   id="name"
-                  placeholder="Como podemos te chamar?"
+                  placeholder={t('signupModal.namePlaceholder')}
                   value={signupName}
                   onChange={(e) => setSignupName(e.target.value)}
                   required
@@ -107,12 +108,12 @@ export function SignupModal({
 
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-sm font-medium text-gray-200">
-                  E-mail
+                  {t('signupModal.emailLabel')}
                 </Label>
                 <Input
                   id="email"
                   type="email"
-                  placeholder="seu@email.com"
+                  placeholder={t('signupModal.emailPlaceholder')}
                   value={signupEmail}
                   onChange={(e) => setSignupEmail(e.target.value)}
                   required
@@ -122,12 +123,12 @@ export function SignupModal({
 
               <div className="space-y-2">
                 <Label htmlFor="password" className="text-sm font-medium text-gray-200">
-                  Senha
+                  {t('signupModal.passwordLabel')}
                 </Label>
                 <Input
                   id="password"
                   type="password"
-                  placeholder="Crie uma senha segura"
+                  placeholder={t('signupModal.passwordPlaceholder')}
                   value={signupPassword}
                   onChange={(e) => setSignupPassword(e.target.value)}
                   required
@@ -150,30 +151,35 @@ export function SignupModal({
                 {isSigningUp ? (
                   <div className="flex items-center justify-center">
                     <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                    Criando conta...
+                    {t('signupModal.creatingAccount')}
                   </div>
                 ) : (
-                  "Criar minha conta"
+                  t('sidebar.signupDialog.createAccountCta')
                 )}
               </Button>
 
               <div className="text-center text-sm text-gray-400 mt-4">
-                Ao criar uma conta, você concorda com nossos{" "}
-                <a
-                  href="https://filmesja.com.br/termos"
-                  target="_blank"
-                  className="text-filmeja-purple hover:underline"
-                >
-                  Termos de Serviço
-                </a>{" "}
-                e{" "}
-                <a
-                  href="https://filmesja.com.br/privacidade"
-                  target="_blank"
-                  className="text-filmeja-purple hover:underline"
-                >
-                  Política de Privacidade
-                </a>
+                <Trans
+                  i18nKey="signupModal.termsAgreement"
+                  components={{
+                    terms: (
+                      <a
+                        href="https://filmesja.com.br/termos"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-filmeja-purple hover:underline"
+                      />
+                    ),
+                    privacy: (
+                      <a
+                        href="https://filmesja.com.br/privacidade"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-filmeja-purple hover:underline"
+                      />
+                    ),
+                  }}
+                />
               </div>
             </form>
           </div>

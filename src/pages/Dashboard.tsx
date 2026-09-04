@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { Trans, useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { getTrending } from "@/lib/tmdb";
 import { ContentItem, MoodType } from "@/types/movie";
@@ -84,6 +85,8 @@ import {
   genreCategories,
 } from "@/lib/recommendations/moodGenreData";
 import { translateAuthError } from "@/lib/errors/translateAuthError";
+import { getTmdbLanguage, getTmdbRegion } from "@/lib/tmdbLanguage";
+import { callGeminiForText } from "@/lib/geminiClient";
 
 // Mock user data - in a real app, this would come from authentication
 const mockUser = {
@@ -93,6 +96,7 @@ const mockUser = {
 };
 
 const Dashboard = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const isMobile = useIsMobile();
@@ -115,8 +119,11 @@ const Dashboard = () => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [showTrailerModal, setShowTrailerModal] = useState(false);
   const [isTrailerAnimating, setIsTrailerAnimating] = useState(false);
+  // Display-only — the raw `moodNames` import (Portuguese) is still what
+  // feeds the AI prompt and analytics elsewhere in this file; this is
+  // purely for the "for when you're feeling X" heading below.
   const getMoodName = (mood: MoodType): string => {
-    return moodNames[mood] || mood;
+    return t(`mood.${mood}.name`, { defaultValue: moodNames[mood] || mood });
   };
   const [genre, setGenre] = useState<{ id: number; name: string } | null>(null);
   const [showAiChat, setShowAiChat] = useState(false);
@@ -168,9 +175,8 @@ const Dashboard = () => {
             handleFirst();
 
             toast({
-              title: "Bem-vindo!",
-              description:
-                "Você está usando uma conta temporária. Crie uma conta para salvar suas preferências.",
+              title: t("dashboard.toasts.welcomeAnonymous.title"),
+              description: t("dashboard.toasts.welcomeAnonymous.description"),
               duration: 6000,
             });
           }
@@ -181,6 +187,10 @@ const Dashboard = () => {
     };
 
     checkAnonymousUser();
+    // t() reads the current language at call time regardless of closure —
+    // adding it here would just re-run this auth check on every language
+    // switch for no benefit.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [toast]);
 
   useEffect(() => {
@@ -215,7 +225,7 @@ const Dashboard = () => {
 
           for (const item of watchedContent) {
             const response = await fetch(
-              `https://api.themoviedb.org/3/${item.media_type}/${item.tmdb_id}?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=pt-BR`
+              `https://api.themoviedb.org/3/${item.media_type}/${item.tmdb_id}?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=${getTmdbLanguage()}`
             );
             const details = await response.json();
 
@@ -243,7 +253,7 @@ const Dashboard = () => {
         const response = await fetch(
           `https://api.themoviedb.org/3/movie/top_rated?api_key=${
             import.meta.env.VITE_TMDB_API_KEY
-          }&language=pt-BR&page=1`
+          }&language=${getTmdbLanguage()}&page=1`
         );
         const data = await response.json();
         setTopContent(
@@ -287,14 +297,15 @@ const Dashboard = () => {
       } catch (error) {
         console.error("Error fetching trending content:", error);
         toast({
-          title: "Erro",
-          description: "Não foi possível carregar os conteúdos populares",
+          title: t("dashboard.toasts.trendingError.title"),
+          description: t("dashboard.toasts.trendingError.description"),
           variant: "destructive",
         });
       }
     };
 
     fetchTrending();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [toast]);
 
   useEffect(() => {
@@ -356,8 +367,8 @@ const Dashboard = () => {
         setMonthlyViews(error.monthlyViews);
       } else {
         toast({
-          title: "Erro",
-          description: "Não foi possível carregar a recomendação",
+          title: t("dashboard.toasts.recommendationError.title"),
+          description: t("dashboard.toasts.recommendationError.description"),
           variant: "destructive",
         });
       }
@@ -413,9 +424,67 @@ const Dashboard = () => {
 
       const onboardingPrefs = JSON.parse(onboardingData);
 
-      const prompt = `
-Você é um assistente de recomendação de filmes e séries. 
-Responda **apenas em JSON válido** com uma lista de 2 recomendações que **obrigatoriamente** cumpram os critérios abaixo:
+      // Gemini's own `description` field never reaches the UI (the real
+      // TMDB `overview`, fetched in the user's language, overwrites it
+      // below) — this prompt's language only affects the model's own
+      // reasoning/search quality, not what gets displayed.
+      const onboardingTmdbLang = getTmdbLanguage();
+      const onboardingPromptLang: "en" | "es" | "pt" =
+        onboardingTmdbLang === "en-US" ? "en" : onboardingTmdbLang === "es-MX" ? "es" : "pt";
+
+      const prompt = onboardingPromptLang === "en" ? `
+You are a movie and TV show recommendation assistant.
+Reply **only with valid JSON** containing a list of 8 recommendations that **must** meet the criteria below:
+
+1. Available on major streaming platforms (Netflix, Prime Video, Disney+, HBO Max, Star+)
+2. Rated higher than 8 on TMDb
+3. Released in 2020 or later
+4. Type: ${onboardingPrefs.content_type}
+5. Must match at least ONE of the following genres: ${onboardingPrefs.genres.join(
+        ", "
+      )}
+
+Required format:
+[
+  {
+    "title": "Title name",
+    "tmdbId": 12345,
+    "description": "Short description, up to 250 characters",
+    "tipo": "movie" or "tv",
+    "releaseYear": 2021
+  }
+]
+
+"releaseYear" is the title's real release year — important for telling remakes/reboots that reuse the same name apart.
+Your response must contain ONLY the JSON array. No text before or after.
+` : onboardingPromptLang === "es" ? `
+Eres un asistente de recomendación de películas y series.
+Responde **solo en JSON válido** con una lista de 8 recomendaciones que **obligatoriamente** cumplan los siguientes criterios:
+
+1. Disponibles en las principales plataformas de streaming (Netflix, Prime Video, Disney+, HBO Max, Star+)
+2. Con calificación mayor a 8 en TMDb
+3. Estrenadas en 2020 o después
+4. Del tipo: ${onboardingPrefs.content_type}
+5. Deben coincidir con AL MENOS UNO de los siguientes géneros: ${onboardingPrefs.genres.join(
+        ", "
+      )}
+
+Formato obligatorio:
+[
+  {
+    "title": "Nombre del título",
+    "tmdbId": 12345,
+    "description": "Descripción breve, hasta 250 caracteres",
+    "tipo": "movie" o "tv",
+    "releaseYear": 2021
+  }
+]
+
+"releaseYear" es el año real de estreno del título — importante para diferenciar remakes/reboots que usan el mismo nombre.
+Tu respuesta debe contener SOLO el array JSON. Ningún texto antes o después.
+` : `
+Você é um assistente de recomendação de filmes e séries.
+Responda **apenas em JSON válido** com uma lista de 8 recomendações que **obrigatoriamente** cumpram os critérios abaixo:
 
 1. Estão disponíveis nas principais plataformas de streaming (Netflix, Prime Video, Disney+, HBO Max, Star+)
 2. Têm avaliação maior que 8 no TMDb
@@ -440,32 +509,7 @@ Formato obrigatório:
 A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
 `;
 
-      const geminiResponse = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${
-          import.meta.env.VITE_GEMINI_API_KEY
-        }`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            tools: [{ google_search: {} }],
-            generationConfig: {
-              temperature: 0.7,
-              topK: 40,
-              topP: 0.95,
-              maxOutputTokens: 2048,
-              thinkingConfig: { thinkingBudget: 0 },
-            },
-          }),
-        }
-      );
-
-      const geminiData = await geminiResponse.json();
-
-      const raw = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text;
-
-      if (!raw) throw new Error("Empty response from Gemini");
+      const raw = await callGeminiForText(prompt);
 
       const parsedSuggestions = extractJsonFromResponse(raw) || [];
       // Ensure we're working with a properly typed array of ContentSuggestion objects
@@ -492,7 +536,7 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
             const searchResponse = await fetch(
               `https://api.themoviedb.org/3/search/${searchType}?api_key=${
                 import.meta.env.VITE_TMDB_API_KEY
-              }&query=${encodeURIComponent(suggestion.title)}&language=pt-BR`
+              }&query=${encodeURIComponent(suggestion.title)}&language=${getTmdbLanguage()}`
             );
             const searchData = await searchResponse.json();
 
@@ -519,21 +563,21 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
             fetch(
               `https://api.themoviedb.org/3/${suggestion.tipo}/${
                 suggestion.tmdbId
-              }?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=pt-BR`
+              }?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=${getTmdbLanguage()}`
             ).then((r) => r.json()),
             fetch(
               `https://api.themoviedb.org/3/${suggestion.tipo}/${
                 suggestion.tmdbId
               }/videos?api_key=${
                 import.meta.env.VITE_TMDB_API_KEY
-              }&language=pt-BR`
+              }&language=${getTmdbLanguage()}`
             ).then((r) => r.json()),
             fetch(
               `https://api.themoviedb.org/3/${suggestion.tipo}/${
                 suggestion.tmdbId
               }/similar?api_key=${
                 import.meta.env.VITE_TMDB_API_KEY
-              }&language=pt-BR`
+              }&language=${getTmdbLanguage()}`
             ).then((r) => r.json()),
             fetch(
               `https://api.themoviedb.org/3/${suggestion.tipo}/${
@@ -542,11 +586,11 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
             ).then((r) => r.json()),
           ]);
 
-          if (providers.results?.BR?.flatrate) {
+          if (providers.results?.[getTmdbRegion()]?.flatrate) {
             availableContent.push({
               ...details,
               videos: videos.results,
-              providers: providers.results?.BR,
+              providers: providers.results?.[getTmdbRegion()],
               similar: similar.results,
               mediaType: suggestion.tipo,
             });
@@ -601,15 +645,15 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
       if (error) throw error;
 
       toast({
-        title: "Saindo...",
-        description: "Você foi desconectado com sucesso",
+        title: t("dashboard.toasts.loggingOut.title"),
+        description: t("dashboard.toasts.loggingOut.description"),
       });
 
       navigate("/");
     } catch (error) {
       toast({
-        title: "Erro ao sair",
-        description: "Não foi possível fazer logout. Tente novamente.",
+        title: t("dashboard.toasts.logoutError.title"),
+        description: t("dashboard.toasts.logoutError.description"),
         variant: "destructive",
       });
     }
@@ -800,7 +844,7 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
               const response = await fetch(
                 `https://api.themoviedb.org/3/${item.media_type}/${
                   item.tmdb_id
-                }?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=pt-BR`
+                }?api_key=${import.meta.env.VITE_TMDB_API_KEY}&language=${getTmdbLanguage()}`
               );
               const data = await response.json();
               return {
@@ -848,8 +892,54 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
 
         const currentYear = new Date().getFullYear();
         const minReleaseYear = currentYear - 5;
+        // The genre id/name pair passed through navigation state stays the
+        // original Portuguese business value (see GenreSelectPage.tsx) —
+        // this is purely the display name for the *current* UI language,
+        // used only so the prompt reads as one consistent language instead
+        // of mixing an English sentence with a Portuguese genre word.
+        const genreDisplayName = t(`genre.${genre.id}`, { defaultValue: genre.name });
+        const tmdbLang = getTmdbLanguage();
+        const promptLang: "en" | "es" | "pt" = tmdbLang === "en-US" ? "en" : tmdbLang === "es-MX" ? "es" : "pt";
 
-        const prompt = `
+        const prompt = promptLang === "en" ? `
+        You are an assistant that responds only in valid JSON.
+        The user has already watched the following titles:
+        ${JSON.stringify(validWatchedContent)}
+
+        Recent recommendations (do not recommend these titles again):
+        ${JSON.stringify(recentTitles)}
+
+        Provide a list of 15 well-rated ${
+          mediaType === "movie" ? "movies" : "TV shows"
+        } that match the genre: ${genreDisplayName}.
+        IMPORTANT: prioritize recent releases — from ${minReleaseYear} to ${currentYear}. Avoid old classics or overused picks; the list should feel current, not a "most famous of all time" selection.
+        DO NOT INCLUDE titles the user has already watched or that were recently recommended.
+        Must be available on major streaming services: Netflix, Max, Amazon Prime Video, Disney, etc.
+
+        Respond in the following JSON format:
+        [
+          { "title": "Title", "tmdbId": 12345, "description": "Movie or show description", "imgUrl": "image url", "tipo": "movie or tv", "releaseYear": 2024 }
+        ]
+        ` : promptLang === "es" ? `
+        Eres un asistente que responde solo en JSON válido.
+        El usuario ya vio los siguientes títulos:
+        ${JSON.stringify(validWatchedContent)}
+
+        Recomendaciones recientes (no recomiendes estos títulos de nuevo):
+        ${JSON.stringify(recentTitles)}
+
+        Dame una lista de 15 ${
+          mediaType === "movie" ? "películas" : "series"
+        } bien calificadas que coincidan con el género: ${genreDisplayName}.
+        IMPORTANTE: prioriza estrenos recientes — de ${minReleaseYear} a ${currentYear}. Evita clásicos antiguos o elecciones muy repetidas; la lista debe sentirse actual, no una selección de "los más famosos de todos los tiempos".
+        NO INCLUYAS títulos que el usuario ya vio o que fueron recomendados recientemente.
+        Debe estar disponible en los principales servicios de streaming: Netflix, Max, Amazon Prime Video, Disney, etc.
+
+        Responde en el siguiente formato JSON:
+        [
+          { "title": "Título", "tmdbId": 12345, "description": "Descripción de la película o serie", "imgUrl": "url de la imagen", "tipo": "movie o tv", "releaseYear": 2024 }
+        ]
+        ` : `
         Você é um assistente que responde apenas em JSON válido.
         O usuário já assistiu os seguintes títulos:
         ${JSON.stringify(validWatchedContent)}
@@ -857,9 +947,9 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
         Últimas recomendações (não recomendar estes títulos também):
         ${JSON.stringify(recentTitles)}
 
-        Forneça uma lista de 10 ${
+        Forneça uma lista de 15 ${
           mediaType === "movie" ? "filmes" : "séries"
-        } bem avaliados que correspondem ao gênero: ${genre.name}.
+        } bem avaliados que correspondem ao gênero: ${genreDisplayName}.
         IMPORTANTE: priorize lançamentos recentes — de ${minReleaseYear} até ${currentYear}. Evite indicar clássicos antigos ou títulos muito batidos; a lista deve parecer atual, não uma seleção de "os mais famosos de sempre".
         NÃO INCLUA os títulos que o usuário já assistiu ou que foram recomendados recentemente.
         Tem que estar presente nos principais streamings: Netflix, Max, Amazon Prime Video, Disney, etc.
@@ -870,43 +960,16 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
         ]
         `;
 
-        const geminiResponse = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${
-            import.meta.env.VITE_GEMINI_API_KEY
-          }`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              contents: [
-                {
-                  parts: [
-                    {
-                      text:
-                        prompt +
-                        "\nResponda apenas com o JSON, sem texto adicional.",
-                    },
-                  ],
-                },
-              ],
-              tools: [{ google_search: {} }],
-              generationConfig: {
-                temperature: 0.7,
-                topK: 40,
-                topP: 0.95,
-                maxOutputTokens: 2048,
-                thinkingConfig: { thinkingBudget: 0 },
-              },
-            }),
-          }
-        );
+        const promptSuffix =
+          promptLang === "en"
+            ? "\nRespond only with the JSON, no additional text."
+            : promptLang === "es"
+              ? "\nResponde únicamente con el JSON, sin texto adicional."
+              : "\nResponda apenas com o JSON, sem texto adicional.";
 
-        const geminiData = await geminiResponse.json();
-        const raw = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text;
+        const raw = await callGeminiForText(prompt + promptSuffix);
 
-        if (!raw) throw new Error("Resposta vazia do Gemini");
-
-        let suggestions: {
+        const suggestions: {
           title: string;
           tmdbId: number;
           description: string;
@@ -915,28 +978,52 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
           releaseYear?: number;
         }[] = extractJsonFromResponse(raw) || [];
 
-        if (suggestions.length > 0) {
-          const randomSuggestion =
-            suggestions[Math.floor(Math.random() * suggestions.length)];
-          await fetchContentDetails(
-            randomSuggestion.title,
-            randomSuggestion.tipo as "movie" | "tv",
-            randomSuggestion.releaseYear
-          );
-        } else {
+        if (suggestions.length === 0) {
           throw new Error("No suggestions found");
         }
 
-        console.log("Sugestões geradas:", suggestions);
+        // Try candidates in random order until one actually has region
+        // streaming availability, instead of picking a single random title
+        // and giving up outright if just that one isn't available — that
+        // threw away the other candidates Gemini already gave us for free.
+        let found = false;
+        for (const candidate of shuffleArray(suggestions)) {
+          try {
+            const item = await searchContentByTitle(
+              candidate.title,
+              candidate.tipo as "movie" | "tv",
+              candidate.releaseYear
+            );
+            await fetchContentWithProviders(item, {
+              showToast: false,
+              requireRegionAvailability: true,
+              onContentFetched: (fetchedContent) => {
+                setMoodRecommendation(fetchedContent);
+                trackEvent("recommendation_generated", {
+                  source: "genre",
+                  tmdbId: fetchedContent.id,
+                  title: fetchedContent.title || fetchedContent.name,
+                });
+              },
+            });
+            found = true;
+            break;
+          } catch (candidateError) {
+            console.error("Genre candidate unavailable:", candidate.title, candidateError);
+          }
+        }
+
+        if (!found) {
+          throw new Error("Nenhum conteúdo disponível encontrado");
+        }
       } catch (error) {
         console.error("Erro ao buscar recomendação:", error);
         if (coinSpent) {
           await refundDailyView(user.id, today, dailyViewsBeforeSpend, monthlyViewsBeforeSpend);
         }
         toast({
-          title: "Erro",
-          description:
-            "Não foi possível encontrar conteúdo disponível em streaming",
+          title: t("dashboard.toasts.genreRecommendationError.title"),
+          description: t("dashboard.toasts.genreRecommendationError.description"),
           variant: "destructive",
         });
         setShowRecommendationModal(false);
@@ -957,7 +1044,7 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
       const item = await searchContentByTitle(title, type, releaseYear);
       await fetchContentWithProviders(item, {
         showToast: false,
-        requireBrAvailability: true,
+        requireRegionAvailability: true,
         onContentFetched: (fetchedContent) => {
           setMoodRecommendation(fetchedContent);
           trackEvent("recommendation_generated", {
@@ -983,8 +1070,8 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
       } = await supabase.auth.getUser();
       if (!user) {
         toast({
-          title: "Erro",
-          description: "Você precisa estar logado para marcar como assistido",
+          title: t("dashboard.toasts.watchedRequiresLogin.title"),
+          description: t("dashboard.toasts.watchedRequiresLogin.description"),
           variant: "destructive",
         });
         return;
@@ -1001,8 +1088,8 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
       if (error) throw error;
 
       toast({
-        title: "Sucesso",
-        description: "Conteúdo marcado como assistido!",
+        title: t("dashboard.toasts.watchedSuccess.title"),
+        description: t("dashboard.toasts.watchedSuccess.description"),
       });
 
       // Update local state to reflect the change
@@ -1013,8 +1100,8 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
     } catch (error) {
       console.error("Error marking content as watched:", error);
       toast({
-        title: "Erro",
-        description: "Não foi possível marcar como assistido",
+        title: t("dashboard.toasts.watchedError.title"),
+        description: t("dashboard.toasts.watchedError.description"),
         variant: "destructive",
       });
     }
@@ -1080,9 +1167,8 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
 
       // Show email confirmation toast
       toast({
-        title: "Conta criada com sucesso!",
-        description:
-          "Enviamos um link de confirmação para o seu e-mail. Por favor, verifique sua caixa de entrada para ativar sua conta.",
+        title: t("dashboard.toasts.signupSuccess.title"),
+        description: t("dashboard.toasts.signupSuccess.description"),
         duration: 6000,
       });
 
@@ -1094,7 +1180,7 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
       localStorage.removeItem("onboarding_data");
     } catch (error: any) {
       console.error("Signup error:", error);
-      setSignupError(translateAuthError(error, "Erro ao criar conta. Tente novamente."));
+      setSignupError(translateAuthError(error, t("dashboard.toasts.signupErrorFallback")));
     } finally {
       setIsSigningUp(false);
     }
@@ -1183,7 +1269,7 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
           <HeaderDashboard user={mockUser} />
           <div className="flex-1 flex flex-col items-center justify-center text-center px-4 py-6 md:absolute md:inset-0 md:py-0">
             <h1 className="text-3xl md:text-5xl font-bold text-white mb-8 md:mb-12 drop-shadow-lg leading-tight">
-              Como você quer descobrir seu próximo filme ou série?
+              {t("dashboard.heroTitle")}
             </h1>
 
           <div className="flex flex-col gap-3 w-full max-w-sm md:max-w-3xl md:grid md:grid-cols-3 md:gap-4">
@@ -1191,8 +1277,8 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
               {
                 key: "mood",
                 icon: Heart,
-                title: "Por Humor",
-                subtitle: "Deixe seu clima guiar a escolha",
+                title: t("dashboard.actions.mood.title"),
+                subtitle: t("dashboard.actions.mood.subtitle"),
                 color: "purple" as const,
                 locked: false,
                 onClick: () => {
@@ -1206,8 +1292,8 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
               {
                 key: "genre",
                 icon: Film,
-                title: "Por Gênero",
-                subtitle: "Explore por categoria favorita",
+                title: t("dashboard.actions.genre.title"),
+                subtitle: t("dashboard.actions.genre.subtitle"),
                 color: "blue" as const,
                 locked: false,
                 onClick: () => {
@@ -1221,8 +1307,8 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
               {
                 key: "ai",
                 icon: Sparkles,
-                title: "Filmin.IA",
-                subtitle: "Converse e receba sugestões na hora",
+                title: t("dashboard.actions.ai.title"),
+                subtitle: t("dashboard.actions.ai.subtitle"),
                 color: "gradient" as const,
                 locked: !isPremium,
                 onClick: () => {
@@ -1345,8 +1431,8 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
             // which picks up the change as soon as the webhook updates the row.
             setShowPaymentModal(false);
             toast({
-              title: "Bem-vindo ao Premium!",
-              description: "Seu acesso premium foi ativado com sucesso.",
+              title: t("dashboard.toasts.premiumWelcome.title"),
+              description: t("dashboard.toasts.premiumWelcome.description"),
             });
           }}
         />
@@ -1393,7 +1479,7 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
         <main className="p-6 pb-[max(6rem,calc(4rem+env(safe-area-inset-bottom)))] md:pb-6">
           <TopTrendingList
             type="movie"
-            title="Top 10 Filmes da Semana"
+            title={t("dashboard.sections.topMoviesWeek")}
             content={trendingContent
               ?.filter((item) => item.media_type === "movie")
               ?.slice(0, 10)}
@@ -1417,7 +1503,7 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
 
           <TopTrendingList
             type="tv"
-            title="Top 10 Séries da Semana"
+            title={t("dashboard.sections.topSeriesWeek")}
             content={trendingContent
               ?.filter((item) => item.media_type === "tv")
               ?.slice(0, 10)}
@@ -1450,7 +1536,7 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
           {userFavorites.length > 0 && (
             <TopTrendingList
               type="movie"
-              title="Minha lista"
+              title={t("dashboard.sections.myList")}
               showFavorites={true}
               favoriteContent={userFavorites}
               onItemClick={async (item) => {
@@ -1476,7 +1562,7 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
           {userWatchedMovies.length > 0 && (
             <TopTrendingList
               type="movie"
-              title="Filmes Que Você Já Assistiu"
+              title={t("dashboard.sections.moviesWatched")}
               showWatched={true}
               watchedContent={userWatchedMovies}
               onItemClick={async (item) => {
@@ -1496,7 +1582,7 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
           {userWatchedSeries.length > 0 && (
             <TopTrendingList
               type="tv"
-              title="Séries Que Você Já Assistiu"
+              title={t("dashboard.sections.seriesWatched")}
               showWatched={true}
               watchedContent={userWatchedSeries}
               onItemClick={async (item) => {
@@ -1519,7 +1605,7 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
           {selectedMood && moodRecommendations.length > 0 && (
             <section className="mb-12">
               <h2 className="text-xl font-semibold mb-4 text-white">
-                Para quando você está {getMoodName(selectedMood)}
+                {t("dashboard.sections.forWhenYouAre", { mood: getMoodName(selectedMood) })}
               </h2>
               <ContentCarousel title="" items={moodRecommendations} />
             </section>
@@ -1533,29 +1619,23 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
               <DialogHeader>
                 <DialogTitle className="text-2xl font-bold flex items-center gap-2">
                   <Mail className="w-6 h-6 text-filmeja-purple" />
-                  Verifique seu e-mail
+                  {t("dashboard.emailConfirmDialog.title")}
                 </DialogTitle>
               </DialogHeader>
 
               <div className="space-y-4 py-2">
                 <p>
-                  Enviamos um link de confirmação para{" "}
-                  <span className="font-medium text-filmeja-purple">
-                    {signupEmail}
-                  </span>
-                  .
+                  <Trans
+                    i18nKey="dashboard.emailConfirmDialog.sentTo"
+                    values={{ email: signupEmail }}
+                    components={{ email: <span className="font-medium text-filmeja-purple" /> }}
+                  />
                 </p>
-                <p>
-                  Por favor, verifique sua caixa de entrada e clique no link
-                  para ativar sua conta.
-                </p>
+                <p>{t("dashboard.emailConfirmDialog.checkInbox")}</p>
                 <div className="bg-filmeja-purple/10 border border-filmeja-purple/20 rounded-lg p-4 text-sm">
                   <p className="flex items-start gap-2">
                     <Info className="w-5 h-5 text-filmeja-purple flex-shrink-0 mt-0.5" />
-                    <span>
-                      Se não encontrar o e-mail, verifique sua pasta de spam ou
-                      lixo eletrônico.
-                    </span>
+                    <span>{t("dashboard.emailConfirmDialog.spamNote")}</span>
                   </p>
                 </div>
               </div>
@@ -1565,7 +1645,7 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
                   onClick={() => setShowEmailConfirmationDialog(false)}
                   className="w-full bg-gradient-to-r from-filmeja-purple to-filmeja-blue"
                 >
-                  Entendi
+                  {t("dashboard.emailConfirmDialog.gotIt")}
                 </Button>
               </DialogFooter>
             </DialogContent>

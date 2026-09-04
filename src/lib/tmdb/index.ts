@@ -1,7 +1,6 @@
 
 // Re-export all TMDB functionality from this central file
-import { TMDB_BASE_URL, LANGUAGE } from './api';
-export { TMDB_BASE_URL, LANGUAGE };
+export { TMDB_BASE_URL } from './api';
 
 // Export mock data
 export { 

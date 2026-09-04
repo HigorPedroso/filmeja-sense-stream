@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { X, Check, AlertCircle, Film } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -22,8 +23,10 @@ export function SubscriptionModal({
   onCancelSubscription,
   onUpgradeSubscription
 }: SubscriptionModalProps) {
+  const { t } = useTranslation();
   const [isCancelling, setIsCancelling] = useState(false);
   const { toast } = useToast();
+  const features = t("subscriptionModal.features", { returnObjects: true }) as string[];
 
   const handleCancelSubscription = async () => {
     try {
@@ -45,15 +48,15 @@ export function SubscriptionModal({
 
       await onCancelSubscription?.();
       toast({
-        title: "Assinatura cancelada",
-        description: "Sua assinatura foi cancelada com sucesso.",
+        title: t("subscriptionModal.toasts.cancelled.title"),
+        description: t("subscriptionModal.toasts.cancelled.description"),
       });
       onClose();
     } catch (error) {
       console.error('Error cancelling subscription:', error);
       toast({
-        title: "Erro ao cancelar assinatura",
-        description: translateAuthError(error, "Por favor, tente novamente mais tarde"),
+        title: t("subscriptionModal.toasts.cancelError.title"),
+        description: translateAuthError(error, t("subscriptionModal.toasts.cancelError.fallback")),
         variant: "destructive",
       });
     } finally {
@@ -74,7 +77,7 @@ export function SubscriptionModal({
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold text-white">
-              {isPremium ? "Sua Assinatura" : "Upgrade para Premium"}
+              {isPremium ? t("subscriptionModal.titleActive") : t("subscriptionModal.titleUpgrade")}
             </h2>
             <Button
               variant="ghost"
@@ -91,12 +94,12 @@ export function SubscriptionModal({
               <div className="space-y-4 mb-6">
                 <div className="flex items-center gap-2 text-green-400">
                   <Check className="w-5 h-5" />
-                  <span>Sua assinatura está ativa</span>
+                  <span>{t("subscriptionModal.activeStatus")}</span>
                 </div>
                 <div className="bg-white/5 rounded-xl p-4">
-                  <h3 className="font-medium text-white mb-2">Plano Premium</h3>
-                  <p className="text-gray-400 text-sm">Próxima cobrança em: 15/04/2024</p>
-                  <p className="text-gray-400 text-sm">Valor: R$9,99/mês</p>
+                  <h3 className="font-medium text-white mb-2">{t("subscriptionModal.planName")}</h3>
+                  <p className="text-gray-400 text-sm">{t("subscriptionModal.nextBilling", { date: "15/04/2024" })}</p>
+                  <p className="text-gray-400 text-sm">{t("subscriptionModal.priceLabel", { price: "R$9,99/mês" })}</p>
                 </div>
               </div>
               <Button
@@ -113,10 +116,10 @@ export function SubscriptionModal({
                     >
                       <Film className="w-4 h-4" />
                     </motion.div>
-                    <span>Cancelando...</span>
+                    <span>{t("subscriptionModal.cancelling")}</span>
                   </div>
                 ) : (
-                  "Cancelar Assinatura"
+                  t("subscriptionModal.cancelSubscription")
                 )}
               </Button>
             </>
@@ -124,23 +127,17 @@ export function SubscriptionModal({
             <>
               <div className="space-y-4 mb-6">
                 <div className="bg-white/5 rounded-xl p-4">
-                  <h3 className="font-medium text-white mb-2">Plano Premium</h3>
+                  <h3 className="font-medium text-white mb-2">{t("subscriptionModal.planName")}</h3>
                   <p className="text-gray-400 mb-4">
-                    Desbloqueie todos os recursos do FilmeJá por apenas R$9,99/mês
+                    {t("subscriptionModal.unlockDescription", { price: "R$9,99/mês" })}
                   </p>
                   <ul className="space-y-2">
-                    <li className="flex items-center gap-2 text-white">
-                      <Check className="w-4 h-4 text-green-400" />
-                      Recomendações ilimitadas
-                    </li>
-                    <li className="flex items-center gap-2 text-white">
-                      <Check className="w-4 h-4 text-green-400" />
-                      Sem anúncios
-                    </li>
-                    <li className="flex items-center gap-2 text-white">
-                      <Check className="w-4 h-4 text-green-400" />
-                      Acesso a recursos exclusivos
-                    </li>
+                    {features.map((feature) => (
+                      <li key={feature} className="flex items-center gap-2 text-white">
+                        <Check className="w-4 h-4 text-green-400" />
+                        {feature}
+                      </li>
+                    ))}
                   </ul>
                 </div>
               </div>
@@ -148,7 +145,7 @@ export function SubscriptionModal({
                 className="w-full bg-gradient-to-r from-filmeja-purple to-filmeja-blue"
                 onClick={onUpgradeSubscription}
               >
-                Assinar Agora
+                {t("subscriptionModal.subscribeNow")}
               </Button>
             </>
           )}
