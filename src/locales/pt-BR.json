@@ -1,0 +1,825 @@
+{
+  "landingChat": {
+    "header": { "title": "Filmin.AI te ajuda", "close": "Fechar" },
+    "greeting": "Olá! Eu sou o Filmin.AI, sua inteligência recomendadora de filmes e séries. Posso te ajudar a escolher algo incrível hoje? Vamos lá!",
+    "questions": {
+      "favoriteGenres": {
+        "question": "Quais tipos de filmes ou séries você mais gosta de assistir? Selecione quantos quiser",
+        "options": {
+          "action": "Ação",
+          "comedy": "Comédia",
+          "romance": "Romance",
+          "horror": "Terror",
+          "psychological": "Drama",
+          "fantasy": "Fantasia",
+          "scifi": "Ficção",
+          "mystery": "Mistério",
+          "documentary": "Documentário",
+          "family": "Família"
+        }
+      },
+      "contentPreference": {
+        "question": "Você prefere?",
+        "options": { "movies": "Filmes", "series": "Séries", "both": "Tanto faz" }
+      },
+      "watchDuration": {
+        "question": "Por quanto tempo você geralmente assiste?",
+        "options": {
+          "30min": "Menos de 30 minutos",
+          "1h": "Até uma hora",
+          "1h+": "Mais de uma hora",
+          "exploring": "Estou só explorando"
+        }
+      },
+      "watchTime": {
+        "question": "Em que horário costuma assistir com mais frequência?",
+        "options": { "morning": "Manhã", "afternoon": "Tarde", "night": "Noite", "dawn": "Madrugada" }
+      }
+    },
+    "continuePrompt": "Ótimo! Clique em continuar quando estiver pronto.",
+    "continueButton": "Continuar",
+    "selectedSummary": "São esses: {{list}}",
+    "recommendation": {
+      "message": "Já tenho uma recomendação perfeita para você! 🎬\n\nClique no botão abaixo para ver o que escolhi especialmente para você:",
+      "cta": "Ver minha recomendação",
+      "processing": "Processando sua recomendação personalizada...",
+      "error": "Ops! Tivemos um problema ao processar sua recomendação. Por favor, tente novamente."
+    },
+    "signup": {
+      "method": {
+        "question": "Como você prefere criar sua conta?",
+        "google": "Continuar com Google",
+        "email": "Usar meu e-mail"
+      },
+      "googleRedirecting": "Ótimo! Redirecionando para o login com Google...",
+      "googleError": "Ops! Algo deu errado. Tente novamente ou use seu e-mail.",
+      "email": { "question": "Digite seu melhor e-mail:", "invalid": "Por favor, digite um e-mail válido." },
+      "existingAccount": "Parece que você já tem uma conta! Vamos te redirecionar para o login...",
+      "name": { "question": "Como podemos te chamar?", "invalid": "Por favor, digite um nome válido." },
+      "password": { "question": "Crie uma senha segura:", "placeholder": "********" },
+      "success": "Cadastro realizado com sucesso! Verifique seu e-mail para confirmar sua conta. Após confirmar, faça login para continuar.",
+      "genericError": "Erro ao criar conta. Tente novamente."
+    },
+    "unexpectedError": "Ocorreu um erro inesperado. Por favor, tente novamente mais tarde.",
+    "inputPlaceholder": "Digite aqui..."
+  },
+  "recommendationErrors": {
+    "notReleasedYet": {
+      "toastTitle": "Ainda não foi lançado",
+      "message": "\"{{title}}\" ainda não foi lançado."
+    },
+    "notAvailableInRegion": {
+      "toastTitle": "Não disponível no Brasil",
+      "message": "\"{{title}}\" não está disponível em nenhuma plataforma de streaming no Brasil no momento."
+    },
+    "contentNotFound": {
+      "toastTitle": "Conteúdo não encontrado",
+      "description": "Não foi possível encontrar o título especificado"
+    },
+    "loadDetailsFailed": {
+      "title": "Erro",
+      "description": "Não foi possível carregar os detalhes do conteúdo"
+    },
+    "genericTitleFallback": "Este título"
+  },
+  "dashboard": {
+    "heroTitle": "Como você quer descobrir seu próximo filme ou série?",
+    "actions": {
+      "mood": {
+        "title": "Por Humor",
+        "subtitle": "Deixe seu clima guiar a escolha"
+      },
+      "genre": {
+        "title": "Por Gênero",
+        "subtitle": "Explore por categoria favorita"
+      },
+      "ai": {
+        "title": "Filmin.IA",
+        "subtitle": "Converse e receba sugestões na hora"
+      }
+    },
+    "sections": {
+      "topMoviesWeek": "Top 10 Filmes da Semana",
+      "topSeriesWeek": "Top 10 Séries da Semana",
+      "myList": "Minha lista",
+      "moviesWatched": "Filmes Que Você Já Assistiu",
+      "seriesWatched": "Séries Que Você Já Assistiu",
+      "forWhenYouAre": "Para quando você está {{mood}}"
+    },
+    "toasts": {
+      "welcomeAnonymous": {
+        "title": "Bem-vindo!",
+        "description": "Você está usando uma conta temporária. Crie uma conta para salvar suas preferências."
+      },
+      "trendingError": {
+        "title": "Erro",
+        "description": "Não foi possível carregar os conteúdos populares"
+      },
+      "recommendationError": {
+        "title": "Erro",
+        "description": "Não foi possível carregar a recomendação"
+      },
+      "genreRecommendationError": {
+        "title": "Erro",
+        "description": "Não foi possível encontrar conteúdo disponível em streaming"
+      },
+      "loggingOut": {
+        "title": "Saindo...",
+        "description": "Você foi desconectado com sucesso"
+      },
+      "logoutError": {
+        "title": "Erro ao sair",
+        "description": "Não foi possível fazer logout. Tente novamente."
+      },
+      "watchedRequiresLogin": {
+        "title": "Erro",
+        "description": "Você precisa estar logado para marcar como assistido"
+      },
+      "watchedSuccess": {
+        "title": "Sucesso",
+        "description": "Conteúdo marcado como assistido!"
+      },
+      "watchedError": {
+        "title": "Erro",
+        "description": "Não foi possível marcar como assistido"
+      },
+      "signupSuccess": {
+        "title": "Conta criada com sucesso!",
+        "description": "Enviamos um link de confirmação para o seu e-mail. Por favor, verifique sua caixa de entrada para ativar sua conta."
+      },
+      "signupErrorFallback": "Erro ao criar conta. Tente novamente.",
+      "premiumWelcome": {
+        "title": "Bem-vindo ao Premium!",
+        "description": "Seu acesso premium foi ativado com sucesso."
+      }
+    },
+    "emailConfirmDialog": {
+      "title": "Verifique seu e-mail",
+      "sentTo": "Enviamos um link de confirmação para <email>{{email}}</email>.",
+      "checkInbox": "Por favor, verifique sua caixa de entrada e clique no link para ativar sua conta.",
+      "spamNote": "Se não encontrar o e-mail, verifique sua pasta de spam ou lixo eletrônico.",
+      "gotIt": "Entendi"
+    }
+  },
+  "header": {
+    "subscribePremium": "Assinar Premium",
+    "premiumBadge": "Premium",
+    "creditsRemaining_one": "{{count}} de {{total}} crédito grátis hoje",
+    "creditsRemaining_other": "{{count}} de {{total}} créditos grátis hoje",
+    "avatarAlt": "Avatar",
+    "paymentCanceled": {
+      "title": "Pagamento cancelado",
+      "description": "O processo de pagamento foi cancelado. Você pode tentar novamente quando quiser."
+    }
+  },
+  "sidebar": {
+    "home": "Início",
+    "myList": "Minha Lista",
+    "aiChat": "Converse com Filmin.AI",
+    "myAccount": "Minha Conta",
+    "createAccount": "Criar Conta",
+    "signOut": "Sair",
+    "signupDialog": {
+      "title": "Crie sua conta",
+      "description": "Salve suas preferências e continue descobrindo filmes e séries incríveis!",
+      "intro": "Você está usando uma conta temporária. Crie uma conta permanente para:",
+      "benefitSaveHistory": "Salvar suas preferências e histórico",
+      "benefitFavorites": "Criar sua lista de favoritos",
+      "benefitPersonalizedRecs": "Receber recomendações personalizadas",
+      "createAccountCta": "Criar minha conta",
+      "continueAsGuest": "Continuar como visitante"
+    },
+    "signupToast": {
+      "title": "Conta criada com sucesso!",
+      "description": "Enviamos um link de confirmação para o seu e-mail."
+    },
+    "signupErrorFallback": "Erro ao criar conta. Tente novamente."
+  },
+  "mobileNav": {
+    "home": "Início",
+    "myList": "Minha Lista",
+    "ai": "Filmin.IA",
+    "profile": "Perfil"
+  },
+  "streaming": {
+    "heading": "A nossa IA recomenda os melhores filmes e séries de todas streamings para você assistir"
+  },
+  "moodSelect": {
+    "back": "Voltar",
+    "title": "Como você está se sentindo hoje?",
+    "subtitle": "Escolha seu humor e deixe a gente encontrar o filme perfeito para você"
+  },
+  "genreSelect": {
+    "title": "Escolha um Gênero"
+  },
+  "genreCategory": {
+    "actionAdventure": "Ação e Aventura",
+    "dramaEmotion": "Drama e Emoção",
+    "fantasySciFi": "Fantasia e Ficção",
+    "more": "Outros Gêneros"
+  },
+  "genre": {
+    "28": "Ação",
+    "12": "Aventura",
+    "53": "Thriller",
+    "18": "Drama",
+    "10749": "Romance",
+    "10751": "Família",
+    "14": "Fantasia",
+    "878": "Ficção Científica",
+    "16": "Animação",
+    "35": "Comédia",
+    "27": "Terror",
+    "9648": "Mistério"
+  },
+  "mood": {
+    "happy": { "name": "feliz", "description": "Algo divertido e positivo" },
+    "sad": { "name": "triste", "description": "Preciso de algo reconfortante" },
+    "excited": { "name": "animado", "description": "Cheio de ação e adrenalina" },
+    "relaxed": { "name": "relaxado", "description": "Algo tranquilo para descontrair" },
+    "romantic": { "name": "romântico", "description": "No clima para uma história de amor" },
+    "scared": { "name": "assustado", "description": "Quero sentir medo e tensão" },
+    "thoughtful": { "name": "pensativo", "description": "Algo que me faça refletir" }
+  },
+  "profile": {
+    "toasts": {
+      "loadProfileFailed": { "title": "Erro ao carregar perfil", "description": "Por favor, tente novamente mais tarde" },
+      "preferencesUpdated": { "title": "Preferências atualizadas", "description": "Suas preferências foram salvas com sucesso." },
+      "preferencesUpdateFailed": { "title": "Erro ao atualizar preferências", "description": "Por favor, tente novamente mais tarde." },
+      "subscriptionCanceled": { "title": "Assinatura cancelada", "description": "Sua assinatura será cancelada ao fim do período atual." },
+      "subscriptionCancelFailed": { "title": "Erro ao cancelar assinatura", "description": "Ocorreu um erro ao processar sua solicitação. Tente novamente mais tarde." },
+      "subscriptionActivated": { "title": "Assinatura ativada", "description": "Bem-vindo ao plano Premium!" },
+      "subscriptionActivateFailed": { "title": "Erro ao ativar assinatura", "description": "Ocorreu um erro ao processar sua solicitação. Tente novamente mais tarde." },
+      "accountDeleted": { "title": "Conta excluída", "description": "Sua conta e todos os seus dados foram removidos permanentemente." },
+      "accountDeleteFailed": { "title": "Erro ao excluir conta", "description": "Não foi possível excluir sua conta. Tente novamente mais tarde." }
+    },
+    "defaultName": "Usuário",
+    "goPremium": "Seja Premium",
+    "preferencesTitle": "Suas Preferências",
+    "favoriteGenres": "Gêneros Favoritos",
+    "preferredType": "Tipo preferido",
+    "editPreferences": "Editar Preferências",
+    "historyTitle": "Histórico de Recomendações",
+    "emptyHistory": "Nenhuma recomendação no histórico ainda",
+    "premiumFeature": {
+      "title": "Recurso Premium",
+      "description": "Mantenha um histórico completo de todas as suas recomendações e acesse-as a qualquer momento com o plano Premium."
+    },
+    "signOut": "Sair da Conta",
+    "deleteAccount": {
+      "button": "Excluir Conta",
+      "dialogTitle": "Excluir sua conta?",
+      "dialogDescription": "Essa ação é permanente. Todos os seus dados — perfil, preferências, histórico, favoritos e assinatura — serão excluídos e não poderão ser recuperados.",
+      "cancel": "Cancelar",
+      "deleting": "Excluindo...",
+      "confirm": "Excluir permanentemente"
+    }
+  },
+  "common": {
+    "close": "Fechar"
+  },
+  "paymentSuccessModal": {
+    "title": "Bem-vindo ao Premium! 🎉",
+    "subtitle": "Prepare-se para uma experiência incrível de entretenimento!",
+    "items": [
+      "Acesso Premium Ativado",
+      "Recomendações Personalizadas Desbloqueadas",
+      "Recursos Exclusivos Disponíveis",
+      "Suporte Prioritário Ativo"
+    ],
+    "startExploring": "Começar a Explorar"
+  },
+  "avatarModal": {
+    "title": "Escolha seu avatar",
+    "select": "Selecionar",
+    "toasts": {
+      "updated": { "title": "Avatar atualizado!", "description": "Seu novo avatar foi salvo com sucesso." },
+      "error": { "title": "Erro!", "description": "Não foi possível atualizar seu avatar." }
+    }
+  },
+  "signupPromptModal": {
+    "title": "Está gostando do FilmeJá?",
+    "description": "Crie sua conta agora mesmo de graça e aproveite mais recomendações personalizadas!",
+    "benefitMoreAccurate": "Receba recomendações mais precisas",
+    "benefitFavoritesList": "Crie sua lista de favoritos",
+    "continueWithoutAccount": "Continuar sem conta"
+  },
+  "signupModal": {
+    "description": "Junte-se ao FilmeJá e descubra filmes e séries perfeitos para você.",
+    "nameLabel": "Nome",
+    "namePlaceholder": "Como podemos te chamar?",
+    "emailLabel": "E-mail",
+    "emailPlaceholder": "seu@email.com",
+    "passwordLabel": "Senha",
+    "passwordPlaceholder": "Crie uma senha segura",
+    "creatingAccount": "Criando conta...",
+    "termsAgreement": "Ao criar uma conta, você concorda com nossos <terms>Termos de Serviço</terms> e <privacy>Política de Privacidade</privacy>"
+  },
+  "welcome": {
+    "skip": "Pular",
+    "getStarted": "Começar",
+    "next": "Próximo",
+    "slides": [
+      {
+        "title": "Descubra seu próximo filme ou série",
+        "accent": "filme ou série",
+        "description": "Recomendações personalizadas em segundos, sem ficar horas rolando o catálogo."
+      },
+      {
+        "title": "Por humor ou por gênero",
+        "accent": "humor ou por gênero",
+        "description": "Escolha como você está se sentindo ou seu gênero favorito, e a IA encontra a sugestão certa."
+      },
+      {
+        "title": "Converse com o Filmin.IA",
+        "accent": "Filmin.IA",
+        "description": "Bate um papo com nossa IA e receba indicações sob medida, na hora, do jeito que você pedir."
+      },
+      {
+        "title": "Assista na hora certa",
+        "accent": "hora certa",
+        "description": "Veja exatamente onde está disponível — Netflix, Prime Video, Max e mais."
+      }
+    ]
+  },
+  "contentDetailsPage": {
+    "notAvailableNow": "Este título não está disponível no momento.",
+    "seasons_one": "{{count}} temporada",
+    "seasons_other": "{{count}} temporadas",
+    "overview": "Sinopse",
+    "availableOn": "Disponível em",
+    "watchTrailer": "Assistir Trailer",
+    "addToFavorites": "Adicionar aos Favoritos",
+    "trailer": "Trailer"
+  },
+  "authErrors": {
+    "invalidCredentials": "E-mail ou senha incorretos.",
+    "emailNotConfirmed": "Confirme seu e-mail antes de entrar.",
+    "alreadyRegistered": "Esse e-mail já está cadastrado. Tente entrar em vez de criar uma conta.",
+    "passwordTooShort": "A senha precisa ter pelo menos 6 caracteres.",
+    "invalidEmail": "E-mail inválido.",
+    "userNotFound": "Usuário não encontrado.",
+    "rateLimitExceeded": "Muitas tentativas. Aguarde um instante antes de tentar de novo.",
+    "nonceError": "Não foi possível confirmar o login. Feche e tente novamente.",
+    "connectionFailed": "Falha de conexão. Tente novamente.",
+    "networkFailed": "Falha de conexão. Verifique sua internet e tente novamente.",
+    "offline": "Você está sem conexão com a internet.",
+    "timedOut": "A operação demorou demais. Tente novamente.",
+    "loginCancelled": "Login cancelado."
+  },
+  "notFound": {
+    "title": "Página não encontrada",
+    "description": "Parece que a página que você está procurando não existe ou foi movida.",
+    "backHome": "Voltar para o início"
+  },
+  "deleteAccountPage": {
+    "loginErrorTitle": "Erro ao entrar",
+    "loginErrorFallback": "Verifique seu e-mail e senha e tente novamente.",
+    "deleteErrorFallback": "Não foi possível excluir sua conta agora. Tente novamente ou entre em contato conosco.",
+    "heading": "Excluir conta",
+    "deletedTitle": "Conta excluída com sucesso",
+    "deletedDescription": "Sua conta e todos os seus dados foram removidos permanentemente do FilmeJá.",
+    "connectedAccount": "Conta conectada:",
+    "confirmDescription": "Ao confirmar, seu perfil, preferências, histórico de recomendações, favoritos, token de notificações e assinatura serão excluídos permanentemente. Essa ação não pode ser desfeita.",
+    "deleteMyAccount": "Excluir minha conta",
+    "areYouSure": "Tem certeza?",
+    "areYouSureDescription": "Essa ação é permanente e não pode ser desfeita. Todos os seus dados serão excluídos.",
+    "loginPrompt": "Entre com sua conta FilmeJá para solicitar a exclusão permanente dos seus dados.",
+    "footerText": "Prefere não usar esta página? Envie um e-mail para <email>privacidade@filmeja.com</email> solicitando a exclusão da sua conta. Veja também nossa <privacy>Política de Privacidade</privacy>."
+  },
+  "privacy": {
+    "title": "Política de Privacidade",
+    "lastUpdated": "Última atualização: {{date}}",
+    "intro": "A sua privacidade é importante para nós. Esta Política de Privacidade descreve como coletamos, usamos, armazenamos e protegemos as suas informações pessoais ao utilizar a plataforma FilmeJá. Nosso compromisso é com a transparência e o respeito aos seus dados, conforme previsto na Lei Geral de Proteção de Dados (LGPD - Lei 13.709/2018).",
+    "sections": [
+      {
+        "title": "1. Informações que Coletamos",
+        "content": [
+          "Ao utilizar o FilmeJá, podemos coletar as seguintes informações:",
+          "• Dados cadastrais: nome, e-mail, senha (armazenada de forma criptografada) e, quando aplicável, dados de pagamento — processados diretamente por nossos parceiros de pagamento (Stripe e/ou Google Play), sem que o FilmeJá tenha acesso ao número completo do cartão.",
+          "• Dados de uso e comportamento: gêneros e humores selecionados, títulos visualizados, curtidos, salvos e recusados, cliques em serviços de streaming, conversas com o Filmin.IA e demais interações registradas para entender como você usa o app.",
+          "• Dados de dispositivo e notificações: identificador de push (token do Firebase Cloud Messaging) usado para envio de notificações, modelo/sistema operacional do aparelho e identificador de publicidade (Advertising ID), quando você utiliza o aplicativo Android/iOS.",
+          "• Dados técnicos de navegação (versão web): endereço IP, tipo de dispositivo, navegador e cookies, usados para manter sua sessão e melhorar a experiência de uso."
+        ]
+      },
+      {
+        "title": "2. Finalidade da Coleta",
+        "content": [
+          "As informações coletadas são utilizadas para os seguintes propósitos:",
+          "• Criar, autenticar e gerenciar sua conta na plataforma;",
+          "• Gerar recomendações personalizadas de filmes e séries com auxílio de inteligência artificial, com base nas suas preferências, humor e histórico de interações;",
+          "• Enviar notificações push relevantes, como lembretes de sessões de filme, recomendações compatíveis com seu perfil e novidades do catálogo;",
+          "• Exibir anúncios (para usuários do plano gratuito) por meio do Google AdMob, incluindo, quando permitido pelas suas configurações de privacidade do dispositivo, anúncios minimamente personalizados;",
+          "• Processar assinaturas e pagamentos do plano Premium;",
+          "• Melhorar continuamente os serviços, com base em métricas agregadas de uso;",
+          "• Cumprir obrigações legais e regulatórias;",
+          "• Realizar comunicações de suporte, notificações importantes ou atualizações.",
+          "Não vendemos seus dados pessoais a terceiros."
+        ]
+      },
+      {
+        "title": "3. Compartilhamento com Terceiros",
+        "content": [
+          "Para operar o FilmeJá, compartilhamos dados com fornecedores que atuam em nosso nome, sempre limitados ao necessário para prestar o serviço:",
+          "• Supabase: hospedagem do banco de dados, autenticação e armazenamento das informações da sua conta;",
+          "• Google Firebase Cloud Messaging: entrega de notificações push no aplicativo;",
+          "• Google AdMob: exibição de anúncios no plano gratuito, podendo coletar o identificador de publicidade do seu dispositivo conforme a política de privacidade do Google;",
+          "• TMDB (The Movie Database): fonte dos dados de filmes, séries, elenco e onde assistir exibidos no app;",
+          "• Google Gemini AI: processamento das recomendações e conversas do Filmin.IA — as mensagens que você envia ao assistente são processadas por esse serviço para gerar as respostas;",
+          "• Stripe e/ou Google Play Faturamento: processamento de pagamentos das assinaturas Premium.",
+          "Cada um desses parceiros possui sua própria política de privacidade, que recomendamos consultar."
+        ]
+      },
+      {
+        "title": "4. Cookies e Tecnologias Semelhantes",
+        "content": [
+          "Na versão web, utilizamos cookies e tecnologias de armazenamento local (localStorage) para manter você conectado, lembrar preferências do dispositivo e viabilizar a exibição de anúncios. No aplicativo móvel, tecnologias equivalentes de armazenamento local do dispositivo são usadas para os mesmos fins, incluindo controlar se a introdução inicial do app já foi exibida. Você pode gerenciar permissões de anúncio personalizado nas configurações do seu dispositivo (Android/iOS) a qualquer momento."
+        ]
+      },
+      {
+        "title": "5. Retenção de Dados",
+        "content": [
+          "Mantemos seus dados pessoais enquanto sua conta estiver ativa ou pelo tempo necessário para cumprir as finalidades descritas nesta política, incluindo obrigações legais, contábeis ou de prestação de contas. Dados de uso e eventos podem ser mantidos de forma agregada ou anonimizada por período adicional para fins estatísticos, sem identificar você diretamente. Ao excluir sua conta, removemos ou anonimizamos seus dados pessoais, exceto quando a retenção for exigida por lei."
+        ]
+      },
+      {
+        "title": "6. Segurança dos Dados",
+        "content": [
+          "Adotamos medidas técnicas e organizacionais para proteger seus dados, como criptografia em trânsito (HTTPS), controle de acesso por autenticação e políticas de segurança em nível de linha (Row Level Security) no banco de dados, que garantem que cada usuário só acesse suas próprias informações. Apesar dos esforços, nenhum sistema é totalmente livre de riscos, e trabalhamos continuamente para aprimorar nossas práticas de segurança."
+        ]
+      },
+      {
+        "title": "7. Seus Direitos (LGPD)",
+        "content": [
+          "Nos termos da Lei Geral de Proteção de Dados (Lei 13.709/2018), você tem direito a:",
+          "• Confirmar a existência de tratamento e acessar seus dados;",
+          "• Corrigir dados incompletos, inexatos ou desatualizados;",
+          "• Solicitar a exclusão, anonimização ou portabilidade dos seus dados;",
+          "• Revogar o consentimento e se opor a tratamentos realizados com base nele;",
+          "• Solicitar informações sobre com quem compartilhamos seus dados.",
+          "Você pode exercer esses direitos diretamente pelo app, na tela de Perfil, ou entrando em contato conosco pelo e-mail informado ao final desta página."
+        ]
+      },
+      {
+        "title": "8. Menores de Idade",
+        "content": [
+          "O FilmeJá não é direcionado a menores de 13 anos e não coleta intencionalmente dados de crianças nessa faixa etária. Caso identifiquemos que dados de um menor de 13 anos foram coletados sem o devido consentimento dos pais ou responsáveis, tomaremos medidas para excluí-los."
+        ]
+      },
+      {
+        "title": "9. Alterações nesta Política",
+        "content": [
+          "Esta Política de Privacidade pode ser atualizada periodicamente para refletir mudanças em nossas práticas ou por exigências legais e operacionais. A data da última atualização é sempre indicada no topo desta página. Em caso de alterações relevantes, poderemos notificá-lo pelo app ou por e-mail."
+        ]
+      }
+    ],
+    "contactTitle": "Contato",
+    "contactDescription": "Se você tiver qualquer dúvida sobre esta Política de Privacidade, entre em contato conosco:"
+  },
+  "terms": {
+    "title": "Termos de Uso",
+    "lastUpdated": "Última atualização: {{date}}",
+    "intro": "Bem-vindo ao FilmeJá! Ao acessar e utilizar a plataforma FilmeJá (doravante \"Plataforma\"), você concorda com os termos e condições descritos neste documento. Por favor, leia atentamente estes Termos de Uso antes de utilizar nossos serviços.",
+    "sections": {
+      "definitions": {
+        "title": "1. Definições",
+        "content": [
+          "FilmeJá: Serviço de software como serviço (SaaS), acessado por meio da internet, que oferece recomendações personalizadas de filmes e séries utilizando inteligência artificial.",
+          "Usuário: Qualquer pessoa física ou jurídica que acesse ou utilize os serviços do FilmeJá.",
+          "Assinatura: Plano pago que garante acesso às funcionalidades da plataforma."
+        ]
+      },
+      "acceptance": {
+        "title": "2. Aceitação dos Termos",
+        "content": [
+          "Ao utilizar a Plataforma, você declara que leu, entendeu e concorda integralmente com estes Termos. Caso não concorde com alguma cláusula, você deve descontinuar imediatamente o uso da Plataforma."
+        ]
+      }
+    },
+    "contactPrefix": "Para dúvidas, sugestões ou solicitações relacionadas aos Termos de Uso, entre em contato conosco pelo e-mail:"
+  },
+  "auth": {
+    "backToSite": "Voltar ao site",
+    "tabs": {
+      "login": "Entrar",
+      "signup": "Criar conta"
+    },
+    "welcomeBack": "Bem-vindo de volta!",
+    "createAccountTitle": "Crie sua conta",
+    "subtitleLogin": "Entre para continuar sua jornada cinematográfica",
+    "subtitleSignup": "Comece sua jornada por apenas R$9,99/mês",
+    "continueWithGoogle": "Continuar com Google",
+    "continueWithApple": "Continuar com Apple",
+    "orContinueWithEmail": "ou continue com email",
+    "fullNamePlaceholder": "Nome completo",
+    "emailPlaceholder": "Email",
+    "passwordPlaceholder": "Senha",
+    "termsAgreement": "Ao continuar, você concorda com nossos <terms>Termos de Uso</terms> e <privacy>Política de Privacidade</privacy>.",
+    "toasts": {
+      "loginSuccess": {
+        "title": "Login bem-sucedido!",
+        "description": "Redirecionando para a dashboard..."
+      },
+      "signupSuccess": {
+        "title": "Conta criada com sucesso!",
+        "description": "Verifique seu email e confirme sua conta..."
+      },
+      "genericErrorTitle": "Erro!",
+      "authErrorFallback": "Ocorreu um erro durante a autenticação.",
+      "googleErrorFallback": "Ocorreu um erro ao conectar com Google.",
+      "appleErrorFallback": "Ocorreu um erro ao conectar com a Apple."
+    }
+  },
+  "subscriptionModal": {
+    "titleActive": "Sua Assinatura",
+    "titleUpgrade": "Upgrade para Premium",
+    "activeStatus": "Sua assinatura está ativa",
+    "planName": "Plano Premium",
+    "nextBilling": "Próxima cobrança em: {{date}}",
+    "priceLabel": "Valor: {{price}}",
+    "cancelSubscription": "Cancelar Assinatura",
+    "cancelling": "Cancelando...",
+    "unlockDescription": "Desbloqueie todos os recursos do FilmeJá por apenas {{price}}",
+    "features": [
+      "Recomendações ilimitadas",
+      "Sem anúncios",
+      "Acesso a recursos exclusivos"
+    ],
+    "subscribeNow": "Assinar Agora",
+    "toasts": {
+      "cancelled": {
+        "title": "Assinatura cancelada",
+        "description": "Sua assinatura foi cancelada com sucesso."
+      },
+      "cancelError": {
+        "title": "Erro ao cancelar assinatura",
+        "fallback": "Por favor, tente novamente mais tarde"
+      }
+    }
+  },
+  "paywall": {
+    "heroTitle": "Descubra o filme",
+    "heroTitleHighlight": "perfeito com IA",
+    "heroSubtitleLine1": "Menos tempo procurando.",
+    "heroSubtitleLine2": "Mais tempo assistindo.",
+    "unlockTitle": "Desbloqueie o FilmeJá Premium",
+    "features": [
+      "Recomendações personalizadas com IA",
+      "Busque por humor, gênero ou converse com a IA",
+      "Recomendações ilimitadas, sem espera de anúncio",
+      "Chat completo com o Filmin.IA",
+      "Sem anúncios"
+    ],
+    "monthly": "Mensal",
+    "annual": "Anual",
+    "perMonth": "/mês",
+    "perYear": "/ano",
+    "bestValue": "Mais vantajoso",
+    "equivalentToPerMonth": "Equivale a {{price}}/mês",
+    "fallbackPrices": {
+      "monthly": "R$9,99",
+      "annual": "R$71,90",
+      "equivalentPerMonth": "R$5,99"
+    },
+    "restorePurchases": "Restaurar compras",
+    "continueFree": "Continuar com versão gratuita",
+    "cancelAnytime": "Cancele quando quiser.",
+    "trial": {
+      "days_one": "{{count}} dia grátis",
+      "days_other": "{{count}} dias grátis",
+      "weeks_one": "{{count}} semana grátis",
+      "weeks_other": "{{count}} semanas grátis",
+      "months_one": "{{count}} mês grátis",
+      "months_other": "{{count}} meses grátis",
+      "startButton": "Iniciar Teste Grátis",
+      "footerNote": "Depois do teste grátis, cobramos {{price}} automaticamente. Cancele quando quiser."
+    },
+    "toasts": {
+      "webComingSoon": {
+        "title": "Em breve!",
+        "subscribeDescription": "As assinaturas Premium chegam em breve na versão web.",
+        "restoreDescription": "A restauração de compras chega em breve na versão web."
+      },
+      "plansUnavailable": {
+        "title": "Planos indisponíveis",
+        "description": "Não foi possível carregar os planos agora. Tente novamente em instantes.",
+        "descriptionWithDetail": "Não foi possível carregar os planos agora. Detalhe: {{detail}}"
+      },
+      "subscribed": {
+        "title": "Assinatura ativada!",
+        "description": "Bem-vindo ao FilmeJá Premium."
+      },
+      "subscribeError": {
+        "title": "Erro ao assinar",
+        "description": "Não foi possível completar a compra. Tente novamente."
+      },
+      "restored": {
+        "title": "Assinatura restaurada!",
+        "description": "Seu acesso Premium foi reativado."
+      },
+      "noPurchaseFound": {
+        "title": "Nenhuma compra encontrada",
+        "description": "Não encontramos uma assinatura ativa para esta conta."
+      },
+      "restoreError": {
+        "title": "Erro ao restaurar",
+        "description": "Não foi possível restaurar suas compras. Tente novamente."
+      }
+    }
+  },
+  "onboarding": {
+    "genres": {
+      "action": "Ação",
+      "comedy": "Comédia",
+      "romance": "Romance",
+      "horror": "Terror",
+      "psychological": "Drama Psicológico",
+      "fantasy": "Fantasia",
+      "scifi": "Ficção Científica",
+      "mystery": "Mistério",
+      "documentary": "Documentário",
+      "family": "Família / Infantil"
+    },
+    "contentTypes": {
+      "movies": "Filmes",
+      "series": "Séries",
+      "both": "Tanto faz"
+    },
+    "watchDuration": {
+      "short": "Menos de 30 minutos",
+      "medium": "Até 1 hora",
+      "long": "Mais de 1 hora",
+      "exploring": "Estou só explorando"
+    },
+    "languages": {
+      "pt": "Português",
+      "en": "Inglês",
+      "es": "Espanhol",
+      "any": "Sem preferência"
+    },
+    "watchTime": {
+      "morning": "Manhã (6h-12h)",
+      "afternoon": "Tarde (12h-18h)",
+      "evening": "Noite (18h-24h)",
+      "dawn": "Madrugada (0h-6h)"
+    },
+    "steps": {
+      "genres": {
+        "title": "Quais tipos de filmes ou séries você mais gosta de assistir?",
+        "subtitle": "Selecione quantos quiser"
+      },
+      "contentType": {
+        "title": "Você prefere assistir..."
+      },
+      "watchDuration": {
+        "title": "Por quanto tempo você geralmente assiste?"
+      },
+      "languages": {
+        "title": "Quais idiomas você prefere para assistir?",
+        "subtitle": "Selecione um ou mais idiomas"
+      },
+      "watchTime": {
+        "title": "Em que horário costuma assistir com mais frequência?"
+      }
+    },
+    "buttons": {
+      "back": "Voltar",
+      "continue": "Continuar",
+      "finish": "Concluir"
+    },
+    "toasts": {
+      "authError": {
+        "title": "Erro de autenticação",
+        "description": "Por favor, faça login novamente."
+      },
+      "updated": {
+        "title": "Preferências atualizadas!",
+        "description": "Suas preferências foram atualizadas com sucesso."
+      },
+      "saved": {
+        "title": "Preferências salvas!",
+        "description": "Seu perfil foi configurado com sucesso."
+      },
+      "saveError": {
+        "title": "Erro ao salvar preferências",
+        "description": "Por favor, tente novamente."
+      }
+    }
+  },
+  "filminChat": {
+    "conversationsTitle": "Conversas",
+    "searchPlaceholder": "Buscar em conversas",
+    "deleteAction": "Excluir",
+    "noMessagesYet": "Nenhuma mensagem ainda",
+    "newConversationTitle": "Nova conversa",
+    "newChat": "Novo Chat",
+    "emptyState": {
+      "title": "Inicie sua primeira conversa",
+      "description": "Toque no botão + para criar sua próxima conversa"
+    },
+    "noSearchResults": "Nenhuma conversa encontrada para \"{{query}}\"",
+    "headerSubtitle": "Filmin.AI te ajuda",
+    "greeting": "Oi",
+    "greetingSubtitle": "Vamos escolher algo bom pra assistir!",
+    "inputPlaceholder": "Pergunte qualquer coisa...",
+    "viewDetails": "Ver detalhes do título",
+    "fallbackReply": "Hmm, não encontrei um título certeiro disponível em streaming agora. Me conta mais um detalhe do que você quer assistir? 🤔",
+    "quickStarters": {
+      "similar": { "label": "Algo parecido com o que eu gostei", "message": "Quero algo parecido com um filme ou série que eu gostei muito" },
+      "shortOnTime": { "label": "Tenho pouco tempo hoje", "message": "Quero um filme curto, tenho pouco tempo hoje" },
+      "family": { "label": "Pra assistir em família", "message": "Quero algo pra assistir em família" },
+      "surpriseMe": { "label": "Me surpreenda", "message": "Me surpreenda com uma recomendação" }
+    }
+  },
+  "favorites": {
+    "untitledFallback": "Sem título",
+    "viewDetails": "Ver Detalhes",
+    "emptyState": {
+      "title": "Nenhum conteúdo encontrado",
+      "description": "Adicione alguns itens à sua lista para vê-los aqui."
+    }
+  },
+  "result": {
+    "skeleton": {
+      "loadingPhrases": [
+        "🎬 Preparando a próxima aventura...",
+        "✨ Carregando um universo épico...",
+        "🍿 Quase lá...",
+        "🎥 Revelando histórias incríveis...",
+        "🌟 Aquecendo os motores..."
+      ]
+    },
+    "badge": {
+      "movie": "Filme",
+      "tv": "Série"
+    },
+    "labels": {
+      "release": "Lançamento:",
+      "runtime": "Duração:",
+      "language": "Idioma:",
+      "runtimeMinutes_one": "{{count}} minuto",
+      "runtimeMinutes_other": "{{count}} minutos"
+    },
+    "availableOn": "Disponível em:",
+    "watchNow": "Assistir Agora",
+    "inTheatersOnly": "Somente nos cinemas",
+    "watchTrailer": "Ver Trailer",
+    "removeFromList": "Remover dos Favoritos",
+    "addToList": "Adicionar à Lista",
+    "watchedAllSeasons": "Já assisti todas as temporadas",
+    "watchedMovie": "Já assisti este filme",
+    "markAllSeasonsWatched": "Marcar todas temporadas como vistas",
+    "markMovieWatched": "Marcar filme como visto",
+    "nextSuggestion": "Próxima Sugestão",
+    "limitReached": {
+      "title": "Limite de Visualizações Atingido",
+      "description": "Assine o plano premium para continuar descobrindo recomendações incríveis!"
+    },
+    "toasts": {
+      "favoriteLoginRequired": {
+        "title": "Erro",
+        "description": "Você precisa estar logado para favoritar"
+      },
+      "favoriteRemoved": {
+        "title": "Removido",
+        "description": "Conteúdo removido dos favoritos"
+      },
+      "favoriteAdded": {
+        "title": "Adicionado",
+        "description": "Conteúdo adicionado aos favoritos"
+      },
+      "favoriteError": {
+        "title": "Erro",
+        "description": "Não foi possível atualizar os favoritos"
+      },
+      "watchedRemoved": {
+        "title": "Removido",
+        "description": "Conteúdo removido da sua lista de assistidos"
+      },
+      "watchedAdded": {
+        "title": "Marcado como assistido",
+        "description": "Conteúdo adicionado à sua lista de assistidos"
+      },
+      "watchedError": {
+        "title": "Erro",
+        "description": "Não foi possível atualizar o status do conteúdo"
+      },
+      "streamingUnavailable": {
+        "title": "Indisponível",
+        "description": "Este conteúdo não está disponível em nenhum serviço de streaming no momento."
+      }
+    },
+    "streamingModal": {
+      "title": "Onde Assistir",
+      "or": "ou",
+      "tryRenting": "Tente alugar agora mesmo",
+      "appNotInstalledToast": {
+        "title": "Você não tem o {{appName}} instalado",
+        "description": "Instale o app para assistir diretamente por lá."
+      }
+    },
+    "trailer": {
+      "loading": "Buscando trailer..."
+    }
+  }
+}
