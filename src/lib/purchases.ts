@@ -1,4 +1,4 @@
-import { Purchases } from "@revenuecat/purchases-capacitor";
+import { Purchases, INTRO_ELIGIBILITY_STATUS } from "@revenuecat/purchases-capacitor";
 import type { CustomerInfo, PurchasesOffering, PurchasesPackage } from "@revenuecat/purchases-capacitor";
 import { Capacitor } from "@capacitor/core";
 
@@ -82,4 +82,28 @@ export async function restorePurchases(): Promise<CustomerInfo> {
 
 export function isPremiumEntitlementActive(customerInfo: CustomerInfo): boolean {
   return !!customerInfo.entitlements.active[PREMIUM_ENTITLEMENT_ID];
+}
+
+// Whether each product's free/introductory trial can still be granted to
+// this subscriber. Apple only allows one trial per Apple ID per
+// subscription group, ever — RevenueCat surfaces the product's introPrice
+// regardless of whether the user already used it, so the paywall must check
+// this separately before advertising "free trial" copy. Android always
+// comes back UNKNOWN (no concept of per-user trial eligibility there), and
+// on an unknown/errored result callers should fall back to non-trial
+// pricing rather than risk a misleading "free trial" claim.
+export async function checkTrialEligibility(productIdentifiers: string[]): Promise<Record<string, boolean>> {
+  if (!Capacitor.isNativePlatform() || !configurePromise || productIdentifiers.length === 0) return {};
+  await configurePromise;
+  try {
+    const result = await Purchases.checkTrialOrIntroductoryPriceEligibility({ productIdentifiers });
+    const eligibility: Record<string, boolean> = {};
+    for (const [productId, info] of Object.entries(result)) {
+      eligibility[productId] = info.status === INTRO_ELIGIBILITY_STATUS.INTRO_ELIGIBILITY_STATUS_ELIGIBLE;
+    }
+    return eligibility;
+  } catch (error) {
+    console.error("[purchases] failed to check trial eligibility: " + (error?.message || String(error)));
+    return {};
+  }
 }
