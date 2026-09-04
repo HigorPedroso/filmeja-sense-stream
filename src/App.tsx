@@ -52,6 +52,8 @@ import { initializeAds } from "./lib/ads";
 import { trackEvent } from "./lib/analytics/trackEvent";
 import { initializePurchases } from "./lib/purchases";
 import { useSyncPurchasesAuth } from "./hooks/useSyncPurchasesAuth";
+import { useSyncProfileLanguage } from "./hooks/useSyncProfileLanguage";
+import { useTranslation } from "react-i18next";
 
 // Extend the Window interface to include fbq and _fbq
 declare global {
@@ -155,6 +157,7 @@ const App = () => {
 };
 
 const AppContent = ({ favoriteItems }) => {
+  const { t } = useTranslation();
   useGoogleAds(); // Move the hook here, inside Router context
   useCapacitorBackButton();
   useRecommendationNavigation();
@@ -162,6 +165,7 @@ const AppContent = ({ favoriteItems }) => {
   useTitleViewedTracking();
   usePushNotifications();
   useSyncPurchasesAuth();
+  useSyncProfileLanguage();
 
   // On the native app, open straight into the user's dashboard instead of the
   // marketing landing page — but the very first time ever (before login),
@@ -258,7 +262,7 @@ const AppContent = ({ favoriteItems }) => {
         element={
           <ProtectedRoute>
             <FavoritesPage
-              title="Minha lista"
+              title={t("dashboard.sections.myList")}
               items={favoriteItems}
             />
           </ProtectedRoute>

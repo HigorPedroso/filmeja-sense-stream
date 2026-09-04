@@ -28,6 +28,21 @@ const GENRE_NAMES: Record<number, string> = {
   9648: "Mistério",
 };
 
+const GENRE_NAMES_EN: Record<number, string> = {
+  28: "Action",
+  12: "Adventure",
+  53: "Thriller",
+  18: "Drama",
+  10749: "Romance",
+  10751: "Family",
+  14: "Fantasy",
+  878: "Sci-Fi",
+  16: "Animation",
+  35: "Comedy",
+  27: "Horror",
+  9648: "Mystery",
+};
+
 const MIN_SCORE = 80;
 const MAX_CANDIDATES_PER_RUN = 20;
 
@@ -57,13 +72,22 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const supabaseClient = createClient(supabaseUrl, serviceRoleKey);
 
-    const trendingResponse = await fetch(
-      `https://api.themoviedb.org/3/trending/all/day?api_key=${tmdbApiKey}&language=pt-BR`
-    );
+    const [trendingResponse, trendingResponseEn] = await Promise.all([
+      fetch(`https://api.themoviedb.org/3/trending/all/day?api_key=${tmdbApiKey}&language=pt-BR`),
+      fetch(`https://api.themoviedb.org/3/trending/all/day?api_key=${tmdbApiKey}&language=en-US`),
+    ]);
     const trendingData = await trendingResponse.json();
+    const trendingDataEn = await trendingResponseEn.json();
     const candidates = (trendingData.results ?? [])
       .filter((item: any) => (item.media_type === "movie" || item.media_type === "tv") && item.genre_ids?.length)
       .slice(0, MAX_CANDIDATES_PER_RUN);
+
+    // Only used to give English-language users an English title in their
+    // notification — matching stays keyed off the pt-BR trending list above.
+    const enTitleById = new Map<number, string>();
+    for (const item of trendingDataEn.results ?? []) {
+      enTitleById.set(item.id, item.title || item.name);
+    }
 
     logStep("Trending candidates fetched", { count: candidates.length });
 
@@ -102,16 +126,26 @@ serve(async (req) => {
           );
         const alreadyNotifiedIds = new Set((alreadyNotified ?? []).map((row: { user_id: string }) => row.user_id));
 
-        const matchedGenreNames = candidate.genre_ids
+        const matchedGenreNamesPt = candidate.genre_ids
           .map((id: number) => GENRE_NAMES[id])
+          .filter(Boolean)
+          .join(", ");
+        const matchedGenreNamesEn = candidate.genre_ids
+          .map((id: number) => GENRE_NAMES_EN[id])
           .filter(Boolean)
           .join(", ");
 
         for (const match of matches) {
           if (alreadyNotifiedIds.has(match.user_id)) continue;
 
-          const notificationTitle = `Encontramos um filme ${match.score}% compatível com você`;
-          const notificationBody = matchedGenreNames || title;
+          const isEnglish = match.language === "en-US";
+          const displayTitle = isEnglish ? enTitleById.get(tmdbId) || title : title;
+          const matchedGenreNames = isEnglish ? matchedGenreNamesEn : matchedGenreNamesPt;
+
+          const notificationTitle = isEnglish
+            ? `We found a movie ${match.score}% compatible with you`
+            : `Encontramos um filme ${match.score}% compatível com você`;
+          const notificationBody = matchedGenreNames || displayTitle;
 
           const sendResponse = await fetch(`${supabaseUrl}/functions/v1/send-push-notification`, {
             method: "POST",

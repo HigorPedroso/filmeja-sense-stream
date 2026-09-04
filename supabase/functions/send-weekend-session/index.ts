@@ -11,6 +11,38 @@ const logStep = (step: string, details?: unknown) => {
   console.log(`[SEND-WEEKEND-SESSION] ${step}${details ? " - " + JSON.stringify(details) : ""}`);
 };
 
+// top_choice is a mood/genre display name stored in Portuguese (the app's
+// business-logic source of truth — see moodNames/genreCategories client-side).
+// English users still get an English sentence around it; unmapped values
+// (a mood/genre added later and not yet listed here) just fall back to the
+// raw Portuguese word rather than breaking the notification.
+const CHOICE_TRANSLATIONS: Record<string, string> = {
+  feliz: "happy",
+  triste: "sad",
+  animado: "excited",
+  relaxado: "relaxed",
+  romântico: "romantic",
+  assustado: "scared",
+  pensativo: "thoughtful",
+  Ação: "Action",
+  Aventura: "Adventure",
+  Thriller: "Thriller",
+  Drama: "Drama",
+  Romance: "Romance",
+  Família: "Family",
+  Fantasia: "Fantasy",
+  "Ficção Científica": "Sci-Fi",
+  Animação: "Animation",
+  Comédia: "Comedy",
+  Terror: "Horror",
+  Mistério: "Mystery",
+};
+
+function translateChoice(choice: string, language: string): string {
+  if (language !== "en-US") return choice;
+  return CHOICE_TRANSLATIONS[choice] ?? choice;
+}
+
 // Called every Friday and Saturday evening by a pg_cron job (see
 // supabase/weekend_session_notifications.sql). Unlike
 // send-smart-reengagement, this goes out to every user with a device token
@@ -39,19 +71,31 @@ serve(async (req) => {
       new Date()
     );
     const isFriday = weekday.startsWith("sexta");
-    const dayGreeting = isFriday ? "Sextou!" : "Chegou o sábado!";
 
     const { data: candidates, error } = await supabaseClient.rpc("get_weekend_session_candidates");
     if (error) throw error;
 
-    logStep("Candidates found", { count: candidates?.length ?? 0, dayGreeting });
+    logStep("Candidates found", { count: candidates?.length ?? 0, isFriday });
 
     let sentCount = 0;
     for (const candidate of candidates ?? []) {
-      const title = `${dayGreeting} Hora da sessão 🍿`;
-      const body = candidate.top_choice
-        ? `Que tal algo no clima de "${candidate.top_choice}" pra noite de hoje? Temos uma sugestão no FilmeJá.`
-        : "Separamos uma sugestão pra sua noite no FilmeJá.";
+      const isEnglish = candidate.language === "en-US";
+      const topChoice = candidate.top_choice ? translateChoice(candidate.top_choice, candidate.language) : null;
+      const dayGreeting = isEnglish
+        ? isFriday
+          ? "It's Friday!"
+          : "Saturday's here!"
+        : isFriday
+          ? "Sextou!"
+          : "Chegou o sábado!";
+      const title = isEnglish ? `${dayGreeting} Movie night 🍿` : `${dayGreeting} Hora da sessão 🍿`;
+      const body = topChoice
+        ? isEnglish
+          ? `How about something in the mood for "${topChoice}" tonight? We have a suggestion on FilmeJá.`
+          : `Que tal algo no clima de "${topChoice}" pra noite de hoje? Temos uma sugestão no FilmeJá.`
+        : isEnglish
+          ? "We picked a suggestion for your night on FilmeJá."
+          : "Separamos uma sugestão pra sua noite no FilmeJá.";
 
       try {
         const sendResponse = await fetch(`${supabaseUrl}/functions/v1/send-push-notification`, {

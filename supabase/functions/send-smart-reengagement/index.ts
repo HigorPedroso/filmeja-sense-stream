@@ -11,6 +11,38 @@ const logStep = (step: string, details?: unknown) => {
   console.log(`[SEND-SMART-REENGAGEMENT] ${step}${details ? " - " + JSON.stringify(details) : ""}`);
 };
 
+// top_choice is a mood/genre display name stored in Portuguese (the app's
+// business-logic source of truth — see moodNames/genreCategories client-side).
+// English users still get an English sentence around it; unmapped values
+// (a mood/genre added later and not yet listed here) just fall back to the
+// raw Portuguese word rather than breaking the notification.
+const CHOICE_TRANSLATIONS: Record<string, string> = {
+  feliz: "happy",
+  triste: "sad",
+  animado: "excited",
+  relaxado: "relaxed",
+  romântico: "romantic",
+  assustado: "scared",
+  pensativo: "thoughtful",
+  Ação: "Action",
+  Aventura: "Adventure",
+  Thriller: "Thriller",
+  Drama: "Drama",
+  Romance: "Romance",
+  Família: "Family",
+  Fantasia: "Fantasy",
+  "Ficção Científica": "Sci-Fi",
+  Animação: "Animation",
+  Comédia: "Comedy",
+  Terror: "Horror",
+  Mistério: "Mystery",
+};
+
+function translateChoice(choice: string, language: string): string {
+  if (language !== "en-US") return choice;
+  return CHOICE_TRANSLATIONS[choice] ?? choice;
+}
+
 // Called once a day by a pg_cron job (see supabase/reengagement_notifications.sql).
 // Finds users inactive for 3+ days who haven't been re-engaged recently,
 // picks each one's favorite mood/genre from user_events, and sends a
@@ -43,10 +75,16 @@ serve(async (req) => {
 
     let sentCount = 0;
     for (const candidate of candidates ?? []) {
-      const title = "Sentiu falta de uma boa recomendação?";
-      const body = candidate.top_choice
-        ? `Baseado no seu gosto por "${candidate.top_choice}", separamos algo pra você no FilmeJá.`
-        : "Temos recomendações novas esperando por você no FilmeJá.";
+      const isEnglish = candidate.language === "en-US";
+      const topChoice = candidate.top_choice ? translateChoice(candidate.top_choice, candidate.language) : null;
+      const title = isEnglish ? "Missing a good recommendation?" : "Sentiu falta de uma boa recomendação?";
+      const body = topChoice
+        ? isEnglish
+          ? `Based on your taste for "${topChoice}", we picked something for you on FilmeJá.`
+          : `Baseado no seu gosto por "${topChoice}", separamos algo pra você no FilmeJá.`
+        : isEnglish
+          ? "We have new recommendations waiting for you on FilmeJá."
+          : "Temos recomendações novas esperando por você no FilmeJá.";
 
       try {
         const sendResponse = await fetch(`${supabaseUrl}/functions/v1/send-push-notification`, {
