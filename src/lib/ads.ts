@@ -17,11 +17,15 @@ const BANNER_AD_ID =
 // Devices registered here get real ads clearly labeled "Test Ad" instead of
 // live ones — lets us verify the real ad unit works without generating
 // billable impressions/clicks on our own account (which AdMob can flag as
-// invalid traffic). Add your device's ID from the "Use
+// invalid traffic). On Android, grab the ID from the "Use
 // RequestConfiguration.Builder().setTestDeviceIds(...)" line in logcat the
-// first time a real ad loads on it. Only listed devices are affected; every
-// other user still gets real ads.
-const TESTING_DEVICES = ["89C27E16C1F8EDBC28D74A13F655A947"];
+// first time a real ad loads; on iOS it's the "To get test ads on this
+// device, set: ..." line in the device console (Console.app) instead. Only
+// listed devices are affected; every other user still gets real ads.
+const TESTING_DEVICES = [
+  "89C27E16C1F8EDBC28D74A13F655A947", // Android
+  "272AB990-F98A-47BC-B929-83362533B770", // iOS
+];
 
 let initialized: Promise<void> | null = null;
 
