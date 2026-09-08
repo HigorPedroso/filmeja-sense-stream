@@ -1,20 +1,17 @@
 import { Capacitor } from "@capacitor/core";
 import { AdMob, BannerAdPluginEvents, BannerAdPosition, BannerAdSize, InterstitialAdPluginEvents } from "@capacitor-community/admob";
 
-// Real Android ad unit ID (AdMob account: ca-app-pub-7861501292446252). No
-// real iOS ad unit exists yet, so iOS keeps Google's official TEST
-// interstitial ad unit ID — see ios/App/App/Info.plist for the matching
-// (still-test) App ID.
+// Real ad unit IDs, both platforms on the same AdMob account
+// (ca-app-pub-7861501292446252) — see ios/App/App/Info.plist for the
+// matching iOS App ID.
 const INTERSTITIAL_AD_ID =
   Capacitor.getPlatform() === "ios"
-    ? "ca-app-pub-3940256099942544/4411468910"
+    ? "ca-app-pub-7861501292446252/7011349606"
     : "ca-app-pub-7861501292446252/2765486441";
 
-// Real Android banner ad unit. No real iOS ad unit exists yet, so iOS keeps
-// Google's official TEST banner ad unit ID.
 const BANNER_AD_ID =
   Capacitor.getPlatform() === "ios"
-    ? "ca-app-pub-3940256099942544/2934735716"
+    ? "ca-app-pub-7861501292446252/9214996640"
     : "ca-app-pub-7861501292446252/8817557773";
 
 // Devices registered here get real ads clearly labeled "Test Ad" instead of
