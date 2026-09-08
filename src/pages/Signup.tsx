@@ -21,6 +21,7 @@ const isIOS = Capacitor.getPlatform() === 'ios';
 
 const Signup = () => {
   const { t } = useTranslation();
+  const appName = t("common.appName");
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -163,11 +164,15 @@ const Signup = () => {
         <div className="w-full max-w-sm flex flex-col items-center mb-8">
           <img
             src="/icone_novo.png"
-            alt="FilmeJá"
+            alt={appName}
             className="w-14 h-14 rounded-2xl shadow-lg shadow-filmeja-purple/30 mb-4"
           />
-          <h1 className="text-xl font-bold text-white text-center">
-            <span className="text-filmeja-purple">Filme</span>Já
+          <h1
+            className={`font-bold text-white text-center bg-gradient-to-r from-filmeja-purple to-filmeja-blue bg-clip-text text-transparent ${
+              appName.length > 10 ? "text-base" : "text-xl"
+            }`}
+          >
+            {appName}
           </h1>
         </div>
 

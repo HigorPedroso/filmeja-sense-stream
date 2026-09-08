@@ -378,13 +378,13 @@
     "deleteErrorFallback": "No pudimos eliminar tu cuenta ahora. Inténtalo de nuevo o contáctanos.",
     "heading": "Eliminar Cuenta",
     "deletedTitle": "Cuenta eliminada correctamente",
-    "deletedDescription": "Tu cuenta y todos tus datos fueron eliminados permanentemente de FilmeJá.",
+    "deletedDescription": "Tu cuenta y todos tus datos fueron eliminados permanentemente de Qué Ver.",
     "connectedAccount": "Sesión iniciada como:",
     "confirmDescription": "Al confirmar, tu perfil, preferencias, historial de recomendaciones, favoritos, token de notificaciones y suscripción serán eliminados permanentemente. Esta acción no se puede deshacer.",
     "deleteMyAccount": "Eliminar Mi Cuenta",
     "areYouSure": "¿Estás seguro?",
     "areYouSureDescription": "Esta acción es permanente y no se puede deshacer. Todos tus datos serán eliminados.",
-    "loginPrompt": "Inicia sesión con tu cuenta de FilmeJá para solicitar la eliminación permanente de tus datos.",
+    "loginPrompt": "Inicia sesión con tu cuenta de Qué Ver para solicitar la eliminación permanente de tus datos.",
     "footerText": "¿Prefieres no usar esta página? Escríbenos a <email>privacidade@filmeja.com</email> para solicitar la eliminación de tu cuenta. Consulta también nuestra <privacy>Política de Privacidad</privacy>."
   },
   "terms": {
@@ -450,7 +450,7 @@
     "priceLabel": "Precio: {{price}}",
     "cancelSubscription": "Cancelar Suscripción",
     "cancelling": "Cancelando...",
-    "unlockDescription": "Desbloquea todas las funciones de FilmeJá por solo {{price}}",
+    "unlockDescription": "Desbloquea todas las funciones de Qué Ver por solo {{price}}",
     "features": [
       "Recomendaciones ilimitadas",
       "Sin anuncios",
@@ -473,7 +473,7 @@
     "heroTitleHighlight": "película perfecta con IA",
     "heroSubtitleLine1": "Menos tiempo buscando.",
     "heroSubtitleLine2": "Más tiempo viendo.",
-    "unlockTitle": "Desbloquea FilmeJá Premium",
+    "unlockTitle": "Desbloquea Qué Ver Premium",
     "features": [
       "Recomendaciones personalizadas con IA",
       "Busca por ánimo, género o chatea con la IA",
@@ -518,7 +518,7 @@
       },
       "subscribed": {
         "title": "¡Suscripción activada!",
-        "description": "Bienvenido a FilmeJá Premium."
+        "description": "Bienvenido a Qué Ver Premium."
       },
       "subscribeError": {
         "title": "No pudimos completar la compra",
@@ -652,6 +652,7 @@
     }
   },
   "common": {
+    "appName": "Qué Ver",
     "close": "Cerrar"
   },
   "authErrors": {
@@ -670,7 +671,7 @@
     "loginCancelled": "Inicio de sesión cancelado."
   },
   "signupModal": {
-    "description": "Únete a FilmeJá y descubre películas y series perfectas para ti.",
+    "description": "Únete a Qué Ver y descubre películas y series perfectas para ti.",
     "nameLabel": "Nombre",
     "namePlaceholder": "¿Cómo te llamamos?",
     "emailLabel": "Correo electrónico",
@@ -681,7 +682,7 @@
     "termsAgreement": "Al crear una cuenta, aceptas nuestros <terms>Términos de Servicio</terms> y nuestra <privacy>Política de Privacidad</privacy>"
   },
   "signupPromptModal": {
-    "title": "¿Te está gustando FilmeJá?",
+    "title": "¿Te está gustando Qué Ver?",
     "description": "¡Crea tu cuenta gratis ahora mismo y desbloquea más recomendaciones personalizadas!",
     "benefitMoreAccurate": "Recibe recomendaciones más precisas",
     "benefitFavoritesList": "Crea tu lista de favoritos",

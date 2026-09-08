@@ -28,6 +28,7 @@ import {
 // the same Supabase auth used by the app; it does not require the app.
 const DeleteAccountRequest = () => {
   const { t } = useTranslation();
+  const appName = t("common.appName");
   const { session, user, isLoading } = useAuth();
   const { toast } = useToast();
 
@@ -80,9 +81,13 @@ const DeleteAccountRequest = () => {
 
       <div className="relative z-10 min-h-[100dvh] flex flex-col items-center justify-center px-5 py-10">
         <div className="w-full max-w-sm flex flex-col items-center mb-8">
-          <img src="/icone.png" alt="FilmeJá" className="w-14 h-14 rounded-2xl shadow-lg shadow-filmeja-purple/30 mb-4" />
-          <h1 className="text-xl font-bold text-white text-center">
-            <span className="text-filmeja-purple">Filme</span>Já
+          <img src="/icone.png" alt={appName} className="w-14 h-14 rounded-2xl shadow-lg shadow-filmeja-purple/30 mb-4" />
+          <h1
+            className={`font-bold text-white text-center bg-gradient-to-r from-filmeja-purple to-filmeja-blue bg-clip-text text-transparent ${
+              appName.length > 10 ? "text-base" : "text-xl"
+            }`}
+          >
+            {appName}
           </h1>
         </div>
 

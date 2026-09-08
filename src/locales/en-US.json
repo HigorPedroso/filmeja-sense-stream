@@ -276,6 +276,7 @@
     }
   },
   "common": {
+    "appName": "Movie & TV Finder AI",
     "close": "Close"
   },
   "paymentSuccessModal": {
@@ -298,14 +299,14 @@
     }
   },
   "signupPromptModal": {
-    "title": "Enjoying FilmeJá?",
+    "title": "Enjoying Movie & TV Finder AI?",
     "description": "Create your free account right now and unlock more personalized recommendations!",
     "benefitMoreAccurate": "Get more accurate recommendations",
     "benefitFavoritesList": "Build your favorites list",
     "continueWithoutAccount": "Continue without an account"
   },
   "signupModal": {
-    "description": "Join FilmeJá and discover movies and shows that are perfect for you.",
+    "description": "Join Movie & TV Finder AI and discover movies and shows that are perfect for you.",
     "nameLabel": "Name",
     "namePlaceholder": "What should we call you?",
     "emailLabel": "Email",
@@ -378,13 +379,13 @@
     "deleteErrorFallback": "We couldn't delete your account right now. Please try again or contact us.",
     "heading": "Delete Account",
     "deletedTitle": "Account deleted successfully",
-    "deletedDescription": "Your account and all your data have been permanently removed from FilmeJá.",
+    "deletedDescription": "Your account and all your data have been permanently removed from Movie & TV Finder AI.",
     "connectedAccount": "Signed in as:",
     "confirmDescription": "Once confirmed, your profile, preferences, recommendation history, favorites, notification token, and subscription will be permanently deleted. This action can't be undone.",
     "deleteMyAccount": "Delete My Account",
     "areYouSure": "Are you sure?",
     "areYouSureDescription": "This action is permanent and can't be undone. All your data will be deleted.",
-    "loginPrompt": "Sign in with your FilmeJá account to request permanent deletion of your data.",
+    "loginPrompt": "Sign in with your Movie & TV Finder AI account to request permanent deletion of your data.",
     "footerText": "Prefer not to use this page? Email us at <email>privacidade@filmeja.com</email> to request your account be deleted. See also our <privacy>Privacy Policy</privacy>."
   },
   "privacy": {
@@ -539,7 +540,7 @@
     "priceLabel": "Price: {{price}}",
     "cancelSubscription": "Cancel Subscription",
     "cancelling": "Cancelling...",
-    "unlockDescription": "Unlock every FilmeJá feature for just {{price}}",
+    "unlockDescription": "Unlock every Movie & TV Finder AI feature for just {{price}}",
     "features": [
       "Unlimited recommendations",
       "No ads",
@@ -562,7 +563,7 @@
     "heroTitleHighlight": "perfect movie with AI",
     "heroSubtitleLine1": "Less time searching.",
     "heroSubtitleLine2": "More time watching.",
-    "unlockTitle": "Unlock FilmeJá Premium",
+    "unlockTitle": "Unlock Movie & TV Finder AI Premium",
     "features": [
       "Personalized AI recommendations",
       "Search by mood, genre, or chat with the AI",
@@ -607,7 +608,7 @@
       },
       "subscribed": {
         "title": "Subscription activated!",
-        "description": "Welcome to FilmeJá Premium."
+        "description": "Welcome to Movie & TV Finder AI Premium."
       },
       "subscribeError": {
         "title": "Couldn't complete purchase",

@@ -37,6 +37,7 @@ interface SidebarProps {
 
 export function Sidebar({ isExpanded, setIsExpanded, onLogout }: SidebarProps) {
   const { t } = useTranslation();
+  const appName = t("common.appName");
   const navigate = useNavigate();
   const [showAiChat, setShowAiChat] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -164,8 +165,12 @@ export function Sidebar({ isExpanded, setIsExpanded, onLogout }: SidebarProps) {
 
             <div className="py-8 flex justify-center">
               {isExpanded ? (
-                <h1 className="text-3xl font-bold text-white bg-gradient-to-r from-filmeja-purple to-filmeja-blue bg-clip-text text-transparent">
-                  FilmeJá
+                <h1
+                  className={`font-bold text-white bg-gradient-to-r from-filmeja-purple to-filmeja-blue bg-clip-text text-transparent text-center leading-tight ${
+                    appName.length > 10 ? "text-base" : "text-3xl"
+                  }`}
+                >
+                  {appName}
                 </h1>
               ) : (
                 <Film className="w-6 h-6 text-filmeja-purple" />
