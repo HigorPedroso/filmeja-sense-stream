@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { deleteAccount } from "@/lib/account/deleteAccount";
 import { translateAuthError } from "@/lib/errors/translateAuthError";
+import { AppNameLabel } from "@/components/AppNameLabel";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -82,13 +83,11 @@ const DeleteAccountRequest = () => {
       <div className="relative z-10 min-h-[100dvh] flex flex-col items-center justify-center px-5 py-10">
         <div className="w-full max-w-sm flex flex-col items-center mb-8">
           <img src="/icone.png" alt={appName} className="w-14 h-14 rounded-2xl shadow-lg shadow-filmeja-purple/30 mb-4" />
-          <h1
-            className={`font-bold text-white text-center bg-gradient-to-r from-filmeja-purple to-filmeja-blue bg-clip-text text-transparent ${
+          <AppNameLabel
+            className={`font-bold text-white text-center ${
               appName.length > 10 ? "text-base" : "text-xl"
             }`}
-          >
-            {appName}
-          </h1>
+          />
         </div>
 
         <motion.div

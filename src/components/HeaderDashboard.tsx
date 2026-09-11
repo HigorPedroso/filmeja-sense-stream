@@ -1,4 +1,5 @@
 import { useAuth } from "@/hooks/useAuth";
+import { AppNameLabel } from "@/components/AppNameLabel";
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import AvatarSelectionModal from "./AvatarSelectionModal";
@@ -142,9 +143,11 @@ const HeaderDashboard = () => {
         style={{ paddingTop: "max(1.75rem, calc(0.75rem + env(safe-area-inset-top)))" }}
       >
         <div className="flex justify-between md:justify-end items-center">
-          <span className="text-white font-bold text-lg drop-shadow-md md:hidden">
-            <span className="text-filmeja-purple">Filme</span>Já
-          </span>
+          <AppNameLabel
+            className={`font-bold text-white drop-shadow-md md:hidden ${
+              t("common.appName").length > 10 ? "text-sm" : "text-lg"
+            }`}
+          />
 
           <div className="flex items-center space-x-3">
             <div className="flex flex-col items-end">

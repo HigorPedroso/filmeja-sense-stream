@@ -277,6 +277,7 @@
   },
   "common": {
     "appName": "FilmeJá",
+    "appNameAccent": "Filme",
     "close": "Fechar"
   },
   "paymentSuccessModal": {

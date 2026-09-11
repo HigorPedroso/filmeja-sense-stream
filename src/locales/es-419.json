@@ -653,6 +653,7 @@
   },
   "common": {
     "appName": "Qué Ver",
+    "appNameAccent": "Ver",
     "close": "Cerrar"
   },
   "authErrors": {

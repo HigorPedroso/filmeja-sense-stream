@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { loginWithGoogle } from '@/lib/googleAuth';
 import { loginWithApple } from '@/lib/appleAuth';
 import { translateAuthError } from '@/lib/errors/translateAuthError';
+import { AppNameLabel } from '@/components/AppNameLabel';
 import { Capacitor } from '@capacitor/core';
 import { cn } from '@/lib/utils';
 
@@ -167,13 +168,11 @@ const Signup = () => {
             alt={appName}
             className="w-14 h-14 rounded-2xl shadow-lg shadow-filmeja-purple/30 mb-4"
           />
-          <h1
-            className={`font-bold text-white text-center bg-gradient-to-r from-filmeja-purple to-filmeja-blue bg-clip-text text-transparent ${
+          <AppNameLabel
+            className={`font-bold text-white text-center ${
               appName.length > 10 ? "text-base" : "text-xl"
             }`}
-          >
-            {appName}
-          </h1>
+          />
         </div>
 
         <div className="w-full max-w-sm bg-white/[0.04] backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl p-6">
