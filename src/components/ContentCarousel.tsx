@@ -44,7 +44,7 @@ const ContentCarousel: React.FC<ContentCarouselProps> = ({
         
         <div className="relative">
           <div 
-            className="flex overflow-x-auto scrollbar-none pb-4 gap-4 scroll-smooth snap-x"
+            className="flex overflow-x-auto native-scroll pb-4 gap-4 scroll-smooth snap-x"
             ref={scrollContainerRef}
           >
             {items.map((item) => (

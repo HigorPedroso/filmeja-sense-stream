@@ -108,6 +108,18 @@
   background: rgba(155, 135, 245, 0.8);
 }
 
+/* The custom scrollbar above is meant for the web version — on native,
+   any element with its own overflow (instead of relying on the page's
+   natural scroll) renders it as a persistent visible bar, which reads as
+   a web page rather than an app. Opt specific elements out with this. */
+.native-scroll {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* old Edge/IE */
+}
+.native-scroll::-webkit-scrollbar {
+  display: none; /* Chrome/Safari/WebView */
+}
+
 @keyframes kenBurns {
   from {
     transform: scale(1);

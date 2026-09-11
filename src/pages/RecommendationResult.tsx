@@ -50,7 +50,7 @@ const RecommendationResult = () => {
 
   return (
     <div
-      className="min-h-[100dvh] bg-filmeja-dark overflow-y-auto px-4"
+      className="min-h-[100dvh] bg-filmeja-dark overflow-y-auto px-4 native-scroll"
       style={{
         paddingTop: "max(2rem, calc(1rem + env(safe-area-inset-top)))",
         // The banner ad floats above the safe area on top of this content —
