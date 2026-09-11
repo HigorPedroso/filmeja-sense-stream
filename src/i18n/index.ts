@@ -8,14 +8,11 @@ import es419 from "@/locales/es-419.json";
 export const SUPPORTED_LANGUAGES = ["pt-BR", "en-US", "es-419"] as const;
 export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
 
-export const LANGUAGE_STORAGE_KEY = "filmeja_language";
-
 // Collapses any browser/OS locale down to one of our supported languages —
 // pt* -> pt-BR, en* -> en-US, es* -> es-419, everything else falls back to
-// pt-BR (the app's default audience). Applied to every candidate the
-// detector finds (a saved preference in localStorage first, then
-// navigator.language), so a raw "pt", "pt-PT", "en-GB" or "es-ES" all
-// resolve sensibly instead of missing a resource bundle.
+// pt-BR (the app's default audience). Applied to whatever navigator.language
+// reports, so a raw "pt", "pt-PT", "en-GB" or "es-ES" all resolve sensibly
+// instead of missing a resource bundle.
 function normalizeLanguage(lng: string): SupportedLanguage {
   const base = lng.toLowerCase().split("-")[0];
   if (base === "pt") return "pt-BR";
@@ -36,9 +33,14 @@ i18n
     fallbackLng: "pt-BR",
     supportedLngs: SUPPORTED_LANGUAGES,
     detection: {
-      order: ["localStorage", "navigator"],
-      caches: ["localStorage"],
-      lookupLocalStorage: LANGUAGE_STORAGE_KEY,
+      // Always re-detect from the device's current system language on
+      // every app open — deliberately no localStorage/caching. A manual
+      // pick from LanguageSwitcher still applies for the current session
+      // (i18n.changeLanguage works in-memory regardless), but isn't
+      // persisted, so the next app open follows the device's language
+      // again rather than getting stuck on an old choice.
+      order: ["navigator"],
+      caches: [],
       convertDetectedLanguage: normalizeLanguage,
     },
     interpolation: {
