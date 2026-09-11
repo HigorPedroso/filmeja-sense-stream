@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useRecommendationResult } from "@/hooks/useRecommendationResult";
+import { Capacitor } from "@capacitor/core";
 
 // The single, global place that pushes the mobile /recomendacao screen when
 // a recommendation opens. This used to live inside ContentModal itself —
@@ -13,12 +14,15 @@ import { useRecommendationResult } from "@/hooks/useRecommendationResult";
 // couple of open/close cycles the back navigation landed somewhere with
 // nothing on screen. Call this once, near the app root, instead.
 //
-// Skipped on "/" and "/dashboard": Dashboard's own ContentModal instance
-// renders the recommendation inline there (fullScreenOnMobile), so opening
-// one while already on the dashboard doesn't need — and shouldn't get — a
-// route change at all. Every other entry point (Favorites, Profile,
-// Filmin.IA chat, ...) has no ContentModal mounted locally, so those still
-// need the dedicated route.
+// Skipped on "/" and "/dashboard" — Android only: Dashboard's own
+// ContentModal instance renders the recommendation inline there
+// (fullScreenOnMobile), so opening one while already on the dashboard
+// doesn't need — and shouldn't get — a route change at all. Every other
+// entry point (Favorites, Profile, Filmin.IA chat, ...) has no ContentModal
+// mounted locally, so those still need the dedicated route. On iOS,
+// rendering inline caused a visible flicker against the dashboard
+// underneath (see ContentModal.tsx), so Dashboard's instance stays inert
+// there too and this always navigates, same as before that change.
 const DASHBOARD_PATHS = ["/", "/dashboard"];
 
 export function useRecommendationNavigation() {
@@ -28,12 +32,8 @@ export function useRecommendationNavigation() {
   const location = useLocation();
 
   useEffect(() => {
-    if (
-      isMobile &&
-      showRecommendationModal &&
-      location.pathname !== "/recomendacao" &&
-      !DASHBOARD_PATHS.includes(location.pathname)
-    ) {
+    const dashboardHandlesInline = Capacitor.getPlatform() !== "ios" && DASHBOARD_PATHS.includes(location.pathname);
+    if (isMobile && showRecommendationModal && location.pathname !== "/recomendacao" && !dashboardHandlesInline) {
       navigate("/recomendacao");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

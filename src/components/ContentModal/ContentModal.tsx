@@ -5,6 +5,7 @@ import { ContentModalSkeleton } from "./ContentModalSkeleton";
 import { ContentResultView } from "./ContentResultView";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useBannerAdHeight } from "@/hooks/useBannerAdHeight";
+import { Capacitor } from "@capacitor/core";
 
 export const ContentModal = ({
   isOpen,
@@ -32,7 +33,15 @@ export const ContentModal = ({
   // MobileSidebar's instances still return null here and rely on the route
   // for entry points that don't have Dashboard mounted underneath them
   // (Favorites, Profile, Filmin.IA chat, ...).
-  if (isMobile && isOpen && !fullScreenOnMobile) return null;
+  //
+  // iOS-only exception: rendering inline here caused a visible flicker
+  // between this overlay and the dashboard underneath on iOS specifically
+  // — a WKWebView paint/compositing quirk, not seen on Android. Until
+  // that's root-caused, iOS keeps using the /recomendacao route even from
+  // Dashboard (useRecommendationNavigation is kept in sync with this).
+  const canRenderInline = fullScreenOnMobile && Capacitor.getPlatform() !== "ios";
+
+  if (isMobile && isOpen && !canRenderInline) return null;
 
   if (isMobile) {
     if (!isOpen) return null;
