@@ -4,6 +4,7 @@ import { ContentModalProps } from "./types";
 import { ContentModalSkeleton } from "./ContentModalSkeleton";
 import { ContentResultView } from "./ContentResultView";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useBannerAdHeight } from "@/hooks/useBannerAdHeight";
 
 export const ContentModal = ({
   isOpen,
@@ -12,21 +13,50 @@ export const ContentModal = ({
   isLoading,
   onRequestNew,
   hasReachedLimit,
+  fullScreenOnMobile,
 }: ContentModalProps) => {
   const isMobile = useIsMobile();
+  const bannerHeight = useBannerAdHeight();
 
-  // On mobile, the dedicated /recomendacao screen is what actually shows
-  // this — pushing it there is handled once, globally, by
-  // useRecommendationNavigation (see App.tsx). ContentModal is rendered by
-  // several always-mounted components at once (Dashboard, the desktop
-  // Sidebar, MobileSidebar), all bound to the same shared isOpen/content;
-  // if each one pushed the route itself, a single open fired one navigate()
-  // per mounted instance, stacking duplicate history entries that a single
-  // close could never fully undo. This only decides not to render its own
-  // Dialog on mobile — no navigation here.
-  const shouldUseFullScreen = isMobile && isOpen;
+  // ContentModal is rendered by several always-mounted components at once
+  // (Dashboard, the desktop Sidebar, MobileSidebar), all bound to the same
+  // shared isOpen/content — so only ONE instance may render its own UI on
+  // mobile, or the same recommendation shows up tripled. Historically that
+  // was solved by having every instance render nothing on mobile and
+  // instead pushing the dedicated /recomendacao route once, globally, via
+  // useRecommendationNavigation — but that meant closing it always
+  // navigated back through a route change, which unmounted (and fully
+  // re-fetched) whatever page opened it. Dashboard's own instance now
+  // passes fullScreenOnMobile to render inline instead, so opening/closing
+  // a recommendation from the dashboard never leaves it — Sidebar's and
+  // MobileSidebar's instances still return null here and rely on the route
+  // for entry points that don't have Dashboard mounted underneath them
+  // (Favorites, Profile, Filmin.IA chat, ...).
+  if (isMobile && isOpen && !fullScreenOnMobile) return null;
 
-  if (shouldUseFullScreen) return null;
+  if (isMobile) {
+    if (!isOpen) return null;
+    return (
+      <div
+        className="fixed inset-0 z-50 bg-filmeja-dark overflow-y-auto px-4 native-scroll"
+        style={{
+          paddingTop: "max(2rem, calc(1rem + env(safe-area-inset-top)))",
+          paddingBottom: `calc(max(1.5rem, env(safe-area-inset-bottom)) + ${bannerHeight}px + 1.5rem)`,
+        }}
+      >
+        {isLoading || !content ? (
+          <ContentModalSkeleton />
+        ) : (
+          <ContentResultView
+            content={content}
+            onClose={() => onOpenChange(false)}
+            onRequestNew={onRequestNew}
+            hasReachedLimit={hasReachedLimit}
+          />
+        )}
+      </div>
+    );
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>

@@ -95,6 +95,23 @@ const mockUser = {
   isPremium: false, // Toggle this to test premium vs non-premium UI
 };
 
+// Module-level, not component state — same reasoning as usePremiumStatus's
+// isPremiumCache: on native, closing a recommendation's details navigates
+// back from the /recomendacao route (see useRecommendationNavigation),
+// which unmounts and remounts Dashboard. With plain per-component state,
+// every single close re-fetched trending/top-rated/watched/favorites from
+// scratch — network round-trips plus a visible flash back to empty/loading
+// — which read as "the whole home screen reloading". Populated once per
+// app session; later mounts read the cached value instantly. Kept in sync
+// by the same call sites that already update the matching component
+// state. watchedContentCache/favoritesCache are per-user, so they're
+// cleared on logout (see handleLogout) — trending/top-rated aren't
+// user-specific and don't need that.
+let trendingCache: ContentItem[] | null = null;
+let topContentCache: ContentItem[] | null = null;
+let watchedContentCache: { movies: ContentItem[]; series: ContentItem[] } | null = null;
+let favoritesCache: FavoriteItem[] | null = null;
+
 const Dashboard = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -207,6 +224,12 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
+    if (watchedContentCache) {
+      setUserWatchedMovies(watchedContentCache.movies);
+      setUserWatchedSeries(watchedContentCache.series);
+      return;
+    }
+
     const fetchWatchedContent = async () => {
       try {
         const {
@@ -238,6 +261,7 @@ const Dashboard = () => {
 
           setUserWatchedMovies(movies);
           setUserWatchedSeries(series);
+          watchedContentCache = { movies, series };
         }
       } catch (error) {
         console.error("Error fetching watched content:", error);
@@ -248,6 +272,11 @@ const Dashboard = () => {
   }, []);
 
   useEffect(() => {
+    if (topContentCache) {
+      setTopContent(topContentCache);
+      return;
+    }
+
     const fetchTopContent = async () => {
       try {
         const response = await fetch(
@@ -256,12 +285,12 @@ const Dashboard = () => {
           }&language=${getTmdbLanguage()}&page=1`
         );
         const data = await response.json();
-        setTopContent(
-          data.results.map((item: any) => ({
-            ...item,
-            media_type: "movie",
-          }))
-        );
+        const mapped = data.results.map((item: any) => ({
+          ...item,
+          media_type: "movie",
+        }));
+        setTopContent(mapped);
+        topContentCache = mapped;
       } catch (error) {
         console.error("Error fetching top content:", error);
       }
@@ -271,9 +300,15 @@ const Dashboard = () => {
   }, []);
 
   useEffect(() => {
+    if (favoritesCache) {
+      setUserFavorites(favoritesCache);
+      return;
+    }
+
     const fetchFavorites = async () => {
       const favorites = await getUserFavorites();
       setUserFavorites(favorites);
+      favoritesCache = favorites;
     };
 
     fetchFavorites();
@@ -282,6 +317,7 @@ const Dashboard = () => {
   const handleFavoriteUpdate = async () => {
     const favorites = await getUserFavorites();
     setUserFavorites(favorites);
+    favoritesCache = favorites;
   };
 
   useEffect(() => {
@@ -290,10 +326,16 @@ const Dashboard = () => {
 
   // Fetch trending content on mount
   useEffect(() => {
+    if (trendingCache) {
+      setTrendingContent(trendingCache);
+      return;
+    }
+
     const fetchTrending = async () => {
       try {
         const content = await getTrending();
         setTrendingContent(content || []);
+        trendingCache = content || [];
       } catch (error) {
         console.error("Error fetching trending content:", error);
         toast({
@@ -643,6 +685,12 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
       const { error } = await supabase.auth.signOut();
 
       if (error) throw error;
+
+      // Per-user caches — don't let them leak into whoever logs in next
+      // on this device. Trending/top-rated aren't user-specific, so they
+      // stay cached across the logout.
+      watchedContentCache = null;
+      favoritesCache = null;
 
       toast({
         title: t("dashboard.toasts.loggingOut.title"),
@@ -1373,6 +1421,7 @@ A resposta deve conter APENAS o array JSON. Nenhum texto antes ou depois.
           onOpenChange={setShowRecommendationModal}
           content={moodRecommendation}
           isLoading={isLoadingRecommendation}
+          fullScreenOnMobile
           onRequestNew={async () => {
             if (genre) {
               await fetchGenreRecommendation(genre);

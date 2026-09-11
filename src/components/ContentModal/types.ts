@@ -8,6 +8,10 @@ export interface ContentModalProps {
   selectedMood?: string;
   onMarkAsWatched?: () => void;
   hasReachedLimit?: boolean; // Add this prop
+  // Renders inline as a full-screen overlay on mobile instead of returning
+  // null — only one mounted ContentModal instance should ever set this
+  // (see ContentModal.tsx). Ignored on desktop, which always uses the Dialog.
+  fullScreenOnMobile?: boolean;
 }
 
 export interface ContentType {
