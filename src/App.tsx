@@ -21,7 +21,7 @@ import { RecommendationResultProvider } from "./hooks/useRecommendationResult";
 import { AuthProvider } from "./hooks/useAuth";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { FavoritesPage } from "./pages/FavoritesPage";
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import SuperDashboard from "./pages/SuperDashboard";
 import { ProfilePage } from "./pages/Profile";
 import FAQ from "./pages/FAQ";
@@ -34,7 +34,6 @@ import { BlogPostView } from "./pages/BlogPostView";
 import { AdminRoute } from "./components/AdminRoute";
 import BlogPage from "./pages/BlogPage";
 import { HelmetProvider } from "react-helmet-async";
-import { getUserFavorites } from "./lib/favorites";
 import { useGoogleAds } from './hooks/useGoogleAds';
 import { StoriesIndex } from "./pages/StoriesIndex";
 import { AmpStoryPage } from "./pages/AmpStoryPage";
@@ -53,7 +52,6 @@ import { trackEvent } from "./lib/analytics/trackEvent";
 import { initializePurchases } from "./lib/purchases";
 import { useSyncPurchasesAuth } from "./hooks/useSyncPurchasesAuth";
 import { useSyncProfileLanguage } from "./hooks/useSyncProfileLanguage";
-import { useTranslation } from "react-i18next";
 
 // Extend the Window interface to include fbq and _fbq
 declare global {
@@ -67,17 +65,6 @@ declare global {
 const queryClient = new QueryClient();
 
 const App = () => {
-  const [favoriteItems, setFavoriteItems] = useState([]);
-
-  useEffect(() => {
-    const fetchFavorites = async () => {
-      const favorites = await getUserFavorites();
-      setFavoriteItems(favorites);
-    };
-
-    fetchFavorites();
-  }, []);
-
   // Once per app launch (not per navigation) — fires as soon as auth
   // resolves; trackEvent() itself no-ops silently if there's no logged-in
   // user yet.
@@ -135,7 +122,7 @@ const App = () => {
               <Sonner />
               <BrowserRouter>
                 <RecommendationResultProvider>
-                  <AppContent favoriteItems={favoriteItems} />
+                  <AppContent />
                 </RecommendationResultProvider>
               </BrowserRouter>
             </TooltipProvider>
@@ -156,8 +143,7 @@ const App = () => {
   );
 };
 
-const AppContent = ({ favoriteItems }) => {
-  const { t } = useTranslation();
+const AppContent = () => {
   useGoogleAds(); // Move the hook here, inside Router context
   useCapacitorBackButton();
   useRecommendationNavigation();
@@ -261,10 +247,7 @@ const AppContent = ({ favoriteItems }) => {
         path="/favorites"
         element={
           <ProtectedRoute>
-            <FavoritesPage
-              title={t("dashboard.sections.myList")}
-              items={favoriteItems}
-            />
+            <FavoritesPage />
           </ProtectedRoute>
         }
       />

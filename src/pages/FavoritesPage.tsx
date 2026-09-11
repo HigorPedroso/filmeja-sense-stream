@@ -12,6 +12,7 @@ import { fetchContentWithProviders } from "@/lib/utils/tmdb";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useRecommendationResult } from "@/hooks/useRecommendationResult";
+import { getUserFavorites } from "@/lib/favorites";
 
 interface ContentItem {
   id: number;
@@ -60,16 +61,21 @@ interface TMDBResponse {
   first_air_date?: string;
 }
 
-interface FavoritesPageProps {
-  title: string;
-  items: ContentItem[];
-}
-
-export function FavoritesPage({ title, items }: FavoritesPageProps) {
+export function FavoritesPage() {
     const { t } = useTranslation();
+    const title = t("dashboard.sections.myList");
     const navigate = useNavigate();
     const [currentBgIndex, setCurrentBgIndex] = useState(0);
     const [isExpanded, setIsExpanded] = useState(false);
+    const [items, setItems] = useState<ContentItem[]>([]);
+
+  // Fetched fresh every time this page mounts (not once at app startup)
+  // so a favorite added earlier in the same session shows up here right
+  // away, instead of only after the app is fully closed and reopened.
+  useEffect(() => {
+    getUserFavorites().then(setItems);
+  }, []);
+
   const {
     moodRecommendation: selectedContent,
     setMoodRecommendation: setSelectedContent,

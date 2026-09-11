@@ -62,11 +62,12 @@ export const useContentActions = (content: ContentType) => {
       }
 
       if (isFavorite) {
-        await supabase
+        const { error } = await supabase
           .from("favorite_content")
           .delete()
           .eq("user_id", user.id)
           .eq("tmdb_id", String(content.id));
+        if (error) throw error;
 
         setIsFavorite(false);
         toast({
@@ -74,12 +75,13 @@ export const useContentActions = (content: ContentType) => {
           description: t("result.toasts.favoriteRemoved.description"),
         });
       } else {
-        await supabase.from("favorite_content").insert({
+        const { error } = await supabase.from("favorite_content").insert({
           user_id: user.id,
           tmdb_id: String(content.id),
           media_type: content.mediaType,
           title: content.title || content.name,
         });
+        if (error) throw error;
 
         setIsFavorite(true);
         trackEvent("title_saved", {
@@ -115,11 +117,12 @@ export const useContentActions = (content: ContentType) => {
       }
 
       if (isWatched) {
-        await supabase
+        const { error } = await supabase
           .from("watched_content")
           .delete()
           .eq("user_id", user.id)
           .eq("tmdb_id", Number(content.id));
+        if (error) throw error;
 
         setIsWatched(false);
         toast({
@@ -127,13 +130,14 @@ export const useContentActions = (content: ContentType) => {
           description: t("result.toasts.watchedRemoved.description"),
         });
       } else {
-        await supabase.from("watched_content").insert({
+        const { error } = await supabase.from("watched_content").insert({
           user_id: user.id,
           tmdb_id: Number(content.id),
           media_type: content.mediaType,
           title: content.title || content.name || "",
           watched_at: new Date().toISOString(),
         });
+        if (error) throw error;
 
         setIsWatched(true);
         toast({
