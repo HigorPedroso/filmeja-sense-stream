@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
 import {
   Brain,
   SlidersHorizontal,
@@ -366,6 +367,15 @@ export function PremiumPaywallContent({ onClose, className }: PremiumPaywallCont
                 price: selectedPackage?.product.priceString ?? t(`paywall.fallbackPrices.${selectedPlan}`),
               })
             : t("paywall.cancelAnytime")}
+        </p>
+        <p className="text-xs text-gray-500">
+          <Trans
+            i18nKey="paywall.legalLinks"
+            components={{
+              terms: <Link to="/termos" className="text-filmeja-purple hover:underline" />,
+              privacy: <Link to="/privacidade" className="text-filmeja-purple hover:underline" />,
+            }}
+          />
         </p>
       </div>
     </div>

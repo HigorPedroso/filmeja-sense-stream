@@ -586,6 +586,7 @@
     "restorePurchases": "Restaurar compras",
     "continueFree": "Continuar com versão gratuita",
     "cancelAnytime": "Cancele quando quiser.",
+    "legalLinks": "<terms>Termos de Uso</terms> · <privacy>Política de Privacidade</privacy>",
     "trial": {
       "days_one": "{{count}} dia grátis",
       "days_other": "{{count}} dias grátis",

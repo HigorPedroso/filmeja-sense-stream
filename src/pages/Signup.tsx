@@ -1,5 +1,6 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Trans, useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,6 +13,7 @@ import { loginWithApple } from '@/lib/appleAuth';
 import { translateAuthError } from '@/lib/errors/translateAuthError';
 import { AppNameLabel } from '@/components/AppNameLabel';
 import { Capacitor } from '@capacitor/core';
+import { Keyboard } from '@capacitor/keyboard';
 import { cn } from '@/lib/utils';
 
 const isNative = Capacitor.isNativePlatform();
@@ -32,6 +34,55 @@ const Signup = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [session, setSession] = useState(null);
+  // Hides the Google/Apple buttons while an email/password field is
+  // focused, to give the keyboard more room. The timeout on blur debounces
+  // the blur→focus gap when tabbing between the name, email and password
+  // fields, which would otherwise flash the buttons back in for a frame
+  // between each field.
+  const [isFieldFocused, setIsFieldFocused] = useState(false);
+  const blurTimeoutRef = useRef<number | null>(null);
+
+  const handleFieldFocus = () => {
+    if (blurTimeoutRef.current) {
+      window.clearTimeout(blurTimeoutRef.current);
+      blurTimeoutRef.current = null;
+    }
+    setIsFieldFocused(true);
+  };
+
+  const handleFieldBlur = () => {
+    blurTimeoutRef.current = window.setTimeout(() => {
+      setIsFieldFocused(false);
+    }, 100);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (blurTimeoutRef.current) window.clearTimeout(blurTimeoutRef.current);
+    };
+  }, []);
+
+  // On native, dismissing the keyboard (e.g. the "Done" button, or tapping
+  // outside) doesn't reliably blur the input in the WebView — the field can
+  // stay focused even once the keyboard is gone, so plain onBlur alone left
+  // the buttons hidden. keyboardDidHide is the actual native signal for
+  // "the keyboard just closed" and is authoritative here regardless of DOM
+  // focus state.
+  useEffect(() => {
+    if (!isNative) return;
+
+    const listenerPromise = Keyboard.addListener('keyboardDidHide', () => {
+      if (blurTimeoutRef.current) {
+        window.clearTimeout(blurTimeoutRef.current);
+        blurTimeoutRef.current = null;
+      }
+      setIsFieldFocused(false);
+    });
+
+    return () => {
+      listenerPromise.then((listener) => listener.remove());
+    };
+  }, []);
 
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -66,11 +117,6 @@ const Signup = () => {
         });
 
         if (error) throw error;
-
-        toast({
-          title: t('auth.toasts.loginSuccess.title'),
-          description: t('auth.toasts.loginSuccess.description'),
-        });
       } else {
         // Sign up with email and password
         const { error } = await supabase.auth.signUp({
@@ -209,46 +255,59 @@ const Signup = () => {
             {isLogin ? t('auth.subtitleLogin') : t('auth.subtitleSignup')}
           </p>
 
-          <Button
-            variant="outline"
-            className="w-full h-12 rounded-xl bg-white text-gray-900 border-transparent hover:bg-gray-100 font-medium"
-            onClick={handleGoogleLogin}
-            type="button"
-            disabled={busy}
-          >
-            {googleLoading ? (
-              <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-            ) : (
-              <img src="/google.png" alt="" className="w-5 h-5 mr-2" />
+          <AnimatePresence initial={false}>
+            {!isFieldFocused && (
+              <motion.div
+                key="social-login"
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.25, ease: 'easeInOut' }}
+                className="overflow-hidden"
+              >
+                <Button
+                  variant="outline"
+                  className="w-full h-12 rounded-xl bg-white text-gray-900 border-transparent hover:bg-gray-100 font-medium"
+                  onClick={handleGoogleLogin}
+                  type="button"
+                  disabled={busy}
+                >
+                  {googleLoading ? (
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  ) : (
+                    <img src="/google.png" alt="" className="w-5 h-5 mr-2" />
+                  )}
+                  {t('auth.continueWithGoogle')}
+                </Button>
+
+                {isIOS && (
+                  <Button
+                    variant="outline"
+                    className="w-full h-12 rounded-xl bg-black text-white border-transparent hover:bg-black/80 font-medium mt-3"
+                    onClick={handleAppleLogin}
+                    type="button"
+                    disabled={busy}
+                  >
+                    {appleLoading ? (
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    ) : (
+                      <Apple className="w-5 h-5 mr-2 fill-white" />
+                    )}
+                    {t('auth.continueWithApple')}
+                  </Button>
+                )}
+
+                <div className="relative my-6">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t border-white/10" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-[#17131f] px-2 text-gray-500">{t('auth.orContinueWithEmail')}</span>
+                  </div>
+                </div>
+              </motion.div>
             )}
-            {t('auth.continueWithGoogle')}
-          </Button>
-
-          {isIOS && (
-            <Button
-              variant="outline"
-              className="w-full h-12 rounded-xl bg-black text-white border-transparent hover:bg-black/80 font-medium mt-3"
-              onClick={handleAppleLogin}
-              type="button"
-              disabled={busy}
-            >
-              {appleLoading ? (
-                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-              ) : (
-                <Apple className="w-5 h-5 mr-2 fill-white" />
-              )}
-              {t('auth.continueWithApple')}
-            </Button>
-          )}
-
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t border-white/10" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-[#17131f] px-2 text-gray-500">{t('auth.orContinueWithEmail')}</span>
-            </div>
-          </div>
+          </AnimatePresence>
 
           <form onSubmit={handleAuthentication} className="space-y-3">
             {!isLogin && (
@@ -259,6 +318,8 @@ const Signup = () => {
                   className="h-12 pl-10 rounded-xl bg-white/5 border-white/10 text-white"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
+                  onFocus={handleFieldFocus}
+                  onBlur={handleFieldBlur}
                   required={!isLogin}
                   disabled={busy}
                 />
@@ -273,6 +334,8 @@ const Signup = () => {
                 className="h-12 pl-10 rounded-xl bg-white/5 border-white/10 text-white"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                onFocus={handleFieldFocus}
+                onBlur={handleFieldBlur}
                 required
                 disabled={busy}
                 autoComplete="email"
@@ -287,6 +350,8 @@ const Signup = () => {
                 className="h-12 pl-10 pr-10 rounded-xl bg-white/5 border-white/10 text-white"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                onFocus={handleFieldFocus}
+                onBlur={handleFieldBlur}
                 required
                 disabled={busy}
                 autoComplete={isLogin ? 'current-password' : 'new-password'}

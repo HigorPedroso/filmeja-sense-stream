@@ -371,11 +371,6 @@ export function ProfilePage() {
 
       if (error) throw error;
 
-      toast({
-        title: t("dashboard.toasts.loggingOut.title"),
-        description: t("dashboard.toasts.loggingOut.description"),
-      });
-
       navigate("/");
     } catch (error) {
       toast({

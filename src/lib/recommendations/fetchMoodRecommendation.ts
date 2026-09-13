@@ -293,92 +293,113 @@ export async function fetchMoodRecommendation(params: MoodRecommendationParams):
           ? "\nResponde únicamente con el JSON, sin texto adicional."
           : "\nResponda apenas com o JSON, sem texto adicional.";
 
-    const raw = await callGeminiForText(prompt + promptSuffix);
-
-    const parsedSuggestions = extractJsonFromResponse(raw) || [];
-    // Ensure we're working with a properly typed array of ContentSuggestion objects
-    const suggestions: ContentSuggestion[] = Array.isArray(parsedSuggestions) ?
-      parsedSuggestions.map(suggestion => ({
-        title: String(suggestion.title || ""),
-        tmdbId: Number(suggestion.tmdbId || 0),
-        description: String(suggestion.description || ""),
-        imgUrl: suggestion.imgUrl ? String(suggestion.imgUrl) : undefined,
-        tipo: (suggestion.tipo === "tv" ? "tv" : "movie") as "movie" | "tv",
-        releaseYear: Number(suggestion.releaseYear) || undefined,
-      })) : [];
-
-    const shuffledSuggestions = shuffleArray(suggestions);
-
-    const suggestionsWithCorrectIds = await Promise.all(
-      shuffledSuggestions.map(async (suggestion) => {
-        try {
-          const searchType = suggestion.tipo === "movie" ? "movie" : "tv";
-          const searchResponse = await fetch(
-            `https://api.themoviedb.org/3/search/${searchType}?api_key=${
-              import.meta.env.VITE_TMDB_API_KEY
-            }&query=${encodeURIComponent(suggestion.title)}&language=${getTmdbLanguage()}`
-          );
-          const searchData = await searchResponse.json();
-
-          const bestMatch = pickBestTitleMatch(searchData.results || [], suggestion.title, suggestion.releaseYear);
-          if (bestMatch) {
-            return {
-              ...suggestion,
-              tmdbId: bestMatch.id,
-            };
-          }
-          return suggestion;
-        } catch (error) {
-          console.error("Error searching TMDB:", error);
-          return suggestion;
-        }
-      })
-    );
-
+    // If an entire batch of 15 strikes out (rare, but happens — e.g. a run
+    // of titles that all happen to be missing from the region's catalog),
+    // ask Gemini for a fresh batch, excluding whatever just failed, instead
+    // of surfacing an error on the first bad batch.
+    const MAX_BATCH_ATTEMPTS = 2;
     const availableContent = [];
-    for (const suggestion of suggestionsWithCorrectIds) {
-      try {
-        const [details, videos, similar, providers] = await Promise.all([
-          fetch(
-            `https://api.themoviedb.org/3/${suggestion.tipo}/${suggestion.tmdbId}?api_key=${
-              import.meta.env.VITE_TMDB_API_KEY
-            }&language=${getTmdbLanguage()}`
-          ).then(r => r.json()),
-          fetch(
-            `https://api.themoviedb.org/3/${suggestion.tipo}/${suggestion.tmdbId}/videos?api_key=${
-              import.meta.env.VITE_TMDB_API_KEY
-            }&language=${getTmdbLanguage()}`
-          ).then(r => r.json()),
-          fetch(
-            `https://api.themoviedb.org/3/${suggestion.tipo}/${suggestion.tmdbId}/similar?api_key=${
-              import.meta.env.VITE_TMDB_API_KEY
-            }&language=${getTmdbLanguage()}`
-          ).then(r => r.json()),
-          fetch(
-            `https://api.themoviedb.org/3/${suggestion.tipo}/${suggestion.tmdbId}/watch/providers?api_key=${
-              import.meta.env.VITE_TMDB_API_KEY
-            }`
-          ).then(r => r.json()),
-        ]);
+    const excludedTitles: string[] = [];
 
-        if (providers.results?.[getTmdbRegion()]?.flatrate) {
-          availableContent.push({
-            ...details,
-            videos: videos.results,
-            providers: providers.results?.[getTmdbRegion()],
-            similar: similar.results,
-            mediaType: suggestion.tipo,
-          });
-          
-          if (availableContent.length >= 3) {
-            const randomIndex = Math.floor(Math.random() * availableContent.length);
-            setMoodRecommendation(availableContent[randomIndex]);
-            break;
+    for (let batchAttempt = 0; batchAttempt < MAX_BATCH_ATTEMPTS && availableContent.length === 0; batchAttempt++) {
+      const exclusionNote = excludedTitles.length
+        ? promptLang === "en"
+          ? `\nThe following titles were already checked and are NOT available — don't suggest them again: ${excludedTitles.join(", ")}.`
+          : promptLang === "es"
+            ? `\nLos siguientes títulos ya fueron verificados y NO están disponibles — no los sugieras de nuevo: ${excludedTitles.join(", ")}.`
+            : `\nOs títulos a seguir já foram verificados e NÃO estão disponíveis — não os sugira novamente: ${excludedTitles.join(", ")}.`
+        : "";
+
+      const raw = await callGeminiForText(prompt + promptSuffix + exclusionNote);
+
+      const parsedSuggestions = extractJsonFromResponse(raw) || [];
+      // Ensure we're working with a properly typed array of ContentSuggestion objects
+      const suggestions: ContentSuggestion[] = Array.isArray(parsedSuggestions) ?
+        parsedSuggestions.map(suggestion => ({
+          title: String(suggestion.title || ""),
+          tmdbId: Number(suggestion.tmdbId || 0),
+          description: String(suggestion.description || ""),
+          imgUrl: suggestion.imgUrl ? String(suggestion.imgUrl) : undefined,
+          tipo: (suggestion.tipo === "tv" ? "tv" : "movie") as "movie" | "tv",
+          releaseYear: Number(suggestion.releaseYear) || undefined,
+        })) : [];
+
+      if (suggestions.length === 0) continue;
+
+      const shuffledSuggestions = shuffleArray(suggestions);
+
+      const suggestionsWithCorrectIds = await Promise.all(
+        shuffledSuggestions.map(async (suggestion) => {
+          try {
+            const searchType = suggestion.tipo === "movie" ? "movie" : "tv";
+            const searchResponse = await fetch(
+              `https://api.themoviedb.org/3/search/${searchType}?api_key=${
+                import.meta.env.VITE_TMDB_API_KEY
+              }&query=${encodeURIComponent(suggestion.title)}&language=${getTmdbLanguage()}`
+            );
+            const searchData = await searchResponse.json();
+
+            const bestMatch = pickBestTitleMatch(searchData.results || [], suggestion.title, suggestion.releaseYear);
+            if (bestMatch) {
+              return {
+                ...suggestion,
+                tmdbId: bestMatch.id,
+              };
+            }
+            return suggestion;
+          } catch (error) {
+            console.error("Error searching TMDB:", error);
+            return suggestion;
           }
+        })
+      );
+
+      for (const suggestion of suggestionsWithCorrectIds) {
+        try {
+          const [details, videos, similar, providers] = await Promise.all([
+            fetch(
+              `https://api.themoviedb.org/3/${suggestion.tipo}/${suggestion.tmdbId}?api_key=${
+                import.meta.env.VITE_TMDB_API_KEY
+              }&language=${getTmdbLanguage()}`
+            ).then(r => r.json()),
+            fetch(
+              `https://api.themoviedb.org/3/${suggestion.tipo}/${suggestion.tmdbId}/videos?api_key=${
+                import.meta.env.VITE_TMDB_API_KEY
+              }&language=${getTmdbLanguage()}`
+            ).then(r => r.json()),
+            fetch(
+              `https://api.themoviedb.org/3/${suggestion.tipo}/${suggestion.tmdbId}/similar?api_key=${
+                import.meta.env.VITE_TMDB_API_KEY
+              }&language=${getTmdbLanguage()}`
+            ).then(r => r.json()),
+            fetch(
+              `https://api.themoviedb.org/3/${suggestion.tipo}/${suggestion.tmdbId}/watch/providers?api_key=${
+                import.meta.env.VITE_TMDB_API_KEY
+              }`
+            ).then(r => r.json()),
+          ]);
+
+          if (providers.results?.[getTmdbRegion()]?.flatrate) {
+            availableContent.push({
+              ...details,
+              videos: videos.results,
+              providers: providers.results?.[getTmdbRegion()],
+              similar: similar.results,
+              mediaType: suggestion.tipo,
+            });
+
+            if (availableContent.length >= 3) {
+              const randomIndex = Math.floor(Math.random() * availableContent.length);
+              setMoodRecommendation(availableContent[randomIndex]);
+              break;
+            }
+          } else {
+            excludedTitles.push(suggestion.title);
+          }
+        } catch (error) {
+          console.error("Error fetching content details:", error);
+          excludedTitles.push(suggestion.title);
         }
-      } catch (error) {
-        console.error("Error fetching content details:", error);
-        continue;
       }
     }
 
@@ -397,7 +418,7 @@ export async function fetchMoodRecommendation(params: MoodRecommendationParams):
         .insert({
           user_id: user?.id,
           content_type: selectedContent.mediaType,
-          content_id: 0,
+          content_id: selectedContent.id,
           title: selectedContent.title || selectedContent.name,
           poster_path: selectedContent.poster_path,
           created_at: new Date().toISOString()
