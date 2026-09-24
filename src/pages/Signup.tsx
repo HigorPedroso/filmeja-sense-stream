@@ -5,7 +5,8 @@ import { Trans, useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, User, Eye, EyeOff, Loader2, ChevronLeft, Apple } from 'lucide-react';
+import { Mail, Lock, User, Eye, EyeOff, Loader2, ChevronLeft } from 'lucide-react';
+import { AppleSignInButton } from '@/components/AppleSignInButton';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { loginWithGoogle } from '@/lib/googleAuth';
@@ -281,20 +282,13 @@ const Signup = () => {
                 </Button>
 
                 {isIOS && (
-                  <Button
-                    variant="outline"
-                    className="w-full h-12 rounded-xl bg-black text-white border-transparent hover:bg-black/80 font-medium mt-3"
+                  <AppleSignInButton
+                    className="mt-3"
+                    label={t('auth.continueWithApple')}
                     onClick={handleAppleLogin}
-                    type="button"
+                    loading={appleLoading}
                     disabled={busy}
-                  >
-                    {appleLoading ? (
-                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                    ) : (
-                      <Apple className="w-5 h-5 mr-2 fill-white" />
-                    )}
-                    {t('auth.continueWithApple')}
-                  </Button>
+                  />
                 )}
 
                 <div className="relative my-6">
