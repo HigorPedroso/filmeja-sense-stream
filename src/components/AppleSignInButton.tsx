@@ -37,9 +37,10 @@ export function AppleSignInButton({
       style={{
         fontFamily:
           '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif',
-        fontSize: 19,
+        // Same size/weight as the Google button next to it (Button's text-sm
+        // font-medium) so the two read as a pair.
+        fontSize: 14,
         fontWeight: 500,
-        letterSpacing: "-0.02em",
       }}
     >
       {loading ? (
@@ -47,10 +48,11 @@ export function AppleSignInButton({
       ) : (
         <svg
           viewBox="0 0 24 24"
-          width={22}
-          height={22}
+          width={20}
+          height={20}
           fill="currentColor"
           aria-hidden="true"
+          className="mr-2"
           style={{ marginTop: -2 }}
         >
           <path d={APPLE_LOGO_PATH} />
