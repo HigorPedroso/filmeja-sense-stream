@@ -1,9 +1,9 @@
-
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { subDays } from 'date-fns';
+import type { DateRange } from 'react-day-picker';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import AdminSidebar from '@/components/AdminDashboard/AdminSidebar';
 import DashboardHeader from '@/components/AdminDashboard/DashboardHeader';
@@ -12,197 +12,131 @@ import UserMetricsPanel from '@/components/AdminDashboard/UserMetricsPanel';
 import RecommendationPanel from '@/components/AdminDashboard/RecommendationPanel';
 import RecentActivitiesPanel from '@/components/AdminDashboard/RecentActivitiesPanel';
 import FinancialPanel from '@/components/AdminDashboard/FinancialPanel';
+import { ErrorBanner } from '@/components/AdminDashboard/shared';
 import { DateRangePicker } from '@/components/AdminDashboard/DateRangePicker';
 import { BlogPostsPanel } from '@/components/AdminDashboard/BlogPostsPanel';
-import { DashboardData, DateRangeType } from '@/types/dashboard';
+import { useAdminMetrics } from '@/hooks/useAdminDashboard';
+
+// The sidebar links to /super/<section>; each one opens the matching tab.
+const PATH_TO_TAB: Record<string, string> = {
+  '/super/users': 'users',
+  '/super/analytics': 'overview',
+  '/super/recommendations': 'recommendations',
+  '/super/finances': 'financial',
+};
+
+const TAB_TO_PATH: Record<string, string> = {
+  overview: '/super',
+  users: '/super/users',
+  recommendations: '/super/recommendations',
+  financial: '/super/finances',
+};
 
 const SuperDashboard = () => {
-  const [dateRange, setDateRange] = useState<DateRangeType>({
-    from: new Date(new Date().setDate(new Date().getDate() - 30)),
-    to: new Date()
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [tab, setTab] = useState(PATH_TO_TAB[location.pathname] ?? 'overview');
+  const [dateRange, setDateRange] = useState<DateRange>({
+    from: subDays(new Date(), 29),
+    to: new Date(),
   });
 
-  const { data: dashboardData, isLoading } = useQuery<DashboardData>({
-    queryKey: ['dashboard-metrics', dateRange],
+  useEffect(() => {
+    setTab(PATH_TO_TAB[location.pathname] ?? 'overview');
+  }, [location.pathname]);
+
+  const { data: metrics, isLoading, error } = useAdminMetrics(dateRange);
+
+  // blog_posts isn't in the generated Supabase types yet, hence the loose cast.
+  const { data: blogPosts, isLoading: loadingBlog } = useQuery({
+    queryKey: ['admin-blog-posts'],
     queryFn: async () => {
-      const [
-        usersData,
-        recommendationsData,
-        watchedData,
-        subscriptionsData,
-        revenueData,
-        blogPostsData 
-        ] = await Promise.all([
-          // Users metrics
-          supabase
-            .from('profiles')
-            .select('id, created_at, is_premium')
-            .gte('created_at', dateRange.from?.toISOString())
-            .lte('created_at', dateRange.to?.toISOString()),
-  
-          // Recommendations data
-          supabase
-            .from('recommendations')
-            .select('id, created_at, content_id, user_id, rating, content_type')
-            .gte('created_at', dateRange.from?.toISOString())
-            .lte('created_at', dateRange.to?.toISOString()),
-  
-          // Watched content
-          supabase
-            .from('watched_content')
-            .select('id, created_at, content_id, user_id, watch_duration, content_type')
-            .gte('created_at', dateRange.from?.toISOString())
-            .lte('created_at', dateRange.to?.toISOString()),
-  
-          // Subscriptions
-          supabase
-            .from('subscriptions')
-            .select('id, created_at, user_id, status, plan_type')
-            .gte('created_at', dateRange.from?.toISOString())
-            .lte('created_at', dateRange.to?.toISOString()),
-  
-          // Revenue/Transactions
-          supabase
-            .from('transactions')
-            .select('id, created_at, amount, status, user_id')
-            .gte('created_at', dateRange.from?.toISOString())
-            .lte('created_at', dateRange.to?.toISOString()),
-
-        // Fix the blog posts query
-        // In the Promise.all array, update the blog posts query
-        supabase
-          .from('blog_posts')
-          .select('*')
-          .order('created_at', { ascending: false })
-        ]);
-  
-        // Update the users metrics processing
-        return {
-          users: {
-            total: usersData.data?.length || 0,
-            active: usersData.data?.filter(u => u.last_sign_in_at)?.length || 0,
-            withSubscription: usersData.data?.filter(u => u.is_premium)?.length || 0
-          },
-          recommendations: {
-            total: recommendationsData.data?.length || 0,
-            avgRating: recommendationsData.data?.reduce((acc, rec) => acc + (rec.rating || 0), 0) / 
-              (recommendationsData.data?.length || 1),
-            byType: recommendationsData.data?.reduce((acc, rec) => {
-              acc[rec.content_type] = (acc[rec.content_type] || 0) + 1;
-              return acc;
-            }, {} as Record<string, number>)
-          },
-          watched: {
-            total: watchedData.data?.length || 0,
-            uniqueUsers: new Set(watchedData.data?.map(w => w.user_id)).size,
-            avgDuration: watchedData.data?.reduce((acc, w) => acc + (w.watch_duration || 0), 0) / 
-              (watchedData.data?.length || 1),
-            byType: watchedData.data?.reduce((acc, w) => {
-              acc[w.content_type] = (acc[w.content_type] || 0) + 1;
-              return acc;
-            }, {} as Record<string, number>)
-          },
-          subscriptions: {
-            total: subscriptionsData.data?.length || 0,
-            active: subscriptionsData.data?.filter(s => s.status === 'active')?.length || 0,
-            byPlan: subscriptionsData.data?.reduce((acc, sub) => {
-              acc[sub.plan_type] = (acc[sub.plan_type] || 0) + 1;
-              return acc;
-            }, {} as Record<string, number>)
-          },
-          revenue: {
-            total: revenueData.data?.reduce((acc, tx) => 
-              tx.status === 'completed' ? acc + (tx.amount || 0) : acc, 0
-            ) || 0,
-            transactions: revenueData.data?.length || 0
-          },
-          blogPosts: {
-            total: blogPostsData.data?.length || 0,
-            posts: blogPostsData.data || [],
-            published: blogPostsData.data?.filter(post => post.status === 'published').length || 0,
-            draft: blogPostsData.data?.filter(post => post.status === 'draft').length || 0
-          }
+      const client = supabase as unknown as {
+        from: (table: string) => {
+          select: (cols: string) => {
+            order: (col: string, opts: { ascending: boolean }) => Promise<{
+              data: Array<{ status: string } & Record<string, unknown>> | null;
+              error: { message: string } | null;
+            }>;
+          };
         };
-      }
-    });
+      };
+      const { data, error } = await client.from('blog_posts').select('*').order('created_at', { ascending: false });
+      if (error) throw new Error(error.message);
+      const posts = data ?? [];
+      return {
+        total: posts.length,
+        posts,
+        published: posts.filter((p) => p.status === 'published').length,
+        draft: posts.filter((p) => p.status === 'draft').length,
+      };
+    },
+  });
 
-    return (
-      <div className="flex min-h-screen bg-filmeja-dark text-white">
-        <AdminSidebar />
-        
-        <div className="flex-1 p-6 md:p-8 overflow-auto">
-          <DashboardHeader 
-            title="SuperDashboard" 
-            subtitle="Visão administrativa completa do FilmeJá"
-          />
-          
-          <div className="my-6 flex justify-between items-center">
+  return (
+    <div className="flex min-h-screen bg-filmeja-dark text-white">
+      <AdminSidebar />
+
+      <div className="flex-1 p-6 md:p-8 overflow-auto">
+        <DashboardHeader title="SuperDashboard" subtitle="Visão administrativa completa do FilmeJá" />
+
+        <div className="my-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
             <h2 className="text-2xl font-bold">Visão Geral</h2>
-            <DateRangePicker dateRange={dateRange} setDateRange={setDateRange} />
+            <p className="text-sm text-gray-400">
+              Números reais do banco. O período vale para os totais e gráficos; “ativos hoje/7/30 dias” é sempre
+              relativo a agora.
+            </p>
           </div>
-          
-          <Tabs defaultValue="overview" className="w-full">
-            <TabsList className="grid grid-cols-6 w-full max-w-4xl mb-6">
-              <TabsTrigger value="overview">Visão Geral</TabsTrigger>
-              <TabsTrigger value="users">Usuários</TabsTrigger>
-              <TabsTrigger value="recommendations">Recomendações</TabsTrigger>
-              <TabsTrigger value="activities">Atividades</TabsTrigger>
-              <TabsTrigger value="financial">Financeiro</TabsTrigger>
-              <TabsTrigger value="blog">Blog</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="overview" className="space-y-6">
-              <OverviewPanel 
-                data={dashboardData}
-                isLoading={isLoading}
-                dateRange={dateRange}
-              />
-            </TabsContent>
-            
-            <TabsContent value="users" className="space-y-6">
-              <UserMetricsPanel 
-                data={dashboardData?.users}
-                isLoading={isLoading}
-                dateRange={dateRange}
-              />
-            </TabsContent>
-            
-            <TabsContent value="recommendations" className="space-y-6">
-              <RecommendationPanel 
-                data={dashboardData?.recommendations}
-                isLoading={isLoading}
-                dateRange={dateRange}
-              />
-            </TabsContent>
-            
-            <TabsContent value="activities" className="space-y-6">
-              <RecentActivitiesPanel 
-                data={dashboardData?.watched}
-                isLoading={isLoading}
-              />
-            </TabsContent>
-            
-            <TabsContent value="financial" className="space-y-6">
-              <FinancialPanel 
-                data={{
-                  subscriptions: dashboardData?.subscriptions,
-                  revenue: dashboardData?.revenue
-                }}
-                isLoading={isLoading}
-                dateRange={dateRange}
-              />
-            </TabsContent>
-            
-            <TabsContent value="blog" className="space-y-6">
-              <BlogPostsPanel 
-                data={dashboardData?.blogPosts}
-                isLoading={isLoading}
-              />
-            </TabsContent>
-          </Tabs>
+          <DateRangePicker dateRange={dateRange} setDateRange={setDateRange} />
         </div>
+
+        {error && <ErrorBanner error={error} />}
+
+        <Tabs
+          value={tab}
+          onValueChange={(value) => {
+            setTab(value);
+            if (TAB_TO_PATH[value]) navigate(TAB_TO_PATH[value], { replace: true });
+          }}
+          className="w-full mt-4"
+        >
+          <TabsList className="grid grid-cols-3 md:grid-cols-6 w-full max-w-4xl mb-6 h-auto">
+            <TabsTrigger value="overview">Visão Geral</TabsTrigger>
+            <TabsTrigger value="users">Usuários</TabsTrigger>
+            <TabsTrigger value="recommendations">Recomendações</TabsTrigger>
+            <TabsTrigger value="activities">Atividades</TabsTrigger>
+            <TabsTrigger value="financial">Premium</TabsTrigger>
+            <TabsTrigger value="blog">Blog</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="overview" className="space-y-6">
+            <OverviewPanel data={metrics} isLoading={isLoading} />
+          </TabsContent>
+
+          <TabsContent value="users" className="space-y-6">
+            <UserMetricsPanel data={metrics} isLoading={isLoading} />
+          </TabsContent>
+
+          <TabsContent value="recommendations" className="space-y-6">
+            <RecommendationPanel data={metrics} isLoading={isLoading} />
+          </TabsContent>
+
+          <TabsContent value="activities" className="space-y-6">
+            <RecentActivitiesPanel />
+          </TabsContent>
+
+          <TabsContent value="financial" className="space-y-6">
+            <FinancialPanel data={metrics} isLoading={isLoading} />
+          </TabsContent>
+
+          <TabsContent value="blog" className="space-y-6">
+            <BlogPostsPanel data={blogPosts as never} isLoading={loadingBlog} />
+          </TabsContent>
+        </Tabs>
       </div>
-    );
+    </div>
+  );
 };
 
 export default SuperDashboard;

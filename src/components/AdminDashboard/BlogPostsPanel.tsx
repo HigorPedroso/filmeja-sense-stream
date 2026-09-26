@@ -71,9 +71,7 @@ export const BlogPostsPanel = ({ data, isLoading }: BlogPostsPanelProps) => {
     return <div className="flex items-center justify-center p-8">Carregando...</div>;
   }
 
-  if (!data?.posts || data.posts.length === 0) {
-    return <div className="flex items-center justify-center p-8">Nenhum post encontrado</div>;
-  }
+  const posts = data?.posts ?? [];
 
   return (
     <div className="space-y-6">
@@ -81,7 +79,7 @@ export const BlogPostsPanel = ({ data, isLoading }: BlogPostsPanelProps) => {
         <div>
           <h2 className="text-2xl font-bold">Blog Posts</h2>
           <p className="text-gray-400">
-            {data.published} publicados • {data.draft} rascunhos
+            {data?.published ?? 0} publicados • {data?.draft ?? 0} rascunhos
           </p>
         </div>
         <Link to="/super/blog/new">
@@ -92,8 +90,12 @@ export const BlogPostsPanel = ({ data, isLoading }: BlogPostsPanelProps) => {
         </Link>
       </div>
 
+      {posts.length === 0 && (
+        <div className="flex items-center justify-center p-8 text-gray-400">Nenhum post encontrado</div>
+      )}
+
       <div className="grid gap-4">
-        {data.posts.map((post) => (
+        {posts.map((post) => (
           <Card key={post.id} className="bg-black/40 border-white/10">
             <CardContent className="flex items-center p-4">
               {post.featured_image && (
@@ -107,8 +109,6 @@ export const BlogPostsPanel = ({ data, isLoading }: BlogPostsPanelProps) => {
               <div className="flex-1">
                 <h3 className="font-semibold text-lg">{post.title}</h3>
                 <div className="flex items-center gap-2 text-sm text-gray-400">
-                  <span>{post.profiles?.email || 'Unknown'}</span>
-                  <span>•</span>
                   <span>
                     {formatDistanceToNow(new Date(post.created_at), {
                       addSuffix: true,

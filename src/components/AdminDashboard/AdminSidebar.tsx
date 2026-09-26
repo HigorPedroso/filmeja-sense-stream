@@ -77,7 +77,6 @@ const AdminSidebar = () => {
           </div>
           <div className="ml-3">
             <p className="text-sm font-medium text-white">Admin</p>
-            <p className="text-xs text-gray-400">admin@filmeja.com</p>
           </div>
         </div>
       </div>
