@@ -24,12 +24,14 @@ export async function initializePushNotifications(): Promise<void> {
         } = await supabase.auth.getUser();
         if (!user) return;
 
+        // No client-side updated_at: some devices have their system clock set
+        // wrong, which wrote future timestamps into the row. The column
+        // defaults to now() server-side, which is trustworthy.
         const { error } = await supabase.from("device_push_tokens").upsert(
           {
             user_id: user.id,
             token: token.value,
             platform: Capacitor.getPlatform(),
-            updated_at: new Date().toISOString(),
           },
           { onConflict: "user_id,token" }
         );
